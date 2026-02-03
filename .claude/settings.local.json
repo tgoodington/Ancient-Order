@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(test:*)",
+      "Bash(git init:*)",
+      "Bash(git config:*)",
+      "Bash(git add:*)"
+    ],
+    "autoApprove": [
+      "Read",
+      "Glob",
+      "Grep",
+      "WebSearch",
+      "WebFetch",
+      "Task"
+    ]
+  },
+  "git": {
+    "autoApprove": [
+      "status",
+      "diff",
+      "log",
+      "add",
+      "commit",
+      "push",
+      "pull",
+      "branch",
+      "checkout",
+      "merge"
+    ]
+  },
+  "description": "Pre-authorized tools for autonomous agent operation. Agents can read files, search code, delegate tasks, and perform version control without permission interruptions."
+}
