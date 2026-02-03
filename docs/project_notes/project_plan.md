@@ -68,6 +68,8 @@
 
 ### Phase 3: Sprint 2 - Combat System (Future)
 
+⚠️ **Note**: This phase should begin with `/intuition-discovery` to explore combat system requirements and design before planning and implementation.
+
 **Overview**: Implement 5-phase turn-based combat system
 
 **Key Features**:
@@ -81,9 +83,13 @@
 
 **Scope**: ~10 combat-related TypeScript files
 
+**Recommended Workflow**: Discovery (Waldo) → Handoff → Planning (Magellan) → Handoff → Execution (Faraday)
+
 ---
 
 ### Phase 4: Sprint 3 - Narrative & State Machine (Future)
+
+⚠️ **Note**: This phase should begin with `/intuition-discovery` to explore narrative structure and dialogue requirements before planning and implementation.
 
 **Overview**: Implement Act 1 narrative structure
 
@@ -94,6 +100,8 @@
 4. Time Skip (5-year training montage narrative)
 5. Setting Out (team registration, final preparations)
 6. First Gym Town (demonstrates personality gates with new NPCs)
+
+**Recommended Workflow**: Discovery (Waldo) → Handoff → Planning (Magellan) → Handoff → Execution (Faraday)
 
 ---
 
