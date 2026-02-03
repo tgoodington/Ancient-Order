@@ -3,8 +3,8 @@
   "version": "1.0",
   "personalization": {
     "waldo_greeted": false,
-    "plan_created": false,
-    "plan_status": "none",
+    "plan_created": true,
+    "plan_status": "planned",
     "plan_file": "docs/project_notes/project_plan.md"
   }
 }
