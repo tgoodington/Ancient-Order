@@ -34,48 +34,55 @@ Turn-based combat RPG prototype with personality-driven narrative. Act 1 backend
 
 ## Project Workflow and Memory System
 
-This project uses a three-phase workflow coordinated by the Intuition system, with institutional knowledge maintained in `docs/project_notes/` for consistency across sessions.
+This project uses a three-tier workflow coordinated by the Intuition system, with institutional knowledge maintained in `docs/project_notes/` for consistency across sessions.
 
 ### Workflow Phases
 
-The project follows a structured three-phase workflow:
+The project follows a structured three-tier workflow. Each sprint starts with planning, which audits the codebase and existing specs. Planning flags complex tasks for design exploration before execution.
 
-**Phase 1: Discovery (Waldo)**
-- Purpose: Deep understanding of the problem through collaborative dialogue
-- Framework: GAPP (Problem → Goals → UX Context → Personalization)
-- Output: `discovery_brief.md` and `discovery_output.json` with comprehensive context
-- When: Starting new features or investigating complex problems
-- Skill: `/intuition-discovery`
-
-**Phase 1.5: Discovery → Planning Handoff (Orchestrator)**
-- Purpose: Process discovery output, update memory files, brief planner
-- Process: Extract insights, document in key_facts/decisions, generate planning_brief.md
-- Output: Fresh context for planning phase
-- When: Discovery complete, before planning begins
-- Skill: `/intuition-handoff`
-
-**Phase 2: Planning (Magellan)**
+**Tier 1: Planning (Magellan)**
 - Purpose: Strategic synthesis and structured execution planning
-- Process: Research codebase, identify patterns, create detailed plan
-- Output: `plan.md` with tasks, dependencies, risks
-- When: After discovery handoff, ready to design approach
+- Process: Research codebase, audit existing specs, identify patterns, create detailed plan
+- Output: `plan.md` with tasks marked as execute-ready or `[DESIGN REQUIRED]`
+- When: Starting a new sprint or feature
 - Skill: `/intuition-plan`
 
-**Phase 2.5: Planning → Execution Handoff (Orchestrator)**
-- Purpose: Process plan, brief executor, update memory
-- Process: Extract task structure and risks, generate execution_brief.md
-- Output: Fresh context for execution phase
-- When: Plan approved, before execution begins
+**Tier 2: Design Exploration (Edison)** *(optional, per flagged task)*
+- Purpose: Collaborative technical design for complex subsystems
+- Process: Iterative dialogue using DIP framework (Data, Interfaces, Process), codebase research, trade-off analysis
+- Output: `design_spec_[component].md` with types, interfaces, algorithms, integration points
+- When: Planning flags a task as `[DESIGN REQUIRED]` — subsystem has no existing spec and needs architectural decisions the user should make
+- Skill: `/intuition-design`
+- Skip when: Task is straightforward, specs already exist, or work is purely mechanical
+
+**Handoff (Orchestrator)**
+- Purpose: Process phase outputs, brief the next phase, update memory
+- Process: Extract decisions, update key_facts/decisions, generate briefs
+- Output: Fresh context for next phase
+- When: Between any phase transition
 - Skill: `/intuition-handoff`
 
-**Phase 3: Execution (Faraday)**
+**Tier 3: Execution (Faraday)**
 - Purpose: Methodical implementation with verification and quality checks
 - Process: Delegate to specialized sub-agents, coordinate work, verify outputs
 - Output: Implemented features, updated memory, completion report
-- When: Plan approved and ready to implement
+- When: All tasks are fully specified (plan + design specs) and ready to implement
 - Skill: `/intuition-execute`
 
-**Recommended Workflow**: Discovery → Handoff → Planning → Handoff → Execution (→ Repeat for next feature)
+**Standard Workflow**: Planning → Handoff → Execution
+**Design-Required Workflow**: Planning → Design (per flagged task) → Handoff → Execution
+
+### Task Classification
+
+Planning classifies each task in `plan.md`:
+- **Execute-ready**: Specs exist, implementation is straightforward. Goes directly to execution.
+- **`[DESIGN REQUIRED]`**: No spec exists, subsystem needs collaborative design. Must go through `/intuition-design` before execution.
+
+Examples:
+- "Add unit tests for personality system" → Execute-ready (pure functions, clear inputs/outputs)
+- "Port Rank KO formula from Excel" → Execute-ready (source of truth exists in spreadsheet)
+- "Design behavior tree AI for NPC combat" → Design required (no spec, architectural decisions needed)
+- "Design Group action type" → Design required (undefined in docs, needs invention)
 
 ### Memory Files
 
@@ -87,10 +94,8 @@ The project follows a structured three-phase workflow:
 - **.project-memory-state.json** - Workflow phase tracking and session state
 
 **Phase Output Files** (created during workflow):
-- **discovery_brief.md** - Discovery phase synthesis (created by Waldo)
-- **discovery_output.json** - Structured findings from discovery (created by Waldo, processed by Handoff)
-- **planning_brief.md** - Brief for planning phase (created by Handoff orchestrator)
 - **plan.md** - Structured project plan with tasks, dependencies, risks (created by Magellan)
+- **design_spec_[component].md** - Technical design specifications (created by Edison, one per designed component)
 - **execution_brief.md** - Brief for execution phase (created by Handoff orchestrator)
 
 ### Memory-Aware Protocols
@@ -127,20 +132,24 @@ The project follows a structured three-phase workflow:
 
 ### Smart Skill Suggestions
 
-**When discovery is complete:**
-If discovery brief is finalized - prompt them to run handoff before planning:
-- "Discovery looks complete! Use `/intuition-handoff` to process insights and prepare for planning."
-- Handoff orchestrator updates memory files and creates planning brief
-
 **When user suggests planning work:**
-If the user mentions designing features, architecture, complex multi-step work, or asks "how should we approach..." - prompt them to use `/intuition-plan`:
+If the user mentions starting a new sprint, scoping a feature, or asks "how should we approach..." - prompt them to use `/intuition-plan`:
 - "This sounds like a good candidate for planning. Want to use `/intuition-plan` to develop a structured approach first?"
 - Don't proceed with ad-hoc planning; guide them to the planning workflow
 
-**When plan is ready for execution:**
-If the user approves a plan or indicates readiness - prompt them to run handoff before execution:
-- "Great, the plan looks ready! Use `/intuition-handoff` to prepare execution context."
-- Handoff orchestrator creates execution brief and updates state
+**When plan has design-required tasks:**
+If the plan flags tasks with `[DESIGN REQUIRED]` - prompt them to run design exploration before handoff:
+- "The plan flagged [task] for design exploration. Run `/intuition-design` to flesh out the technical design before execution."
+- Don't skip design for flagged tasks; execution agents shouldn't make design decisions autonomously
+
+**When all design work is complete:**
+If all `[DESIGN REQUIRED]` tasks have corresponding `design_spec_*.md` files - prompt handoff:
+- "All design specs are ready. Use `/intuition-handoff` to prepare execution context."
+- Handoff orchestrator incorporates design specs into execution brief
+
+**When plan has no design-required tasks:**
+If the user approves a plan with only execute-ready tasks - prompt handoff directly:
+- "Plan looks ready — all tasks are execute-ready. Use `/intuition-handoff` to prepare execution context."
 
 **When user is ready to execute:**
 If handoff is complete - prompt them to use `/intuition-execute`:

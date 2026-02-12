@@ -265,3 +265,148 @@ User <-> Waldo (Haiku)             User <-> Architect (Opus)
 - Clear separation of concerns (plan vs execute)
 - User maintains control over when to commit to implementation
 - Sub-agents serve both tiers with different intent (exploration vs execution)
+
+---
+
+### ADR-011: Three-Tier Workflow with Design Exploration (2026-02-11)
+
+**Context:**
+- Sprint planning created high-level architecture but left design decisions to execution phase
+- Two complex subsystems (behavior tree AI, Group action type) have no existing specifications
+- Execution agents shouldn't make architectural design decisions autonomously
+- Need collaborative design dialogue for complex subsystems, but discovery-style exploration is too broad
+
+**Decision:**
+- Adopt three-tier workflow: Planning → Design Exploration (optional, per-task) → Execution
+- Planning flags tasks as execute-ready or `[DESIGN REQUIRED]`
+- Design exploration subsystem (`/intuition-design`) engages user in collaborative design for flagged tasks
+- Design exploration produces `design_spec_[component].md` ready for execution implementation
+- Execution agents only receive fully-specified tasks
+
+**Alternatives Considered:**
+- Single-tier (Planning → Execution): Execution makes design decisions. Rejected: loses user control over architecture.
+- Bring back discovery for complex tasks: Too heavyweight. Discovery is broad problem-understanding; design needs narrow technical focus.
+- Two-tier with deeper planning: Planning goes deeper on complex tasks. Rejected: planning session becomes too long; design dialogue has different feel/flow than planning.
+
+**Consequences:**
+- Two subsystems (Tasks 16-17) require `/intuition-design` before implementation begins
+- Total project duration increases slightly (design exploration overhead)
+- User maintains control over architectural decisions even on complex subsystems
+- Design specs provide clear contracts for execution agents
+- Better separation of concerns: plan scope/sequence, design architecture, execute code
+
+---
+
+### ADR-012: Pipeline Combat Architecture (2026-02-11)
+
+**Context:**
+- Combat resolution involves 12 interconnected subsystems (rank KO, blindside, defense, damage, etc.)
+- Subsystems have complex interdependencies but are each logically separate
+- 5-phase turn structure is sequential: AI Decision → Visual → Declaration → Priority Sort → Per-Attack Resolution
+- Need clean boundaries, independent testability, and clear orchestration
+
+**Decision:**
+- Combat engine structured as a staged pipeline: each phase is a pure function transforming CombatState
+- Round Manager orchestrates phases in sequence
+- Each phase/subsystem can be tested independently
+- CombatState is the immutable contract between stages
+- All functions follow existing spread-operator immutability pattern
+
+**Alternatives Considered:**
+- Monolithic combat resolver: Single function handles all logic. Rejected: untestable, hard to follow.
+- Subsystem-per-module (12 separate files): Each subsystem is a module. Rejected: risk of cross-imports and circular dependencies.
+- Domain-grouped modules (4-5 groups): Subsystems grouped by category. Rejected: less clean separation.
+
+**Consequences:**
+- Combat logic is highly modular and testable
+- Mirrors the actual combat flow (5 phases), making it easy to understand
+- Matches existing codebase patterns (pure function composition like `processDialogueChoice`)
+- Phase functions can run independently in tests
+- New combat features can be added as new stages or substages
+
+---
+
+### ADR-013: Independent CombatState with Round-Boundary Sync (2026-02-11)
+
+**Context:**
+- Combat resolution involves dozens of micro-steps: checks, defense rolls, damage application, counter triggers, energy gains
+- Existing GameState immutability pattern creates new full state on every change
+- Creating full GameState copies on every combat micro-step would be expensive and noisy
+- Need to keep combat pipeline fast while maintaining immutability guarantee with main GameState
+
+**Decision:**
+- Combat pipeline owns a focused CombatState (combatants, actions, queue, logs) during resolution
+- CombatState is independent and mutable within the combat module (pure functions transform it)
+- Only at round boundaries does CombatState merge back into GameState via immutable sync function
+- GameState.activeCombat holds the latest round snapshot
+- CombatState never nested inside GameState during resolution
+
+**Alternatives Considered:**
+- Nested CombatState inside GameState throughout: Every micro-step creates new full GameState. Rejected: expensive, verbose.
+- Hybrid with event log: Independent CombatState + event log for replay/animation. Rejected: adds work without blocking Sprint 2.
+
+**Consequences:**
+- Combat pipeline stays lean and fast
+- No expensive full-GameState copies during resolution
+- Clear boundary between combat system and main game state
+- Immutability guarantee maintained at the GameState level (end of round)
+- Event replay/animation can be added in later sprints if needed
+
+---
+
+### ADR-014: Behavior Tree AI Architecture (2026-02-11)
+
+**Context:**
+- NPC combat decisions need to be made in Phase 1 (hidden from player)
+- Decisions should consider combat state (own stamina, target stamina, available energy, team composition)
+- Different NPC archetypes should have distinct decision patterns
+- Simple random/weighted system lacks sophistication for investor demo
+- Need extensible system for later sprint enhancements
+
+**Decision:**
+- Implement behavior trees for NPC decision-making
+- Tree framework includes node types: Selector (priority), Condition, Action, Decorator
+- Tree structure loaded per NPC or archetype (Elena = loyal scout tree, Lars = scheming merchant tree, Kade = rogue tree)
+- Trees read CombatState via readonly perception adapter (maintains immutability)
+- Evaluation produces single DeclaredAction per tree tick (Phase 1)
+
+**Alternatives Considered:**
+- Rule-based archetype profiles: Simple, less flexible. Rejected: user chose extensibility.
+- Weighted random: Fastest. Rejected: too simple for demo.
+- Full AI system with learning: Overkill for prototype.
+
+**Consequences:**
+- Behavior trees are familiar pattern to game developers
+- Extensible for later sprints (behavior modifications, dynamic tree loading)
+- Requires design exploration to specify node types and evaluation algorithm
+- NPC behavior is predictable and can be read/debugged via tree inspection
+- Supports archetype differentiation (aggressive, defensive, tactical)
+
+---
+
+### ADR-015: Test-Driven Formula Porting from Excel (2026-02-11)
+
+**Context:**
+- Combat formulas are the source of balance and must be accurate
+- GM Combat Tracker Excel has 17 sheets with tested formulas
+- ADR-007 requires exact replication (no modifications, no "improvements")
+- Risk: formula misinterpretation during porting introduces subtle bugs
+- Need guarantee of correctness per ADR-007
+
+**Decision:**
+- All formulas ported using test-driven development (TDD)
+- For each formula category: extract known input/output pairs from Excel first
+- Write failing tests with those pairs
+- Implement formula until tests pass
+- Test boundary cases (equal stats, thresholds, edge conditions)
+
+**Alternatives Considered:**
+- Manual spot-check: Fast but error-prone. Rejected: no regression protection.
+- Golden file testing: Comprehensive but requires Excel export. Rejected: TDD sufficient.
+
+**Consequences:**
+- 100% confidence in formula accuracy
+- Tests serve as documentation of formula intent
+- Regression protection: future changes must pass existing tests
+- Slightly slower porting (test writing overhead)
+- All formula tests committed to codebase

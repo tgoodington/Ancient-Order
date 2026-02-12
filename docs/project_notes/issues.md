@@ -44,4 +44,17 @@ This file logs work completed on tickets. Keep it simple - just enough to rememb
 - **URL**: https://github.com/tgoodington/Ancient-Order
 - **Notes**: Project infrastructure complete. Memory system ready for coordinated development. State file updated: plan_status now "planned"
 
+### 2026-02-11 - PLAN-001: Sprint 1 Closeout + Sprint 2 Combat Engine Planning
+- **Status**: Completed
+- **Description**: Comprehensive planning for Sprint 1 test coverage and complete Sprint 2 combat engine implementation
+- **Scope**: 19 tasks across 2 workstreams (5 Sprint 1 closeout, 14 Sprint 2 combat)
+- **Key Decisions**:
+  - Three-tier workflow: Planning → Design Exploration (optional) → Execution (ADR-011)
+  - Pipeline combat architecture with independent CombatState (ADR-012, ADR-013)
+  - Behavior tree AI system with test-driven formula porting (ADR-014, ADR-015)
+- **Design Explorations Required**: 2 tasks flagged for `/intuition-design` (behavior tree AI, Group action type)
+- **Estimated Duration**: 10-14 days with parallelization
+- **Artifacts**: plan.md (comprehensive), execution_brief.md, 5 new ADRs
+- **Decisions Updated**: Transitioned from two-tier to three-tier workflow per CLAUDE.md
+
 <!-- Add work log entries below this line -->
