@@ -8,7 +8,11 @@
       "Bash(git commit:*)",
       "Bash(git remote add:*)",
       "Bash(git push:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(npm view:*)",
+      "Bash(npm install:*)",
+      "Bash(git:*)",
+      "Bash(grep ^-:*)"
     ],
     "autoApprove": [
       "Read",

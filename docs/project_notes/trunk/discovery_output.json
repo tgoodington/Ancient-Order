@@ -1,0 +1,45 @@
+{
+  "summary": {
+    "title": "Ancient Order Sprint 1 + Sprint 2 Rebuild",
+    "one_liner": "Complete backend rebuild of personality-driven narrative and combat engine systems with fresh technical decisions",
+    "problem_statement": "The Ancient Order backend prototype needs a complete rebuild from an empty codebase. Sprint 1 (personality-driven narrative systems) and Sprint 2 (combat engine) must be implemented with fresh technical decisions while preserving the established game design specifications.",
+    "success_criteria": "Full Sprint 1 backend operational (personality, dialogue, state, persistence, API) + Full Sprint 2 combat engine (5-phase pipeline, all Excel formulas ported, behavior tree AI, 6 paths, energy/ascension). 3v3 combat resolves correctly. Working demo for investor/publisher pitch."
+  },
+  "scope": {
+    "in": [
+      "Sprint 1: TypeScript interfaces, game state, personality system, dialogue engine, NPC system, save/load, REST API",
+      "Sprint 2: Combat types, dominance checks, defense resolution, damage calc, stamina, counter chains, paths, energy/ascension, resolution pipeline, declaration validation, round manager, behavior tree AI, Group action, combat API, GameState sync",
+      "Unit and integration tests for all systems",
+      "Test-driven formula porting from Excel"
+    ],
+    "out": [
+      "React frontend (Sprints 5-7)",
+      "Narrative state machine / Act 1 scenes (Sprint 3)",
+      "Advanced persistence and API hardening (Sprint 4)",
+      "Vercel deployment (Sprints 8-9)",
+      "Game balance tuning"
+    ]
+  },
+  "constraints": [
+    "Personality traits: 6 traits, 5-35% range, sum = 100%",
+    "NPCs have fixed archetypes, only player personality changes",
+    "No dead ends in dialogue (all gates have ungated fallback)",
+    "Combat formulas must exactly replicate Excel source of truth",
+    "All technical/architectural decisions are open for re-evaluation"
+  ],
+  "assumptions": [
+    { "assumption": "Game design specs in reference docs are complete and accurate", "confidence": "high", "basis": "Used for prior prototype, validated by archived implementation" },
+    { "assumption": "Excel combat formulas are internally consistent and balanced", "confidence": "high", "basis": "17-sheet model developed and tested independently" },
+    { "assumption": "Sprint 1 and Sprint 2 can be built as a single continuous effort", "confidence": "medium", "basis": "Prior plan treated them as one scope" },
+    { "assumption": "3 test NPCs sufficient for demo", "confidence": "high", "basis": "Established in Sprint 1 spec" },
+    { "assumption": "Archived prototype code available as reference", "confidence": "high", "basis": "Archived in docs/project_notes/archive/" }
+  ],
+  "research_performed": [],
+  "open_questions": [
+    "Technical stack decisions: framework, architecture, state management, test framework",
+    "Behavior Tree AI system: node types, evaluation model, archetype profiles need design exploration",
+    "Group Action Type: mechanics undefined, need design exploration",
+    "Combat encounter configuration: static templates vs dynamic",
+    "Build sequencing: optimal order for Sprint 1 + Sprint 2 systems"
+  ]
+}

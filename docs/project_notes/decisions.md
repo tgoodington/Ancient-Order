@@ -384,6 +384,120 @@ User <-> Waldo (Haiku)             User <-> Architect (Opus)
 
 ---
 
+### ADR-016: Fastify HTTP Framework (2026-02-21)
+
+**Context:**
+- Planning phase evaluated framework choices: Express.js (archived patterns), Fastify, Hono
+- Archived Express patterns could be ported but framework itself is open for re-evaluation
+- Need TypeScript-native, performant, well-documented framework
+
+**Decision:**
+- Use Fastify 4.18 as HTTP framework for Sprint 1 and Sprint 2 APIs
+- Leverage Fastify's plugin architecture for modular route organization
+- Use built-in JSON Schema validation via Ajv
+- Session state managed via `fastify.decorate()` (replaces archived `api/game.ts` singleton pattern)
+
+**Alternatives Considered:**
+- Express.js: Archived patterns translate directly. Rejected: user chose Fastify for TypeScript-first approach.
+- Hono: Lightweight, edge-compatible. Rejected: less mature ecosystem for this use case.
+
+**Consequences:**
+- Fastify plugin API differs from Express middleware; route handlers need adaptation
+- Built-in schema validation reduces boilerplate vs Express
+- Slightly faster performance than Express (not critical for demo, but positive)
+- Engineering phase must translate archived Express router patterns to Fastify plugins
+- Session state pattern (`fastify.decorate`) differs from archived singleton
+
+---
+
+### ADR-017: Vitest Test Framework (2026-02-21)
+
+**Context:**
+- Planning required fast TDD workflow for formula porting (ADR-015)
+- Jest listed in package.json but not installed; clean slate for testing framework choice
+- Need TypeScript support without additional configuration
+
+**Decision:**
+- Use Vitest as test framework for all unit, integration, and E2E tests
+- Jest-compatible `describe/it/expect` API for familiarity
+- Native TypeScript support without ts-jest or babel-jest
+- Watch mode optimized for TDD workflow
+
+**Alternatives Considered:**
+- Jest: Requires ts-jest config; slower TypeScript cold start. Rejected: Vitest addresses both issues.
+- Node built-in runner: Minimal ecosystem. Rejected: need mature test framework for complex combat system.
+
+**Consequences:**
+- Fast watch mode critical for formula porting TDD (ADR-015)
+- All existing Jest knowledge transfers (API compatibility)
+- Vitest configuration simpler than Jest + ts-jest
+- No migration path needed to Jest later (both APIs compatible)
+
+---
+
+### ADR-019: Utility Scoring for Behavior Tree AI (2026-02-21)
+
+**Context:**
+- Behavior tree AI (Task 17) requires transparent, testable decision-making for 3 archetypes
+- Prior ADR-014 was conceptual; design exploration produced specific technical decisions
+- Need an evaluation model that is traceable, deterministic, and data-driven
+
+**Decision:**
+- Use utility scoring over classic behavior tree traversal
+- 7 multi-output scoring factors (each returns scores for all 5 action types)
+- Combined (action, target) scoring: all candidates evaluated together
+- Combat perception layer: pre-computed readonly snapshot mediates between CombatState and factors
+- Rank-based decision quality coefficient: linear scaling from 0.2 (low rank) to 1.0 (high rank)
+- Path-based tie-breaking: elemental path determines action priority for score ties
+
+**Key Design Elements:**
+- **7 Scoring Factors:** OwnStamina, AllyInDanger, TargetVulnerability, EnergyAvailability, SpeedAdvantage, RoundPhase, TeamBalance
+- **Perception Layer:** Pre-computed CombatPerception includes sorted ally/enemy lists, stamina percentages, rank/speed deltas, team averages
+- **Rank Coefficient:** max(0.2, rank/10.0) — low-rank NPCs rely on instinct, high-rank on full tactical awareness
+- **Path Tie-Breaking:** Fire→[ATTACK, SPECIAL, DEFEND, EVADE, GROUP]; Water→[DEFEND, EVADE, SPECIAL, ATTACK, GROUP]; etc.
+- **Archetype Profiles:** Data-driven (Elena: support-weighted, Lars: efficient/defensive, Kade: aggressive/opportunistic)
+
+**Alternatives Considered:**
+- Classic behavior tree (Selector/Sequence nodes): Order-dependent, harder to balance. Rejected for utility scoring's transparency.
+- Two-phase (action then target): Less accurate cross-comparison. Rejected for combined scoring's expressiveness.
+- Direct CombatState access vs perception layer: Perception layer avoids redundant computation and enforces immutability boundary.
+
+**Consequences:**
+- Every NPC decision is traceable to a score breakdown (debuggable, testable)
+- 7 factors cover full combat decision space with natural modeling
+- Multi-output factors reduce factor count vs flat per-action approach
+- Deterministic: same state → same decision
+- Extensible: new factors can be added by engineering
+- Archetype profiles are 100% data-driven (JSON-like structures)
+
+**Related Design Specs:** `design_spec_behavior_tree_ai_system.md`
+
+---
+
+### ADR-018: Linear Build Sequencing (2026-02-21)
+
+**Context:**
+- Sprint 1 and Sprint 2 share state management and type foundation
+- Sprint 2 depends on working Sprint 1 as a tested base
+- Risk: attempting parallel build when Sprint 1 unstable causes Sprint 2 churn
+
+**Decision:**
+- Build Sprint 1 completely (Tasks 1-9) before beginning Sprint 2 (Tasks 10-22)
+- Sprint 1 integration validation (Task 9) is a hard gate before Sprint 2 starts
+- Allows Sprint 1 test coverage and API validation before combat engine complexity
+
+**Alternatives Considered:**
+- Types-first parallel tracks: Define all types upfront, build both concurrently. Rejected: risk of type churn mid-build.
+- Interleaved by system: Alternate tasks across sprints based on dependencies. Rejected: too complex to track for execution agents.
+
+**Consequences:**
+- Total build duration slightly longer than parallel (sequential dependency chain)
+- Sprint 1 fully tested before Sprint 2 begins (higher confidence)
+- Clear milestone at Task 9 for user to validate progress
+- Sprint 2 can begin with confidence in foundation
+
+---
+
 ### ADR-015: Test-Driven Formula Porting from Excel (2026-02-11)
 
 **Context:**

@@ -1,21 +1,68 @@
 {
-  "workflow": {
-    "status": "executing",
-    "discovery": {
-      "started": false,
-      "completed": false
-    },
-    "planning": {
-      "started": true,
-      "completed": true,
-      "completed_at": "2026-02-11T00:00:00Z",
-      "approved": true
-    },
-    "execution": {
-      "started": false,
-      "completed": false
+  "version": "5.0",
+  "initialized": true,
+  "active_context": "trunk",
+  "trunk": {
+    "status": "design",
+    "display_name": "Sprint 1 + Sprint 2",
+    "workflow": {
+      "prompt": {
+        "started": true,
+        "completed": true,
+        "started_at": "2026-02-21T00:00:00Z",
+        "completed_at": "2026-02-21T00:00:00Z",
+        "output_files": [
+          "discovery_brief.md",
+          "discovery_output.json"
+        ]
+      },
+      "planning": {
+        "started": true,
+        "completed": true,
+        "started_at": "2026-02-21T00:00:00Z",
+        "completed_at": "2026-02-21T00:00:00Z",
+        "approved": true
+      },
+      "design": {
+        "started": true,
+        "completed": false,
+        "started_at": "2026-02-21T00:00:00Z",
+        "completed_at": null,
+        "items": [
+          {
+            "name": "behavior_tree_ai_system",
+            "display_name": "Behavior Tree AI System",
+            "status": "completed",
+            "plan_tasks": [17],
+            "spec_file": "design_spec_behavior_tree_ai_system.md",
+            "flagged_reason": "No spec exists. Node types, evaluation model, archetype profiles, and integration pattern all require design decisions with lasting consequences."
+          },
+          {
+            "name": "group_action_type",
+            "display_name": "Group Action Type",
+            "status": "in_progress",
+            "plan_tasks": [18],
+            "spec_file": null,
+            "flagged_reason": "Completely undefined in all reference documentation. Targeting rules, synergy mechanics, priority resolution need invention."
+          }
+        ],
+        "current_item": "group_action_type"
+      },
+      "engineering": {
+        "started": false,
+        "completed": false,
+        "started_at": null,
+        "completed_at": null
+      },
+      "build": {
+        "started": false,
+        "completed": false,
+        "started_at": null,
+        "completed_at": null
+      }
     }
   },
-  "last_handoff": "2026-02-11T00:00:00Z",
-  "last_handoff_transition": "planning→execution"
+  "branches": {},
+  "last_handoff": "2026-02-21T14:30:00Z",
+  "last_handoff_transition": "design_to_design"
 }

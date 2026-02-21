@@ -17,12 +17,18 @@ This file stores project constants, configuration, and frequently-needed **non-s
 
 ## Technical Stack
 
-- **Runtime:** Node.js
-- **Framework:** Express.js
-- **Language:** TypeScript
-- **State Management:** Immutable game state (no mutations)
-- **Persistence:** JSON file-based (saves/ directory)
-- **API Style:** REST endpoints
+- **Runtime:** Node.js (ES2020, CommonJS modules)
+- **Framework:** Fastify 4.18 (plugin-based architecture, TypeScript-native)
+- **Language:** TypeScript 5.3 (strict mode)
+- **State Management:** Immutable spread-operator pattern + TypeScript `Readonly<>` types (mechanism deferred to engineering phase)
+- **Persistence:** JSON file-based (saves/ directory, 10 slots)
+- **API Style:** REST endpoints (Fastify plugins)
+- **Testing Framework:** Vitest (native TypeScript, Jest-compatible API)
+- **Build:** TypeScript compiler (tsc), no bundler, source maps enabled
+
+**NOTE (2026-02-21):** Full backend rebuild of Sprint 1+2 with fresh technical decisions finalized. Game design specs (personality ranges, dialogue gates, combat formulas) remain fixed.
+
+**Build Sequencing:** Linear — Sprint 1 complete first, then Sprint 2. Behavior Tree AI and Group Action Type require design exploration before implementation begins.
 
 ## Core Game Systems
 
@@ -226,3 +232,44 @@ Stone, Iron, Bronze, Silver, Gold, Platinum, Diamond, Master, Grand Master, Lege
 ### Key Formula Sources
 - All combat formulas must be ported from `GM Combat Tracker.xlsx`
 - See `GM_Combat_Tracker_Documentation.md` for formula locations and data structures
+
+## Behavior Tree AI System (Sprint 2, Task 17)
+
+**Evaluation Model:** Utility scoring (7 multi-output factors) — not classic behavior tree traversal.
+
+**Scoring Factors (7 + rank meta-factor):**
+1. OwnStamina — Self-preservation (favor EVADE when low)
+2. AllyInDanger — Team protection (favor DEFEND when ally critical)
+3. TargetVulnerability — Offensive opportunity (favor ATTACK when weak target)
+4. EnergyAvailability — Resource management (favor SPECIAL when energy available)
+5. SpeedAdvantage — Blindside exploitation (favor ATTACK when faster)
+6. RoundPhase — Temporal strategy (early: build energy, late: press advantage)
+7. TeamBalance — Team stamina comparison (losing: shift defensive, winning: aggressive)
+8. **Rank Coefficient** (meta-factor): Linear 0.2-1.0 scaling by combatant rank
+
+**Architecture:**
+- Evaluator engine in `combat/behaviorTree/evaluator.ts`
+- Factors in `combat/behaviorTree/factors/` (one file per factor)
+- CombatPerception builder in `combat/behaviorTree/perception.ts` (pre-computed readonly snapshot)
+- Archetype profiles (Elena, Lars, Kade) in `combat/behaviorTree/profiles/`
+- Path-based tie-breaking in `combat/behaviorTree/tieBreaking.ts`
+
+**Key Interfaces:**
+```
+ScoringFactor: name, evaluate(perception, target) → ActionScores
+ArchetypeProfile: name, baseScores, factorWeights, elementalPath
+CombatPerception: selfStaminaPct, allies[], enemies[], round, etc.
+ScoredCandidate: actionType, targetId, score, scoreBreakdown
+```
+
+**Design Decisions (ADR-019):**
+- Combined (action, target) scoring: ~5-15 candidates evaluated per NPC
+- Multi-output factors vs flat: reduces to 7 factors vs ~20
+- Perception layer: enforces immutability, avoids redundant computation
+- GROUP excluded via config flag until Group Action Type designed
+- Deterministic: no randomness in evaluator
+
+**Archetype Profiles:**
+- **Elena (Loyal Scout):** Light path. Support-weighted. Responds strongly to ally danger (factor weight 1.8). Prefers DEFEND.
+- **Lars (Scheming Merchant):** Earth path. Defensive/efficient. Self-preservation (weight 1.5). Strategic energy use (weight 1.4). Adapts per round.
+- **Kade (Rogue Outlaw):** Fire path. Aggressive. Target vulnerability (weight 1.6) and speed advantage (weight 1.5). Ignores team needs.
