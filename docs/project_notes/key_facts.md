@@ -233,6 +233,24 @@ Stone, Iron, Bronze, Silver, Gold, Platinum, Diamond, Master, Grand Master, Lege
 - All combat formulas must be ported from `GM Combat Tracker.xlsx`
 - See `GM_Combat_Tracker_Documentation.md` for formula locations and data structures
 
+## Group Action Type (Sprint 2, Task 18)
+
+**Mechanics (POC):**
+- Leader-initiated: one combatant declares GROUP, all allies conscripted
+- Full trio attack: 3 allies vs 1 enemy target
+- Priority 0 (highest): resolves before all other actions
+- Energy gate: all participants require full energy at declaration
+- Defense suppression: target forced to Block only (no Dodge/Parry)
+- Damage: (damageA + damageB + damageC) × 1.5x
+- Flexible participants: fires with non-KO'd allies; multiplier unchanged
+- Opposing GROUP tie-break: higher team average speed resolves first
+
+**Design Decisions (ADR-020):**
+- Priority table updated: GROUP=0, DEFEND=1, ATTACK/SPECIAL=2, EVADE=3
+- Validation at declaration (Phase 3), resolution at priority 0
+- Energy consumption: all participants reset to 0 (atomic)
+- Extensible via GroupActionConfig for future varieties
+
 ## Behavior Tree AI System (Sprint 2, Task 17)
 
 **Evaluation Model:** Utility scoring (7 multi-output factors) — not classic behavior tree traversal.

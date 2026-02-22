@@ -524,3 +524,184 @@ User <-> Waldo (Haiku)             User <-> Architect (Opus)
 - Regression protection: future changes must pass existing tests
 - Slightly slower porting (test writing overhead)
 - All formula tests committed to codebase
+
+---
+
+### ADR-020: Group Action Type (2026-02-21)
+
+**Context:**
+- GROUP is a 5th action type for coordinated team attacks (alongside ATTACK, DEFEND, EVADE, SPECIAL)
+- Completely undefined in prior documentation; inspired by Skies of Arcadia crew specials
+- Requires design exploration to define mechanics, targeting, synergy, defense interaction
+- Design brief flagged GROUP for collaborative design before implementation
+- Existing behavior tree AI design (ADR-019) includes GROUP factor scoring but excluded it via config flag pending this design
+
+**Decision:**
+- GROUP is a leader-initiated action: one combatant declares GROUP, all non-KO'd allies are conscripted (overriding their individual declarations)
+- Full trio attack: all 3 allies coordinate a single strike against one enemy target
+- **Priority 0 (highest):** GROUP resolves before all other actions, including DEFEND intercepts — cannot be redirected by DEFEND
+- **Energy gate:** All participants must have full energy segments at Phase 3 declaration time; validation is one-time (at declaration)
+- **Defense suppression:** Target forced to Block only — no Dodge, no Parry, no counter chains
+- **Damage multiplier:** 1.5x flat multiplier on sum of all participants' individual damage: `(damageA + damageB + damageC) × 1.5`
+- **Flexible participant count:** GROUP fires with whoever is non-KO'd at resolution. If opposing GROUP KO's allies first, GROUP still executes with 2 or 1 participant; multiplier unchanged
+- **Opposing GROUP tie-break:** Higher team average speed (of non-KO'd members) resolves first
+- **Designed for extensibility:** POC implements one GROUP variety. Future varieties can define different synergy bonuses, join rules, and targeting models via `GroupActionConfig`
+
+**Key Design Elements:**
+- Priority table change: GROUP=0, DEFEND=1, ATTACK/SPECIAL=2, EVADE=3 (vs prior GROUP=2)
+- Energy consumption: all participants' energy reset to 0 on GROUP execution (atomic)
+- Immutable: all state updates produce new objects (existing ADR-001 pattern)
+- Pure functions: GROUP resolver has no side effects, deterministic
+
+**Alternatives Considered:**
+- Pair-based or flexible participation: Rejected for POC; full trio chosen for drama and simplicity
+- Multiple GROUP varieties in POC: Rejected; one variety with extensibility for future enhancement
+- GROUP as bonus to individual attacks (not priority 0): Rejected; priority 0 provides clear tactical identity (counter to DEFEND-heavy strategies)
+- Defense alternatives (single roll with reduced rates, three rolls): Rejected; Block-only best balances overwhelm concept with rule simplicity
+
+**Consequences:**
+- GROUP is the highest-priority action; nothing else resolves before it (except slower opposing GROUP)
+- Full team commitment to one enemy per round when GROUP used
+- Energy buildup over several rounds creates rhythm (build → unleash → build → unleash)
+- Behavior tree AI can score GROUP once `groupActionsEnabled = true` in config
+- Clear contract for implementation: validation at declaration, resolution at priority 0, produces `GroupResolutionResult`
+
+**Related Design Spec:** `design_spec_group_action_type.md`
+
+---
+
+### ADR-021: ECMAScript Modules (2026-02-21)
+
+**Context:**
+- Project rebuild starting from empty `src/` directory with clean dependency slate
+- Vitest and Fastify both have native ESM support
+- TypeScript configuration initially targeted CommonJS
+- Build tooling needs clear module strategy from start to avoid mid-project migration
+
+**Decision:**
+- Use ECMAScript modules (ESM) throughout: `"type": "module"` in package.json, `"module": "NodeNext"` in tsconfig.json
+- All import statements use explicit `.js` extensions in source code (TypeScript preserves these in compiled output)
+- Dev runner (`tsx`) supports ESM natively for `npm run dev`
+- Vitest configuration requires no special ESM setup (native support)
+
+**Alternatives Considered:**
+- CommonJS (existing tsconfig.json): Works but requires ts-node or tsx with CommonJS config. Rejected: ESM is modern standard, better tooling support.
+- Dual ESM/CommonJS build: Over-complex for single backend. Rejected.
+
+**Consequences:**
+- All imports must include `.js` extension (TypeScript/Node requirement for ESM)
+- Faster startup time for dev runner (tsx optimized for ESM)
+- Better tree-shaking in future frontend integration
+- Build agents must understand `.js` import semantics
+- No migration path needed to CommonJS later (ESM is standard)
+
+---
+
+### ADR-022: Session State via Fastify Decorate (2026-02-21)
+
+**Context:**
+- Archived Sprint 1 prototype used module-level singleton: `getActiveGameState()` / `setActiveGameState()`
+- Fastify plugin architecture differs from Express middleware (archived pattern)
+- Need type-safe session state access across all route plugins
+- Fastify's `fastify.decorate()` is idiomatic pattern for plugin-shared state
+
+**Decision:**
+- Session state (`gameState: GameState | null`) attached to Fastify instance via `fastify.decorate('gameState', null)`
+- Type-safe access via Fastify declaration merging in module extending `FastifyInstance`
+- All route plugins access via `fastify.gameState`; mutations via `fastify.gameState = newState`
+- Mutable reference (state location), immutable object content (state values)
+
+**Alternatives Considered:**
+- Module-level singleton (archived pattern): Simpler, but not idiomatic Fastify. Breaks plugin isolation.
+- Context-local storage (AsyncLocalStorage): Overkill for single session prototype.
+- Global variable: Anti-pattern, would prevent future multi-session support.
+
+**Consequences:**
+- Session state is plugin-accessible (all plugins see same instance)
+- Type declaration required in each plugin that accesses state
+- Better scoping than global variables (state tied to Fastify instance lifecycle)
+- Prepares for future multi-session support (each request could have separate instance)
+- Differs from archived prototype; build agents must learn pattern
+
+---
+
+### ADR-023: Per-Call-Site Roll Injection (2026-02-21)
+
+**Context:**
+- Combat resolution involves multiple probabilistic checks: Rank KO, Blindside, Crushing Blow, defense success/failure
+- Need deterministic testing (same state → same result) without seeding global Math.random()
+- TDD formula porting requires fixed roll values to validate against Excel
+
+**Decision:**
+- Functions accepting random rolls take a `rollFn` parameter: `(state, action, rollFn?: () => number) => newState`
+- Default: `rollFn = () => Math.random() * 20` (produces 0-20 roll value)
+- Tests pass fixed functions: `() => 15.0` for specific roll values
+- Roll values never change during a function call (no repeated randomness)
+
+**Alternatives Considered:**
+- Global seed (seedrandom library): Heavy dependency for prototype. Rejected.
+- Module-level `currentRoll` variable: Global state, hard to manage. Rejected.
+- Random seed in CombatState: Couples state to randomness; harder to reason about.
+
+**Consequences:**
+- All functions with randomness have explicit `rollFn` parameter (clear API contract)
+- Tests can deterministically control outcomes
+- No shared random state across functions
+- Slightly more verbose function signatures
+- Enables determinism test: run twice with identical rollFn sequences, expect identical results
+
+---
+
+### ADR-024: Shared Damage Calculation Utility (2026-02-21)
+
+**Context:**
+- Combat pipeline (Task 15) resolves per-attack damage using base damage formula
+- GROUP action (Task 18) needs identical base damage calculation for each participant
+- Both need to use same formula (no duplication of game logic)
+- Excel formula ADR-007 mandates exact replication; shared utility ensures single source of truth
+
+**Decision:**
+- Extract `calculateBaseDamage(attacker, target, ...modifiers): number` into `combat/formulas.ts`
+- Both `pipeline.ts` and `groupAction.ts` import and call this utility
+- Utility handles attacker power, target power, rank modifiers, buff/debuff modifiers
+- No per-participant synergy applied at utility level (synergy is GROUP-specific)
+
+**Alternatives Considered:**
+- GROUP imports from pipeline.ts: Tighter coupling, harder to trace. Rejected.
+- Inline duplicate: Code duplication increases maintenance risk. Rejected.
+- Abstract base class: Over-engineered for single utility. Rejected.
+
+**Consequences:**
+- Single source of truth for base damage calculation
+- Both subsystems stay decoupled (utility is clear boundary)
+- Utility tested once in formulas.test.ts (both users benefit)
+- GROUP multiplier applied after utility call (1.5x to aggregated base damages)
+- Clear contract: utility returns plain damage number, caller applies action-specific modifiers
+
+---
+
+### ADR-025: Co-Located Tests + ESLint/Prettier (2026-02-21)
+
+**Context:**
+- Sprint 2 requires TDD workflow for formula porting (ADR-015) with fast iteration
+- Archived prototype has zero tests; clean slate for testing structure
+- Code consistency tooling absent; optional to add during build
+
+**Decision:**
+- Unit tests co-located with source: `personalitySystem.test.ts` next to `personalitySystem.ts`
+- Integration/E2E tests in `tests/` directory at project root (avoid source bloat)
+- ESLint flat config (`eslint.config.js`) with `@typescript-eslint` plugin
+- Prettier formatter (`.prettierrc`) for consistent style
+- Scripts: `"test": "vitest run"`, `"test:watch": "vitest"`, `"lint": "eslint src/"`, `"format": "prettier --write src/"`
+
+**Alternatives Considered:**
+- Centralized test directory (all tests in `tests/`): Harder to navigate source files. Rejected.
+- No linting: Code quality suffers. Rejected.
+- Different linter (Biome): Ecosystem not as mature. Rejected.
+
+**Consequences:**
+- Fast feedback loop: edit source, save, test runs (co-location + watch mode)
+- Clear separation: unit tests stay with code, integration tests separate
+- Consistent code style reduces reviewer friction
+- Slightly slower initial build (linting overhead), mitigated by pre-commit hooks in future sprints
+- Build agents must understand test file naming convention (`*.test.ts`)
