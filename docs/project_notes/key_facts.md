@@ -17,18 +17,34 @@ This file stores project constants, configuration, and frequently-needed **non-s
 
 ## Technical Stack
 
-- **Runtime:** Node.js (ES2020, CommonJS modules)
-- **Framework:** Fastify 4.18 (plugin-based architecture, TypeScript-native)
-- **Language:** TypeScript 5.3 (strict mode)
-- **State Management:** Immutable spread-operator pattern + TypeScript `Readonly<>` types (mechanism deferred to engineering phase)
-- **Persistence:** JSON file-based (saves/ directory, 10 slots)
-- **API Style:** REST endpoints (Fastify plugins)
-- **Testing Framework:** Vitest (native TypeScript, Jest-compatible API)
-- **Build:** TypeScript compiler (tsc), no bundler, source maps enabled
+- **Runtime:** Node.js with **ESM** (`"type": "module"`, NodeNext resolution)
+- **Framework:** Fastify (plugin-based architecture, TypeScript-native)
+- **Language:** TypeScript 5.x (strict mode, ES2022 target)
+- **State Management:** Spread operator + `Readonly<T>` type annotations (no Immer)
+- **Persistence:** JSON file-based (saves/ directory, 10 slots, slot_N.json)
+- **API Style:** REST endpoints (Fastify plugins with JSON Schema validation)
+- **Testing Framework:** Vitest (native ESM, Jest-compatible API)
+- **Linting:** ESLint flat config + Prettier
+- **Build:** TypeScript compiler (tsc), no bundler, source maps + declarations enabled
 
-**NOTE (2026-02-21):** Full backend rebuild of Sprint 1+2 with fresh technical decisions finalized. Game design specs (personality ranges, dialogue gates, combat formulas) remain fixed.
+**NOTE (2026-02-21):** Full backend rebuild of Sprint 1+2 completed with Fastify+ESM+Vitest. All imports use `.js` extensions (NodeNext convention).
 
-**Build Sequencing:** Linear — Sprint 1 complete first, then Sprint 2. Behavior Tree AI and Group Action Type require design exploration before implementation begins.
+**Sprint 1 Status (2026-02-22):** COMPLETE — 261 tests passing. Resume at Task 10 (Combat Type System).
+
+## Fastify State Pattern (CRITICAL)
+
+Cross-plugin state uses a **container object**, NOT direct decoration assignment:
+```typescript
+fastify.decorate('gameStateContainer', { state: null as GameState | null });
+// Read/write via: fastify.gameStateContainer.state
+```
+Direct `fastify.gameState = value` inside a plugin is NOT visible to sibling plugins (plugin encapsulation).
+
+Error handler MUST be registered before plugins:
+```typescript
+fastify.setErrorHandler(handler);  // FIRST
+fastify.register(plugin);          // THEN
+```
 
 ## Core Game Systems
 
