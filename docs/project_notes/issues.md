@@ -71,4 +71,26 @@ This file logs work completed on tickets. Keep it simple - just enough to rememb
 - **Next Phase**: Design exploration for Behavior Tree AI, then Group Action Type design, then execution
 - **Status Tracking**: State updated to design phase, design queue initialized with 2 items
 
+### 2026-02-23 - BUILD-001: Sprint 2 Combat Engine Implementation + Verification
+- **Status**: Completed
+- **Description**: Full implementation of 13 Sprint 2 tasks (Combat Type System through E2E Demo Encounter)
+- **Scope**: Tasks 10-22 (2 design items, 11 implementation items, 1 E2E validation)
+- **Completion**: 793/793 tests passing across 25 test files
+- **Verification**: Security PASS (no secrets, no injection), Code Review PASS (with corrections applied), Tests PASS, Build PASS (zero TypeScript errors)
+- **Corrections Applied**:
+  - Task 11 Code Review FAIL → Fixed: Added exact numeric test values for `calculateBaseDamage`, added "pending Excel verification" note
+  - Task 17 Code Review FAIL → Fixed: Removed dead `lerpScores` code, added documentation comments, added interior bracket tests
+  - Security MEDIUM-1 → Fixed: Added `maxItems: 10` to declare endpoint schema
+- **Key Implementation**:
+  - 60+ new source files (types, combat engine, behavior tree, API layer, fixtures)
+  - 22-file behavior tree system with 7 scoring factors, 3 archetype profiles
+  - 1.5x multiplier GROUP action type with priority 0, energy gate, forced Block defense
+  - 5-phase round orchestrator with real AI evaluator integration
+  - 3v3 E2E demo encounter validating all 5 action types
+- **Required User Actions**:
+  - Verify `src/fixtures/encounter.json` stats against Excel "Battle Scenarios" sheet
+  - Verify `calculateBaseDamage` formula against Excel `Math!A40:AM54`
+- **Artifacts**: build_report.md, 793 tests, ~5000 lines of production code
+- **URL**: https://github.com/tgoodington/Ancient-Order (push candidate after git confirmation)
+
 <!-- Add work log entries below this line -->

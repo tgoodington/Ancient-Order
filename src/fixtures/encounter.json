@@ -1,0 +1,104 @@
+{
+  "id": "encounter_demo",
+  "name": "Demo Encounter: Order vs Shadow Guard (3v3)",
+  "playerParty": [
+    {
+      "id": "player_elena",
+      "name": "Elena",
+      "archetype": "elena_loyal_scout",
+      "rank": 3,
+      "stamina": 120,
+      "power": 85,
+      "speed": 90,
+      "elementalPath": "Light",
+      "ascensionLevel": 0,
+      "reactionSkills": {
+        "block": { "SR": 0.6, "SMR": 0.5, "FMR": 0.2 },
+        "dodge": { "SR": 0.4, "FMR": 0.2 },
+        "parry": { "SR": 0.3, "FMR": 0.15 }
+      }
+    },
+    {
+      "id": "player_lars",
+      "name": "Lars",
+      "archetype": "lars_scheming_merchant",
+      "rank": 3,
+      "stamina": 140,
+      "power": 90,
+      "speed": 70,
+      "elementalPath": "Earth",
+      "ascensionLevel": 0,
+      "reactionSkills": {
+        "block": { "SR": 0.7, "SMR": 0.55, "FMR": 0.25 },
+        "dodge": { "SR": 0.2, "FMR": 0.1 },
+        "parry": { "SR": 0.2, "FMR": 0.1 }
+      }
+    },
+    {
+      "id": "player_kade",
+      "name": "Kade",
+      "archetype": "kade_rogue_outlaw",
+      "rank": 3,
+      "stamina": 110,
+      "power": 100,
+      "speed": 100,
+      "elementalPath": "Fire",
+      "ascensionLevel": 0,
+      "reactionSkills": {
+        "block": { "SR": 0.4, "SMR": 0.4, "FMR": 0.15 },
+        "dodge": { "SR": 0.5, "FMR": 0.25 },
+        "parry": { "SR": 0.45, "FMR": 0.2 }
+      }
+    }
+  ],
+  "enemyParty": [
+    {
+      "id": "enemy_knight",
+      "name": "Shadow Knight",
+      "archetype": "enemy",
+      "rank": 3,
+      "stamina": 130,
+      "power": 88,
+      "speed": 75,
+      "elementalPath": "Earth",
+      "ascensionLevel": 0,
+      "reactionSkills": {
+        "block": { "SR": 0.7, "SMR": 0.55, "FMR": 0.25 },
+        "dodge": { "SR": 0.2, "FMR": 0.1 },
+        "parry": { "SR": 0.2, "FMR": 0.1 }
+      }
+    },
+    {
+      "id": "enemy_rogue",
+      "name": "Shadow Rogue",
+      "archetype": "enemy",
+      "rank": 3,
+      "stamina": 100,
+      "power": 95,
+      "speed": 95,
+      "elementalPath": "Fire",
+      "ascensionLevel": 0,
+      "reactionSkills": {
+        "block": { "SR": 0.5, "SMR": 0.45, "FMR": 0.2 },
+        "dodge": { "SR": 0.45, "FMR": 0.2 },
+        "parry": { "SR": 0.4, "FMR": 0.2 }
+      }
+    },
+    {
+      "id": "enemy_mage",
+      "name": "Shadow Mage",
+      "archetype": "enemy",
+      "rank": 3,
+      "stamina": 90,
+      "power": 105,
+      "speed": 80,
+      "elementalPath": "Shadow",
+      "ascensionLevel": 0,
+      "reactionSkills": {
+        "block": { "SR": 0.3, "SMR": 0.35, "FMR": 0.1 },
+        "dodge": { "SR": 0.5, "FMR": 0.25 },
+        "parry": { "SR": 0.3, "FMR": 0.15 }
+      }
+    }
+  ]
+}

@@ -21,6 +21,7 @@ import {
 } from './stateUpdaters.js';
 import { createNewGameState } from './gameState.js';
 import { GameState, Personality, ConversationEntry, DialogueOption } from '../types/index.js';
+import type { CombatState } from '../types/combat.js';
 
 // ============================================================================
 // Helpers
@@ -519,13 +520,13 @@ describe('updateCombatState', () => {
   });
 
   it('sets combatState to a provided value', () => {
-    const fakeCombatState = { round: 1, phase: 'AI_DECISION', status: 'active' };
+    const fakeCombatState = { round: 1, phase: 'AI_DECISION', status: 'active' } as CombatState;
     const updated = updateCombatState(baseState, fakeCombatState);
     expect(updated.combatState).toBe(fakeCombatState);
   });
 
   it('clears combatState when null is passed', () => {
-    const fakeCombatState = { round: 1 };
+    const fakeCombatState = { round: 1 } as CombatState;
     const withCombat = updateCombatState(baseState, fakeCombatState);
     const cleared = updateCombatState(withCombat, null);
     expect(cleared.combatState).toBeNull();
@@ -533,12 +534,12 @@ describe('updateCombatState', () => {
 
   it('does not mutate the input state', () => {
     const originalCombatState = baseState.combatState;
-    updateCombatState(baseState, { round: 99 });
+    updateCombatState(baseState, { round: 99 } as CombatState);
     expect(baseState.combatState).toBe(originalCombatState);
   });
 
   it('preserves other fields (player, npcs, conversationLog)', () => {
-    const updated = updateCombatState(baseState, { round: 1 });
+    const updated = updateCombatState(baseState, { round: 1 } as CombatState);
     expect(updated.player).toBe(baseState.player);
     expect(updated.npcs).toBe(baseState.npcs);
     expect(updated.conversationLog).toBe(baseState.conversationLog);

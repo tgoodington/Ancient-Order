@@ -29,7 +29,9 @@ This file stores project constants, configuration, and frequently-needed **non-s
 
 **NOTE (2026-02-21):** Full backend rebuild of Sprint 1+2 completed with Fastify+ESM+Vitest. All imports use `.js` extensions (NodeNext convention).
 
-**Sprint 1 Status (2026-02-22):** COMPLETE — 261 tests passing. Resume at Task 10 (Combat Type System).
+**Sprint 1 Status (2026-02-22):** COMPLETE — 261 tests passing.
+
+**Sprint 2 Status (2026-02-23):** **COMPLETE** — 793 tests passing across 25 files, zero TypeScript errors, security review PASS. Ready for user verification of Excel formulas and encounter fixture stats before pitch demo.
 
 ## Fastify State Pattern (CRITICAL)
 

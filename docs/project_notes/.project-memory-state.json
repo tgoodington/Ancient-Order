@@ -3,7 +3,7 @@
   "initialized": true,
   "active_context": "trunk",
   "trunk": {
-    "status": "building",
+    "status": "complete",
     "display_name": "Sprint 1 + Sprint 2",
     "workflow": {
       "prompt": {
@@ -56,13 +56,13 @@
       },
       "build": {
         "started": true,
-        "completed": false,
+        "completed": true,
         "started_at": "2026-02-21T21:30:00Z",
-        "completed_at": null
+        "completed_at": "2026-02-23T20:00:00Z"
       }
     }
   },
   "branches": {},
-  "last_handoff": "2026-02-21T21:30:00Z",
-  "last_handoff_transition": "engineer_to_build"
+  "last_handoff": "2026-02-23T20:00:00Z",
+  "last_handoff_transition": "build_to_complete"
 }

@@ -22,6 +22,7 @@ import { gamePlugin } from './game.js';
 import { playerPlugin } from './player.js';
 import { npcPlugin } from './npc.js';
 import { dialoguePlugin } from './dialogue.js';
+import { combatPlugin } from './combat.js';
 
 // ============================================================================
 // Shared session state container
@@ -169,6 +170,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(playerPlugin, { prefix: '/api/player' });
   await fastify.register(npcPlugin, { prefix: '/api/npc' });
   await fastify.register(dialoguePlugin, { prefix: '/api/dialogue' });
+  await fastify.register(combatPlugin, { prefix: '/api/combat' });
 
   return fastify;
 }

@@ -15,6 +15,7 @@ import {
   PersonalityAdjustment,
   DialogueOption,
 } from '../types/index.js';
+import type { CombatState } from '../types/combat.js';
 import { adjustPersonality } from '../personality/personalitySystem.js';
 
 // ============================================================================
@@ -224,12 +225,10 @@ export function processDialogueChoice(
 /**
  * Sets or clears the combatState field on GameState.
  * Pass `null` to clear an active combat; pass a CombatState to start one.
- * The combat type is `unknown | null` in Sprint 1 — refined to CombatState | null
- * in Task 10 when src/types/combat.ts is created.
  */
 export function updateCombatState(
   state: Readonly<GameState>,
-  combatState: unknown | null
+  combatState: CombatState | null
 ): GameState {
   return updateTimestamp({
     ...state,

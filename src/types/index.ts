@@ -4,9 +4,11 @@
  * Barrel file exporting all Sprint 1 interfaces and constants.
  * Zero dependencies — this is the leaf module all other Sprint 1 modules import from.
  *
- * GameState.combatState is typed as `unknown | null` here and will be refined
- * in Task 10 when src/types/combat.ts is created.
+ * GameState.combatState is typed using an import type from combat.ts.
+ * combat.ts imports from this file (not the reverse), so there is no circular dependency.
  */
+
+import type { CombatState } from './combat.js';
 
 // ============================================================================
 // Personality System
@@ -83,15 +85,16 @@ export interface NPC {
  * Root game state object. All state transitions produce a new GameState
  * (immutable pattern via spread operator).
  *
- * combatState is `unknown | null` in Sprint 1 — will be typed as
- * `CombatState | null` in Task 10 when src/types/combat.ts is created.
+ * combatState is null when not in combat, and a full CombatState when an
+ * encounter is active. Typed via import from combat.ts (no circular import —
+ * combat.ts imports from this file, not the reverse).
  */
 export interface GameState {
   readonly player: PlayerCharacter;
   readonly npcs: Record<string, NPC>;
   readonly currentDialogueNode: string | null;
   readonly saveSlot: number | null;
-  readonly combatState: unknown | null;
+  readonly combatState: CombatState | null;
   readonly conversationLog: ConversationEntry[];
   readonly timestamp: number;
 }
