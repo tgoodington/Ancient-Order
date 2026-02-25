@@ -96,21 +96,21 @@
             {
               "name": "team_synergy_system",
               "display_name": "Team Synergy System",
-              "status": "in_progress",
+              "status": "completed",
               "plan_tasks": [7, 8],
-              "spec_file": null,
+              "spec_file": "design_spec_team_synergy_system.md",
               "flagged_reason": "Formula undefined. Pair-based vs team composition, stat bonus types, player transparency, and balance all need game design exploration. Clear boundary with GROUP action synergy (combat-time 1.5x is separate)."
             },
             {
               "name": "act1_narrative_design",
               "display_name": "Act 1 Narrative Design",
-              "status": "pending",
+              "status": "in_progress",
               "plan_tasks": [10],
               "spec_file": null,
               "flagged_reason": "Branching strategy (linear spine + variants vs true branching) determines scene content structure. Scene pacing, choice meaning, personality gate placement, and flag design are creative decisions requiring user input."
             }
           ],
-          "current_item": "team_synergy_system"
+          "current_item": "act1_narrative_design"
         },
         "engineering": {
           "started": false,
@@ -127,6 +127,6 @@
       }
     }
   },
-  "last_handoff": "2026-02-24T00:52:47Z",
-  "last_handoff_transition": "planning_to_design"
+  "last_handoff": "2026-02-24T02:30:00Z",
+  "last_handoff_transition": "design_to_design"
 }

@@ -6,6 +6,18 @@ Complete Project Overview & Development Roadmap
 
 ---
 
+> **⚠ DESIGN REVISION NOTICE (2026-02-24)**
+>
+> Several world and character design decisions have been clarified since this document was written. If using this document for narrative or character design decisions, consult `docs/project_notes/decisions.md` (ADR-027, ADR-028, ADR-029) and `docs/project_notes/key_facts.md` for current design state. Specifically:
+>
+> - **Character archetype labels** ("Loyal Scout," "Scheming Merchant," "Rogue Outlaw") are **internal personality-coding shorthand only** — not in-world titles or class types. Warriors are simply warriors in this world.
+> - **Party members are neutral** — Elena and Kade travel with Kael as fellow warriors, not faction representatives. DEUS/Rogues tension is world-level, not party-level (ADR-027).
+> - **Demo scope has changed** — The Sprint 3 investor demo is a mid-journey Gym Town slice, NOT the Act 1 opening sequence described in this document (ADR-028).
+> - **Player character name is Kael** — presented as a young adult already on the tournament journey in the demo.
+> - **Rogues arc pattern** — Rogues appear sporadically and escalate to central conflict in later acts. They are background presence in early scenes, not foregrounded antagonists (ADR-029).
+
+---
+
 ## PROJECT OVERVIEW
 
 You are building a turn-based combat RPG prototype that demonstrates two equally important systems: (1) sophisticated personality-driven narrative mechanics, and (2) tactical combat with deep mechanical depth. The game targets 2-3 hours of Act 1 gameplay and is designed as a web application for investor pitch.

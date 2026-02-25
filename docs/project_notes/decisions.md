@@ -705,3 +705,122 @@ User <-> Waldo (Haiku)             User <-> Architect (Opus)
 - Consistent code style reduces reviewer friction
 - Slightly slower initial build (linting overhead), mitigated by pre-commit hooks in future sprints
 - Build agents must understand test file naming convention (`*.test.ts`)
+
+---
+
+### ADR-026: Team Synergy System — Paradigm-Based Party Bonuses (2026-02-24)
+
+**Context:**
+- Sprint 3 requires pre-combat stat bonuses based on party member personality interactions
+- Three viable calculation models existed: pair-based lookup (static), trait-distance formula (dynamic), full team composition
+- User chose trait-distance formula, then clarified the design to paradigm-based model
+- Party is always 3 members (Elena, Lars, Kade as fixed NPCs + player) in demo; system must extensible to swappable parties
+
+**Decision:**
+- **Paradigm-based model:** Named archetypes describing personality distribution patterns across the whole party
+- Only the best-matched satisfied paradigm applies (highest-only rule, no stacking)
+- **Two POC paradigms:**
+  - **Well Rounded** (power ×1.10): Every personality trait has ≥25% representation across the party. Rewards versatility/coverage.
+  - **Bond** (speed ×1.10): Player personality ≥80% aligned with one NPC's dominant traits (top 2 by value). Rewards deep character resonance.
+- **Binary thresholds:** Meet it or don't; no partial/graduated bonuses
+- **Highest-only comparison:** Each paradigm has a match quality score (0.0–1.0+); highest score wins. Tiebreak: Well Rounded > Bond
+- **Direct stat modification:** Bonuses applied by scaling `power` or `speed` at `initCombatState` (no new buff pipeline)
+- **Pure function, data-driven:** `calculateSynergy()` is deterministic; paradigm definitions in `ParadigmConfig` (not hardcoded)
+- **Bond dominant traits derived dynamically:** NPC's top 2 traits by value; auto-extends to any new NPC (no manual tagging)
+
+**Key Design Elements:**
+- **Well Rounded match quality:** Minimum of all trait party-maxes / threshold (0.25). If all traits pass, score ≥1.0 clamped to 1.0.
+- **Bond match quality:** Best player-to-NPC alignment ratio: sum(player's NPC top-2 traits) / sum(NPC's own top-2 traits).
+- **Thresholds:** Well Rounded 25%, Bond 80% (as ratio: 0.25 and 0.80)
+- **Application scope:** All party members (player + 3 NPCs) receive the bonus if their party is player party
+- **Calculator lives in `src/narrative/synergyCalculator.ts`** (reads GameState personalities, consumed by `combat/sync.ts`)
+- **REST API exposed:** GET /narrative/synergy (Task 9 endpoint calls same calculator)
+
+**Alternatives Considered:**
+- Pair-based lookup: Static, transparent, but ignored player personality. Rejected for thematic weakness.
+- Pure trait-distance: Too abstract, hard to balance. Rejected.
+- Additive stacking: Multiple paradigms both apply. Rejected for cleaner single-identity design.
+- Graduated bonuses: Partial progress toward paradigm. Rejected for simplicity/clarity.
+
+**Consequences:**
+- Party composition directly affects combat stats; personality choices matter
+- Player personality choices influence synergy (Well Rounded via trait gaps, Bond via alignment)
+- Well Rounded demo-achievable by supportive player build (patience/empathy/kindness ≥25%)
+- Bond demo-achievable by mirroring an NPC's dominant traits
+- System scales to any future party composition/NPC count automatically
+- Extensible: new paradigms added to config without code changes
+- Match quality scores enable future UI/narrative feedback ("92% aligned with Lars")
+
+**Related Design Spec:** `design_spec_team_synergy_system.md`
+
+---
+
+### ADR-027: Party Members Are Neutral Warriors (2026-02-24)
+
+**Context:**
+- Original Sprint 1 design labelled Elena as "Loyal Scout (DEUS)" and Kade as "Rogue Outlaw (Rogues)" — implying faction alignment within the party
+- Post-demo design intent: party composition changes as the player meets new warriors on their journey
+- Locking party members to factions creates narrative constraints that break down when party members swap out
+- Moral ambiguity (DEUS vs Rogues) is a world-level story arc, not a party-level tension
+
+**Decision:**
+- Party members are warriors first. Their identity is defined by: elemental path, personality distribution, rank, and individual backstory — not faction allegiance
+- DEUS/Rogues tension is delivered through world NPCs encountered during the journey, not through party member friction
+- Elena and Kade remain consistent characters with fixed personalities, but their faction labels ("Loyal Scout," "Rogue Outlaw") are internal Sprint 1 shorthand — not in-world titles
+- This generalizes cleanly: any new warrior the player recruits is just a warrior; faction politics stay in the world layer
+
+**Alternatives Considered:**
+- Faction-aligned party members: Creates interesting intra-party tension. Rejected because it breaks down when party composition becomes dynamic in later acts.
+- Neutral world, faction party: Faction tension expressed only through party. Rejected: inverts the intended design where world events carry the faction story.
+
+**Consequences:**
+- Scene writing can focus on world-level DEUS/Rogues encounters rather than intra-party conflict
+- Party synergy design (ADR-026) already supports this — paradigm bonuses are about personality distribution, not faction
+- Future party members designed as warriors with personality, not as faction representatives
+
+---
+
+### ADR-028: Act 1 Demo — Mid-Journey Gym Town Slice (2026-02-24)
+
+**Context:**
+- Original plan assumed the demo would be the Act 1 opening sequence (Championship Fight → Town → Dontan → Time Skip, etc.)
+- Act 1 opening is slow to onboard: young player, training arc, 5-year time skip before the journey begins
+- For an investor/publisher demo, the opening pace undersells the full system capability
+
+**Decision:**
+- The investor demo uses a purpose-built mid-journey slice, not the Act 1 opening
+- Setting: a Gym Town on the tournament circuit — player is already a trained warrior, party is assembled, competition is underway
+- Content ingredients: DEUS presence and world-building, personality choice moments, training fight opportunities, a Rogue run-in (present but not central), and a gym fight climax
+- 3 scenes: Town Arrival (DEUS NPC interaction, flag-setting) → Escalation (Rogue run-in as consequence) → Gym Fight
+- Full Act 1 (Championship Fight, Dontan's Trials, Time Skip, Setting Out, etc.) remains the intended post-demo story arc
+
+**Alternatives Considered:**
+- Act 1 opening as demo: Authentic story start but slow. Investor sees tutorial combat with a kid character before any system depth. Rejected.
+- Single combat demo: No narrative context. Rejected.
+
+**Consequences:**
+- Demo scenes are not canonical Act 1 content — they're a showcase slice at a mid-story moment
+- Player is presented as a young adult warrior already on the journey (no origin onboarding needed)
+- Scene JSON produced by Task 10 is demo-specific; Act 1 opening scenes are future content
+- Scene design can assume player familiarity with warrior culture (no need to explain world from scratch)
+
+---
+
+### ADR-029: Rogues Faction — Sporadic Arc Pattern (2026-02-24)
+
+**Context:**
+- Original design emphasized DEUS vs Rogues moral tension as a core theme
+- Risk of over-foregrounding the faction conflict in early scenes when it should build gradually
+- User's intent: Rogues appear as a low-level background presence in early acts, escalating to a central narrative conflict in later acts
+
+**Decision:**
+- Rogues narrative follows a sporadic escalation pattern (analogous to Team Rocket in Pokémon): early encounters are brief, mysterious, or minor; tension builds across acts until the Rogues' plot becomes the central conflict
+- In Act 1 / early demo scenes: Rogues are *present* (a run-in, a hint of their activity) but NOT the main event
+- The faction moral ambiguity (DEUS vs Rogues, neither clearly right) is seeded through world-building encounters, not resolved or even heavily pressed in early acts
+- Player's relationship to the factions develops through accumulated encounters over the whole story
+
+**Consequences:**
+- Early scene writing should treat Rogue appearances as atmosphere and hint — not confrontation or faction-choice moments
+- Players are not pressured to "pick a side" in the demo
+- Faction tension has narrative room to grow across acts 2-9
+- DEUS presence in early towns feels like normal world infrastructure, not an antagonistic force (yet)

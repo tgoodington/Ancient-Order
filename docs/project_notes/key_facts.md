@@ -69,13 +69,28 @@ fastify.register(plugin);          // THEN
 - **Slots:** 10 slots (slot_1.json through slot_10.json)
 - **Metadata:** id, timestamp, version, playerName, location
 
-## Test NPCs (Sprint 1)
+## Player Character
 
-| ID | Name | Archetype | Faction | Joinable |
-|----|------|-----------|---------|----------|
-| npc_scout_elena | Elena | Loyal Scout | DEUS | Yes |
-| npc_merchant_lars | Lars | Scheming Merchant | Neutral | No |
-| npc_outlaw_kade | Kade | Rogue Outlaw | Rogues | Yes |
+- **Name:** Kael
+- **Starting rank:** 1.0 (5th Degree)
+- **Age at demo:** Young adult (already trained, already on the tournament journey)
+- **Starting personality:** Balanced across all 6 traits (~16-18% each)
+- **Starting elemental path:** Light (Kindness-aligned)
+- **Identity:** Personality is NOT fixed — every dialogue choice evolves Kael's traits, opening and closing narrative paths
+
+## Party NPCs (Joinable Warriors)
+
+Party composition changes as Kael meets new warriors on the journey. Post-demo, any warrior can join or leave the party. Elena and Kade are the starting companions for the Sprint 3 demo.
+
+**IMPORTANT — Archetype Labels:** The labels "Loyal Scout," "Scheming Merchant," and "Rogue Outlaw" are **internal Sprint 1 personality-coding shorthand** used to define trait distributions and dialogue style. They are NOT in-world titles, character classes, or faction identifiers. In this world, warriors are simply warriors — venerated for their craft and rank.
+
+| ID | Name | Internal Label (Sprint 1) | Faction | Joinable | Elemental Path |
+|----|------|--------------------------|---------|----------|---------------|
+| npc_scout_elena | Elena | Loyal Scout | DEUS-affiliated | Yes | Light |
+| npc_merchant_lars | Lars | Scheming Merchant | Neutral | No | Earth |
+| npc_outlaw_kade | Kade | Rogue Outlaw | Rogues-affiliated | Yes | Fire |
+
+**Party member note:** Elena and Kade's faction affiliations are background character detail, not active party-level tension (ADR-027). They are warriors traveling with Kael. Their faction politics stay in the world layer — encounter NPCs carry the DEUS/Rogues story arc, not party members.
 
 ## Factions
 
@@ -83,7 +98,10 @@ fastify.register(plugin);          // THEN
 - **Rogues:** Chaotic, freedom fighters, steal from the rich
 - **Neutral:** Profit-driven, self-interested
 
-## Act 1 Narrative Structure (6 Scenes)
+## Act 1 Narrative Structure (6 Scenes) — Post-Demo Full Story
+
+> **Note:** The Sprint 3 investor demo does NOT use this sequence. See "Sprint 3 Demo Scene Design" below.
+> This is the intended full Act 1 story arc for post-demo development.
 
 1. **The Championship Fight** - Cinematic intro, tutorial combat, reveals player as kid
 2. **Town Exploration** - 4 tasks to convince mentor Dontan (school, DEUS, Auntie M's cat, battle)
@@ -91,6 +109,19 @@ fastify.register(plugin);          // THEN
 4. **Time Skip** - 5-year training montage (narrative only)
 5. **Setting Out** - Team registration, final preparations, departure
 6. **First Gym Town** - Act 1 ends here, demonstrates personality gates with new NPCs
+
+## Sprint 3 Demo Scene Design (Mid-Journey Slice)
+
+The investor/publisher demo uses a **purpose-built mid-journey scene set**, not the Act 1 opening. See ADR-028.
+
+**Setting:** A Gym Town on the tournament circuit. Kael is already a trained warrior with Elena and Kade as party.
+
+**3-Scene Structure:**
+1. **Town Arrival** — DEUS presence and culture world-building, personality choices with a DEUS NPC, flag-setting choice
+2. **Escalation** — Rogue run-in surfaces as a consequence of Scene 1 flag (how player handled DEUS determines Rogue approach)
+3. **Gym Fight** — Climactic combat encounter
+
+**Design spec:** `docs/project_notes/branches/sprint-3/design_spec_act1_narrative_design.md` (in progress — see `.design_research/act1_narrative_design/decisions.md` for current state)
 
 ## Project Structure
 
@@ -239,10 +270,26 @@ All docs in `docs/Reference Documents/`:
 - Red: 24%-1%
 - Black: 0% (KO)
 
-### Team Synergy Bonuses
-- **Balanced** (all traits 15-25%): +5% all stats, +10% team XP
-- **Specialist** (one trait 30%+): +15% trait-specific effects
-- **Harmony** (two traits 25%+): +8% dual effects, special techniques unlock
+### Team Synergy Bonuses (Sprint 3)
+
+**Paradigm-Based Model (POC Design — 2026-02-24):**
+- Only the best-matched satisfied paradigm applies (highest-only rule)
+- Thresholds: binary (meet it or don't; no partial bonuses)
+
+**Well Rounded Paradigm:**
+- Trigger: Every personality trait has ≥25% representation across party
+- Bonus: All player party combatants get power ×1.10 (+10% ATK)
+- Demo-achievable: Player contributes patience/empathy/kindness ≥25% (NPCs cover cunning/logic/charisma)
+- Match quality: (min trait party-max / 25%) clamped to 1.0
+
+**Bond Paradigm:**
+- Trigger: Player personality ≥80% aligned with one NPC's dominant traits (top 2 by value)
+- Bonus: All player party combatants get speed ×1.10 (+10% SPD, affects initiative & Blindside)
+- Demo-achievable: Player mirrors Elena (patience+empathy), Lars (cunning+logic), or Kade (charisma+cunning)
+- Match quality: Best alignment ratio across all NPCs
+
+**Paradigm Comparison:**
+If both satisfied, highest match quality wins. Tiebreak: Well Rounded > Bond. Provides narrative feedback potential ("92% aligned with Lars").
 
 ### Rank Echelons (10 Tiers)
 Stone, Iron, Bronze, Silver, Gold, Platinum, Diamond, Master, Grand Master, Legend
