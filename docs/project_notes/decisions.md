@@ -806,6 +806,219 @@ User <-> Waldo (Haiku)             User <-> Architect (Opus)
 
 ---
 
+### ADR-030: Scene Prerequisite Model — Flat Array with Implicit AND (2026-03-02)
+
+**Context:**
+- Sprint 3 scene graph needs to gate scene availability based on trait checks and flag checks
+- Dialogue engine uses single-condition `PersonalityGate` (one trait comparison)
+- Scenes in Act 1 demo have modest prerequisite complexity (2-3 scenes)
+
+**Decision:**
+- Scene prerequisites stored as flat array: `ScenePrerequisite[]`
+- ALL prerequisites must pass (implicit AND logic)
+- No compound logic operators (OR/AND nesting) in POC
+- Prerequisite types: trait threshold check, flag presence check, visited-scene check
+- If OR logic needed in future, can be modeled via separate scene variants (branching at scene level instead of prerequisite level)
+
+**Alternatives Considered:**
+- Flat list with operator field (all/any): More flexible. Rejected: adds complexity for 2-3 scenes in demo.
+- Compound AND/OR nesting: Full boolean composition. Rejected: overkill for current scope.
+
+**Consequences:**
+- Simple prerequisite evaluation (all must pass)
+- Clean prerequisite API contract
+- Can extend to operator field later without breaking existing scenes
+- Act 1 demo design can work within implicit AND constraint
+
+---
+
+### ADR-031: Scene Choice Effects — Reuse Existing State Updaters (2026-03-02)
+
+**Context:**
+- Scene choices apply personality adjustments and NPC relationship changes (same as dialogue choices)
+- Existing `applyPersonalityAdjustment()`, `updateNPCAffection()`, `updateNPCTrust()` are proven patterns
+- Plan explicitly requires reuse
+
+**Decision:**
+- Choice engine calls existing updaters directly from `stateUpdaters.ts`
+- Effect application follows `processDialogueChoice` pattern: personality → NPC state → flag setting
+- No parallel effect systems; single implementation handles both dialogue and scene choices
+- Reuse enforces consistency across narrative systems
+
+**Alternatives Considered:**
+- New narrative-specific updaters: Parallel implementations. Rejected per plan requirement.
+- Shared effect abstraction: Over-engineered. Rejected.
+
+**Consequences:**
+- Tight coupling between narrative and dialogue/state modules (acceptable — same GameState)
+- Effect semantics guaranteed consistent
+- Single source of truth for personality/NPC adjustments
+
+---
+
+### ADR-032: Scene JSON Storage — src/fixtures/scenes/ (2026-03-02)
+
+**Context:**
+- Scene data is authored JSON (like encounter.json)
+- Existing pattern: encounter.json in src/fixtures/
+- Scene graphs are stateless parameters (not stored on GameState)
+
+**Decision:**
+- Scene JSON files stored in `src/fixtures/scenes/`
+- Follows existing fixture organization pattern
+- Scenes loaded and passed as parameters to engine functions
+- Low-risk organizational choice; can move files later if needed
+
+**Consequences:**
+- Centralized data location (fixtures/)
+- Consistent with existing encounter.json pattern
+- Scene data clearly separated from engine logic
+
+---
+
+### ADR-033: NarrativeState Result Type — Discriminated Union (2026-03-02)
+
+**Context:**
+- Narrative state machine transitions can succeed or fail (scene unavailable, choice not found, etc.)
+- Plan requires typed errors for invalid transitions
+- Dialogue engine throws exceptions on errors (not ideal for API layer)
+
+**Decision:**
+- State machine transitions return discriminated union: `{ type: 'success', state, nextScene } | { type: 'error', code, message }`
+- Success variant carries updated GameState and next scene
+- Error variant carries ErrorCode (enum-like string) and human message
+- API layer maps error variants to HTTP error responses
+- No exceptions thrown in engine (pure error values)
+
+**Alternatives Considered:**
+- Bundled result like DialogueResult: No error path, would need exceptions. Rejected.
+- State-only return: No error information. Rejected.
+
+**Consequences:**
+- Explicit success/failure handling without exceptions
+- API layer has clear error contract
+- Testable: errors don't require try/catch
+- More verbose than exceptions but more functional
+
+---
+
+### ADR-034: Combat Synergy Integration — Read from GameState Parameter (2026-03-02)
+
+**Context:**
+- `initCombatState` has unused `_gameState` parameter (placeholder for future extension)
+- Synergy calculator needs player + NPC personality data from GameState
+- Existing `_gameState` parameter fulfills original design intent
+
+**Decision:**
+- `initCombatState` reads player + NPC personalities from `_gameState` parameter
+- Internally calls `calculateSynergy()` with extracted personality data
+- Applies synergy bonus to player party combatants before returning CombatState
+- Fully encapsulates synergy logic within combat initialization
+
+**Alternatives Considered:**
+- Synergy as extra parameter: Caller pre-computes. Rejected: reduces encapsulation.
+- Post-processing by caller: Splits combat modification logic. Rejected.
+
+**Consequences:**
+- Couples `initCombatState` to narrative/synergy knowledge (acceptable — both combat-layer concerns)
+- Synergy integrated seamlessly at combat start
+- Backward compatible: if `_gameState` is null/minimal, synergy returns null (no bonus)
+
+---
+
+### ADR-035: Narrative Error Codes — Extend Existing ErrorCodes (2026-03-02)
+
+**Context:**
+- Narrative subsystem needs error codes (SCENE_NOT_FOUND, CHOICE_NOT_AVAILABLE, NARRATIVE_NOT_STARTED)
+- Existing ErrorCodes const object in types/index.ts is the centralized registry
+- API error responses use ErrorCode to clients
+
+**Decision:**
+- Add narrative codes to existing ErrorCodes object in types/index.ts
+- Single source of truth for all application error codes
+- Narrative-specific codes: SCENE_NOT_FOUND, CHOICE_NOT_AVAILABLE, NARRATIVE_NOT_STARTED, PREREQUISITE_NOT_MET, NARRATIVE_STATE_NULL
+
+**Alternatives Considered:**
+- Separate NarrativeErrorCodes in types/narrative.ts: Fragments error code lookups. Rejected.
+
+**Consequences:**
+- Centralized error registry (all codes in one place)
+- ErrorCodes object grows; manageable as flat const structure
+- API error responses use unified error codes across all subsystems
+
+---
+
+### ADR-036: Narrative Type System — Leaf File Pattern (2026-03-03)
+
+**Context:**
+- Sprint 3 introduces 20+ narrative/synergy types (Scene, SceneChoice, NarrativeState, SynergyResult, etc.)
+- `src/types/index.ts` already contains GameState and combat types
+- Need to avoid circular dependencies
+
+**Decision:**
+- Create `src/types/narrative.ts` as a leaf file with zero imports from `index.ts`
+- `index.ts` imports from `narrative.ts` (one-way dependency, same pattern as `combat.ts`)
+- GameState extended with `narrativeState: NarrativeState | null`
+
+**Consequences:**
+- Clean dependency graph (narrative.ts → index.ts, never reverse)
+- NarrativeState is nullable for backward compatibility with pre-Sprint 3 saves
+- 20 type exports from narrative.ts keeps index.ts focused
+
+---
+
+### ADR-037: Scene Graph — Flat AND Prerequisites (2026-03-03)
+
+**Context:**
+- Scene prerequisites gate access based on flags set by prior choices
+- Need to decide between flat array (implicit AND) vs nested boolean expressions (AND/OR)
+
+**Decision:**
+- Flat array of prerequisites with implicit AND logic
+- No OR combinator in POC — all prerequisites must be satisfied
+- PrerequisiteType limited to "flag" for POC
+
+**Consequences:**
+- Simple evaluation: `every(prereq => evaluate(prereq, state))`
+- Sufficient for Act 1 demo (only 1-2 flag prerequisites used)
+- Can extend to OR/nested logic in future sprints if needed
+
+---
+
+### ADR-038: Town Named "Ironhold" for Demo (2026-03-03)
+
+**Context:**
+- Sprint 3 demo scenes needed a specific town name for world-building polish
+- Generic "gym town" insufficient for investor pitch demo
+
+**Decision:**
+- Town named "Ironhold" — evokes strength, permanence, and martial culture
+- Used consistently across all 4 demo scenes
+
+**Consequences:**
+- World-building polish for demo without over-committing lore
+- Town name can be reused or changed in full Act 1 story arc
+
+---
+
+### ADR-039: 4th Scene Deviation — Mechanical Flag Prerequisite (2026-03-03)
+
+**Context:**
+- Blueprint specified 3 scenes, but acceptance criteria required a flag prerequisite to mechanically gate a scene
+- The 3 original scenes used flags for set-only tracking with no downstream mechanical effect
+
+**Decision:**
+- Added `scene_combat_briefing` as a 4th terminal scene gated by `gathered_intel` flag
+- Routed via `c2_exploit_distraction` choice in scene_market_disturbance
+- Minimal addition that satisfies the acceptance criterion without disrupting narrative flow
+
+**Consequences:**
+- Deviation from blueprint (3→4 scenes) documented in build report
+- Flag prerequisite system mechanically validated end-to-end
+- Scene follows established narrative tone and is reachable only via specific choice path
+
+---
+
 ### ADR-029: Rogues Faction — Sporadic Arc Pattern (2026-02-24)
 
 **Context:**

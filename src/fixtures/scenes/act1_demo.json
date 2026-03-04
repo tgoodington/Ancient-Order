@@ -1,0 +1,173 @@
+[
+  {
+    "id": "scene_ironhold_arrival",
+    "title": "Arrival at Ironhold",
+    "text": "The tournament town of Ironhold rose from the plains like a clenched fist of stone and iron. Kael led his companions through the eastern gate, where the clamor of merchants and the ring of practice swords filled the dusty air. Elena surveyed the crowded market square with quiet caution, while Kade's eyes darted between vendor stalls with barely concealed interest. A weathered merchant's booth caught their attention -- Lars, a broad-shouldered trader with shrewd eyes and a reputation that preceded him, arranged his wares with deliberate precision. The party needed supplies before the tournament, and Lars had what they required, though his guarded manner suggested fair dealing would not come easily.",
+    "prerequisites": [],
+    "choices": [
+      {
+        "id": "c1_friendly",
+        "text": "Offer Lars a fair price and a friendly word.",
+        "consequence": {
+          "personalityEffect": { "kindness": 2, "empathy": 1 },
+          "npcEffects": [{ "npcId": "npc_merchant_lars", "affectionChange": 5 }],
+          "setFlags": ["approached_lars_friendly"]
+        },
+        "nextSceneId": "scene_market_disturbance"
+      },
+      {
+        "id": "c1_shrewd",
+        "text": "Haggle hard -- find out what Lars really knows.",
+        "consequence": {
+          "personalityEffect": { "cunning": 3, "logic": 1 },
+          "npcEffects": [{ "npcId": "npc_merchant_lars", "trustChange": 5 }],
+          "setFlags": ["approached_lars_shrewd"]
+        },
+        "nextSceneId": "scene_market_disturbance"
+      },
+      {
+        "id": "c1_direct",
+        "text": "Cut to business. Name a price and be done with it.",
+        "consequence": {
+          "personalityEffect": { "charisma": 2, "patience": -1 },
+          "npcEffects": [{ "npcId": "npc_merchant_lars", "affectionChange": -5 }],
+          "setFlags": ["approached_lars_direct"]
+        },
+        "nextSceneId": "scene_market_disturbance"
+      },
+      {
+        "id": "c1_neutral",
+        "text": "Browse the stall quietly and let Lars make the first move.",
+        "consequence": {
+          "personalityEffect": { "patience": 3, "logic": 1 },
+          "setFlags": ["approached_lars_neutral"]
+        },
+        "nextSceneId": "scene_market_disturbance"
+      }
+    ]
+  },
+  {
+    "id": "scene_market_disturbance",
+    "title": "Market Disturbance",
+    "text": "A sharp cry cut through the market noise. Near the fountain square, two DEUS enforcement officers had seized a young pickpocket -- barely more than a child -- and were making a rough example of the arrest. The crowd parted uneasily as one officer wrenched the thief's arm behind their back. Kael noticed a faded symbol stitched into the thief's collar: a broken circle, the mark of those who operated outside the established order. Elena's jaw tightened with visible disapproval at the officers' heavy-handedness, while Kade watched the scene with calculating interest.",
+    "prerequisites": [],
+    "choices": [
+      {
+        "id": "c2_intervene",
+        "text": "Step forward and calmly ask the officers to ease their grip.",
+        "gate": { "trait": "kindness", "operator": "gte", "value": 19 },
+        "consequence": {
+          "personalityEffect": { "kindness": 2, "empathy": 1 },
+          "npcEffects": [{ "npcId": "npc_scout_elena", "trustChange": 10 }],
+          "setFlags": ["defended_thief"]
+        },
+        "nextSceneId": "scene_gym_registration"
+      },
+      {
+        "id": "c2_exploit_distraction",
+        "text": "While everyone watches the scene, slip through the crowd and listen for useful information.",
+        "gate": { "trait": "cunning", "operator": "gte", "value": 20 },
+        "consequence": {
+          "personalityEffect": { "cunning": 2, "logic": 1 },
+          "npcEffects": [{ "npcId": "npc_outlaw_kade", "affectionChange": 5 }],
+          "setFlags": ["gathered_intel"]
+        },
+        "nextSceneId": "scene_combat_briefing"
+      },
+      {
+        "id": "c2_stay_out",
+        "text": "This is DEUS business. Keep moving toward the gym.",
+        "consequence": {
+          "personalityEffect": { "logic": 2, "patience": 2 },
+          "npcEffects": [{ "npcId": "npc_scout_elena", "trustChange": -5 }],
+          "setFlags": ["stayed_neutral_market"]
+        },
+        "nextSceneId": "scene_gym_registration"
+      },
+      {
+        "id": "c2_observe",
+        "text": "Watch from a distance. There might be more to this than meets the eye.",
+        "consequence": {
+          "personalityEffect": { "patience": 2, "empathy": 1 },
+          "setFlags": ["observed_disturbance"]
+        },
+        "nextSceneId": "scene_gym_registration"
+      }
+    ]
+  },
+  {
+    "id": "scene_gym_registration",
+    "title": "Gym Registration",
+    "text": "The Ironhold Gym loomed at the end of the main thoroughfare, its stone facade carved with the names of past champions. Inside, the registration hall buzzed with fighters checking brackets and sizing up their competition. A grizzled registrar looked up from behind a battered desk as Kael's party approached, their tournament credentials already verified. The brackets showed a mix of unknown challengers and a few names that drew murmurs from the crowd. Elena checked her gear with methodical care, and Kade cracked his knuckles with an eager grin. The time for preparation was over.",
+    "prerequisites": [],
+    "choices": [
+      {
+        "id": "c3_methodical",
+        "text": "Study the brackets carefully. Know the opponent before stepping into the ring.",
+        "gate": { "trait": "patience", "operator": "gte", "value": 22 },
+        "consequence": {
+          "personalityEffect": { "patience": 2, "logic": 1 },
+          "setFlags": ["methodical_fighter"]
+        },
+        "nextSceneId": null
+      },
+      {
+        "id": "c3_bold",
+        "text": "Call out the top-ranked fighter. Let them know Kael is here to win.",
+        "consequence": {
+          "personalityEffect": { "charisma": 3 },
+          "npcEffects": [{ "npcId": "npc_outlaw_kade", "affectionChange": 10 }],
+          "setFlags": ["bold_challenger"]
+        },
+        "nextSceneId": null
+      },
+      {
+        "id": "c3_tactical",
+        "text": "Look for a favorable first-round matchup based on fighting style.",
+        "consequence": {
+          "personalityEffect": { "logic": 2, "cunning": 1 },
+          "setFlags": ["tactical_fighter"]
+        },
+        "nextSceneId": null
+      },
+      {
+        "id": "c3_standard",
+        "text": "Sign up and take whatever match comes. Let skill speak for itself.",
+        "consequence": {
+          "personalityEffect": { "patience": 1 },
+          "npcEffects": [{ "npcId": "npc_scout_elena", "trustChange": 5 }],
+          "setFlags": ["standard_fighter"]
+        },
+        "nextSceneId": null
+      }
+    ]
+  },
+  {
+    "id": "scene_combat_briefing",
+    "title": "The Edge You Needed",
+    "text": "The tunnel behind the market stall opened into a narrow passage lined with chalk-marked walls — crude diagrams of the gym's layout, fighter schedules, and patrol patterns. Someone had been watching the tournament for days. The intelligence was detailed enough to be dangerous: entry checkpoints, the registration queue's blind spots, and the name of the gym master who controlled fighter access. You studied it carefully, committing the key details to memory before slipping back onto the main street. Whatever came next, you would not be walking in blind.",
+    "prerequisites": [
+      { "type": "flag", "flag": "gathered_intel" }
+    ],
+    "choices": [
+      {
+        "id": "c4_register_prepared",
+        "text": "Head to the gym with your intelligence advantage.",
+        "consequence": {
+          "personalityEffect": { "cunning": 1 },
+          "setFlags": []
+        },
+        "nextSceneId": null
+      },
+      {
+        "id": "c4_register_cautious",
+        "text": "Pocket the information and approach the gym without revealing your knowledge.",
+        "consequence": {
+          "personalityEffect": { "patience": 1 },
+          "setFlags": []
+        },
+        "nextSceneId": null
+      }
+    ]
+  }
+]

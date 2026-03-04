@@ -1,7 +1,7 @@
 # Plan: Ancient Order Sprint 3 — Narrative & State Machine
 
-**Plan-Execute Contract v1.0 | Tier: Standard**
-**Date:** 2026-02-23
+**Plan-Execute Contract v1.0 | Tier: Standard | Mode: v9 (Domain Specialist)**
+**Date:** 2026-03-01 (revised from 2026-02-23 v8 plan)
 
 ---
 
@@ -48,7 +48,7 @@ Build the narrative progression layer for Act 1: a scene graph engine with perso
 - JSON persistence in saves/, 10 slots (ADR-005)
 - REST API (ADR-006)
 - Roll injection pattern: `rollFn` parameter for testability
-- Fastify session state: `GameStateContainer` is decorated onto the Fastify instance via `fastify.decorate`. All plugins access session state via `fastify.gameState`. Sprint 3's narrative plugin follows this same established pattern. (Was an open question in parent plan — confirmed resolved in Sprint 1+2 implementation.)
+- Fastify session state: `GameStateContainer` is decorated onto the Fastify instance via `fastify.decorate`. All plugins access session state via `fastify.gameState`. Sprint 3's narrative plugin follows this same established pattern.
 
 **Intersection Points:**
 - `types/index.ts` — additive extension, must not break Sprint 1+2 type contracts
@@ -68,9 +68,9 @@ Build the narrative progression layer for Act 1: a scene graph engine with perso
 | Scene Architecture | Directed graph with prerequisites | Locked | JSON nodes with IDs, content, choices (personality-gated), prerequisites (trait checks, choice flags). Mirrors dialogue engine's graph traversal pattern. |
 | Consequence Model | Local effects + named flags | Locked | Choices have immediate effects (personality shift, NPC state change) plus set flags in a choice history map. Future scenes check flags as prerequisites. 1-hop, multiple readers. |
 | Synergy-Combat Boundary | Synergy applied at initCombatState | Locked | Pre-combat party composition bonuses via sync.ts. Distinct from GROUP action's 1.5x resolution-time multiplier. ADR-013 defines this boundary. |
-| Synergy Calculation | Deferred to design | DESIGN REQUIRED | Formula, pair vs team model, stat bonus types need game design exploration. |
-| Branching Strategy | Deferred to design | DESIGN REQUIRED | Linear spine + variants vs true branching vs minimal. Affects content volume and test paths. |
-| Content Scope | Engine + 2-3 starter scenes | Locked | Full engine with functional test scenes proving the narrative arc. Complete Act 1 content can expand later. |
+| Synergy Calculation | Paradigm-based model with highest-only selection | Locked | Two paradigms (Well Rounded, Bond), binary threshold activation, pure calculator function, data-driven config. Design spec approved 2026-02-24. |
+| Branching Strategy | Deferred to detail phase | DETAIL REQUIRED | Linear spine + variants vs true branching vs minimal. Affects content volume and test paths. Explored via Task 10 (Deep). |
+| Content Scope | Engine + 2-3 starter scenes | Locked (inherited) | Full engine with functional test scenes proving the narrative arc. Complete Act 1 content can expand later. |
 | Scene Storage | Static JSON fixtures | Locked (inherited) | Scene definitions are data files, not generated. Matches existing pattern (encounter.json, NPC templates). |
 
 ---
@@ -78,10 +78,12 @@ Build the narrative progression layer for Act 1: a scene graph engine with perso
 ## 6. Task Sequence
 
 ### Task 1: Narrative Type System
+- **Domain**: code/backend
+- **Depth**: Light
 - **Component**: `types/`
 - **Description**: Extend the type system with all interfaces for narrative operations: scene graph nodes, choice definitions, consequence flags, narrative state (current scene, visited scenes, choice history), synergy bonus types. GameState gains narrative fields without breaking Sprint 1+2 contracts.
 - **Acceptance Criteria**:
-  1. All narrative interfaces defined: `Scene`, `SceneChoice`, `ScenePrerequisite`, `ChoiceFlag`, `NarrativeState`, `SynergyBonus`, and any supporting types
+  1. All narrative interfaces defined: `Scene`, `SceneChoice`, `ScenePrerequisite`, `ChoiceFlag`, `NarrativeState`, `SynergyBonus`, `SynergyResult`, `ParadigmConfig`, and any supporting types
   2. `GameState` extended with `narrativeState: NarrativeState | null` — Sprint 1+2 code compiles without changes
   3. TypeScript strict mode compilation succeeds with all new types imported
   4. No circular imports between narrative types and existing Sprint 1+2 types
@@ -91,6 +93,8 @@ Build the narrative progression layer for Act 1: a scene graph engine with perso
 ---
 
 ### Task 2: Scene Graph Engine
+- **Domain**: code/backend
+- **Depth**: Standard
 - **Component**: `narrative/` (new)
 - **Description**: Implement scene graph loading and traversal. Scenes are JSON nodes in a directed graph. Each node has an ID, text content, available choices, and prerequisite conditions. The engine evaluates prerequisites (personality trait checks, choice flag checks) to determine which scenes and choices are available. Must enforce the "no dead ends" constraint: every reachable scene has at least one choice with no prerequisites or met prerequisites.
 - **Acceptance Criteria**:
@@ -105,6 +109,8 @@ Build the narrative progression layer for Act 1: a scene graph engine with perso
 ---
 
 ### Task 3: Choice & Consequence Engine
+- **Domain**: code/backend
+- **Depth**: Standard
 - **Component**: `narrative/`
 - **Description**: Implement the choice processing system. When a player selects a choice, the engine: (1) validates the choice is available given current state, (2) applies immediate effects (personality adjustments, NPC state changes), (3) sets named flags in the choice history map. The flag map is the mechanism for cross-scene consequences — future scene prerequisites read these flags. NPC state effects must reuse the existing `updateNPCAffection`, `updateNPCTrust`, and `updateNPCRelationship` updaters — do not invent parallel NPC state mechanisms. Reference `processDialogueChoice` in `stateUpdaters.ts` as the existing pattern for choice-driven state changes.
 - **Acceptance Criteria**:
@@ -119,6 +125,8 @@ Build the narrative progression layer for Act 1: a scene graph engine with perso
 ---
 
 ### Task 4: Narrative State Machine
+- **Domain**: code/backend
+- **Depth**: Standard
 - **Component**: `narrative/`
 - **Description**: Implement the narrative state management that integrates scene graph traversal and choice processing into a coherent state machine. Tracks: current scene ID, set of visited scene IDs, choice flag map, and provides transition functions that advance the player through the scene graph. All transitions are pure functions returning new NarrativeState.
 - **Acceptance Criteria**:
@@ -133,6 +141,8 @@ Build the narrative progression layer for Act 1: a scene graph engine with perso
 ---
 
 ### Task 5: Narrative State Updaters
+- **Domain**: code/backend
+- **Depth**: Light
 - **Component**: `state/`
 - **Description**: Extend the state updaters library with functions for narrative operations. Each updater follows the existing pattern: `(state: GameState, ...) => GameState`. Updaters needed: start narrative (initialize NarrativeState), advance scene, process choice, set/clear flags. These bridge the narrative module into the existing immutable state management system.
 - **Acceptance Criteria**:
@@ -146,6 +156,8 @@ Build the narrative progression layer for Act 1: a scene graph engine with perso
 ---
 
 ### Task 6: Persistence Integration
+- **Domain**: code/backend
+- **Depth**: Light
 - **Component**: `persistence/`
 - **Description**: Ensure the existing save/load system correctly handles GameState with narrative fields. NarrativeState (current scene, visited set, choice flags) must round-trip through JSON serialization without data loss. This may require no code changes if NarrativeState is already JSON-serializable, but must be explicitly validated.
 - **Acceptance Criteria**:
@@ -159,34 +171,43 @@ Build the narrative progression layer for Act 1: a scene graph engine with perso
 
 ---
 
-### Task 7: Team Synergy Calculator *(DESIGN REQUIRED)*
-- **Component**: `narrative/` or `combat/` (TBD by design)
-- **Description**: Implement the team synergy bonus calculation system. Given a party composition, compute stat bonuses based on personality interactions between party members. The formula, pair vs team model, bonus types, and integration pattern must come from the design spec. Synergy bonuses are computed pre-combat and applied through `initCombatState`.
-- **Acceptance Criteria** *(to be refined after design — minimum requirements)*:
-  1. Synergy bonuses are computed correctly for the 3-member party
-  2. Bonuses are stat-typed (e.g., ATK +15%, DEF +10%) and expressible as percentage modifiers
-  3. Calculation is a pure function: same party composition → same bonuses
-  4. Bonuses are data-driven (configuration, not hardcoded per-character if-statements)
-  5. Unit tests verify correct bonus computation for known party compositions
-- **Dependencies**: Task 1 + Team Synergy System design spec
-- **Files**: TBD by design spec
+### Task 7: Team Synergy Calculator
+- **Domain**: code/backend
+- **Depth**: Light
+- **Component**: `narrative/`
+- **Description**: Implement the team synergy bonus calculation system per the approved design spec. Paradigm-based model: two paradigms (Well Rounded, Bond), binary threshold activation, highest-only selection, pure calculator function with data-driven config. Well Rounded checks that every trait has a party member ≥25%. Bond checks player alignment ≥80% with an NPC's dominant traits. The best-matching satisfied paradigm applies its bonus (power ×1.10 or speed ×1.10) to all player combatants at combat init.
+- **Acceptance Criteria**:
+  1. `calculateSynergy(playerPersonality, partyNpcPersonalities, paradigms)` returns `SynergyResult` (SynergyBonus | null)
+  2. Well Rounded paradigm: fires when max trait value across all party members ≥25 for each of the 6 traits; matchQuality = sum(maxTraitValues) / (6 × threshold)
+  3. Bond paradigm: fires when player's sum of an NPC's top-2 traits / NPC's own sum of top-2 traits ≥0.80; matchQuality = bestAlignmentRatio
+  4. Highest-only selection: when both paradigms satisfied, highest matchQuality wins; Well Rounded wins ties
+  5. Division-by-zero guard: if NPC dominant trait sum is 0, that NPC is skipped in Bond evaluation
+  6. Default paradigm config lives in `src/fixtures/synergyConfig.ts`, overridable for tests
+  7. TDD: tests cover Well Rounded pass/fail, Bond pass/fail, both satisfied (higher wins), no synergy, default personality (no bonus)
+- **Dependencies**: Task 1
+- **Files**: `src/narrative/synergyCalculator.ts`, `src/fixtures/synergyConfig.ts`, associated test file
+- **Reference**: Approved design spec (git: `docs/project_notes/branches/sprint-3/design_spec_team_synergy_system.md`)
 
 ---
 
 ### Task 8: Combat Synergy Integration
+- **Domain**: code/backend
+- **Depth**: Light
 - **Component**: `combat/sync.ts`
-- **Description**: Wire team synergy bonuses into combat initialization. When `initCombatState` creates a CombatState from GameState and EncounterConfig, it reads synergy bonuses from the narrative/synergy system and applies them as stat modifiers to the player party's combatants. This is the bridge between Sprint 3's synergy calculation and Sprint 2's combat engine.
+- **Description**: Wire team synergy bonuses into combat initialization. When `initCombatState` creates a CombatState from GameState and EncounterConfig, it calls `calculateSynergy()` with the player personality, party NPC personalities, and default paradigm config. If a synergy bonus is returned, apply the stat multiplier (power or speed) to all player party combatants via `Math.round(stat × multiplier)`. Enemy party is unaffected.
 - **Acceptance Criteria**:
-  1. `initCombatState` applies synergy bonuses to player party combatant stats
-  2. Synergy bonuses modify the correct stats (matching the synergy calculator's output types)
-  3. Combat without synergy bonuses (no narrative state, or no synergy defined) works identically to current behavior — no regressions
-  4. Unit tests cover: combat init with synergy, combat init without synergy (backward compatibility)
+  1. `initCombatState` calls `calculateSynergy()` and applies non-null bonus to player party combatant stats
+  2. Synergy bonuses modify the correct stat (`power` or `speed`) with `Math.round()` rounding
+  3. Combat without synergy bonuses (no narrative state, or no paradigm satisfied) works identically to current behavior — no regressions
+  4. Unit tests cover: combat init with synergy bonus applied, combat init without synergy (backward compatibility)
 - **Dependencies**: Task 7
 - **Files**: `src/combat/sync.ts` (extended), associated test updates
 
 ---
 
 ### Task 9: Narrative REST API
+- **Domain**: code/backend
+- **Depth**: Standard
 - **Component**: `api/`
 - **Description**: Implement a Fastify narrative plugin exposing all narrative operations through REST endpoints. Endpoints needed: get current scene (with available choices), submit choice, get narrative state, start/reset narrative, get synergy bonuses for current party. Follows the existing Fastify plugin pattern with JSON Schema validation and ApiResponse<T> envelopes.
 - **Acceptance Criteria**:
@@ -200,21 +221,42 @@ Build the narrative progression layer for Act 1: a scene graph engine with perso
 
 ---
 
-### Task 10: Act 1 Starter Scenes *(DESIGN REQUIRED)*
-- **Component**: `src/fixtures/` or `src/narrative/scenes/`
-- **Description**: Author 2-3 functional Act 1 scenes as JSON scene graph data. Scenes must include: narrative text, player choices with personality gates, consequence flags, and prerequisite conditions demonstrating cross-scene flag propagation. Scene content, branching model, and narrative arc must come from the design spec (which covers both branching strategy and scene content).
-- **Acceptance Criteria** *(to be refined after design — minimum requirements)*:
-  1. 2-3 scenes form a playable narrative sequence with at least one branching point
-  2. At least one choice is personality-gated with an ungated fallback
-  3. At least one scene has a prerequisite checking a flag set by a prior scene's choice
-  4. All scenes pass dead-end validation (no unreachable dead ends)
-  5. Scene data is valid JSON loadable by the scene graph engine
-- **Dependencies**: Task 2, Task 3 + Act 1 Narrative Design spec
-- **Files**: Scene JSON files (location TBD by design/engineering)
+### Task 10: Act 1 Narrative Design
+- **Domain**: narrative/game-design
+- **Depth**: Deep
+- **Component**: Narrative content design
+- **Description**: Design the Act 1 narrative arc for the investor demo: branching strategy (linear spine + variants vs true branching vs minimal), scene scope (which 2-3 scenes from the full Act 1 blueprint), choice design (personality gate placement, narrative weight, consequence flags), and scene pacing. This is creative/game-design work that produces a narrative design document specifying scene content, choice trees, flag names, prerequisite conditions, and personality gate thresholds for each scene.
+- **Acceptance Criteria**:
+  1. Branching strategy selected and documented with rationale
+  2. 2-3 scenes defined with narrative text outlines, choice trees, and flag specifications
+  3. At least one choice is personality-gated with an ungated fallback path
+  4. At least one scene has a prerequisite checking a flag set by a prior scene's choice
+  5. Flag naming convention established and all flags documented
+  6. Scene pacing supports investor demo flow (opening hook → choice → consequence visible)
+- **Dependencies**: None (can run in parallel with Tasks 1-9)
+- **Files**: Design document output (blueprint from detail phase)
 
 ---
 
-### Task 11: Integration Validation
+### Task 11: Act 1 Scene JSON Authoring
+- **Domain**: narrative/content
+- **Depth**: Standard
+- **Component**: `src/fixtures/` or `src/narrative/scenes/`
+- **Description**: Author the Act 1 starter scenes as JSON scene graph data, implementing the narrative design from Task 10. Convert the design document's scene outlines, choice trees, flag specs, and prerequisites into valid JSON loadable by the scene graph engine.
+- **Acceptance Criteria**:
+  1. 2-3 scenes authored as JSON matching the scene graph engine's expected format
+  2. All personality gates, prerequisite conditions, and consequence flags match the Task 10 design
+  3. All scenes pass dead-end validation (no unreachable dead ends)
+  4. Scene data is valid JSON loadable by the scene graph engine (Task 2)
+  5. Unit tests validate scene data structure and dead-end freedom
+- **Dependencies**: Task 2, Task 3, Task 10
+- **Files**: Scene JSON files (location determined during detail phase)
+
+---
+
+### Task 12: Integration Validation
+- **Domain**: code/backend
+- **Depth**: Light
 - **Component**: Cross-system
 - **Description**: End-to-end validation that all Sprint 3 systems work together through the API. Test the complete flow: start narrative → traverse scenes → make choices → observe flag propagation → compute synergy → initiate combat with synergy bonuses applied → save/load mid-narrative.
 - **Acceptance Criteria**:
@@ -223,25 +265,29 @@ Build the narrative progression layer for Act 1: a scene graph engine with perso
   3. Save/load during active narrative preserves all state (scene position, flags, visited scenes)
   4. Backward compatibility: Sprint 1+2 API operations work unchanged
   5. No unhandled promise rejections across all integration test scenarios
-- **Dependencies**: Task 8, Task 9, Task 10
+- **Dependencies**: Task 8, Task 9, Task 11
 - **Files**: Integration test file(s) in `src/` or `tests/`
 
 ---
 
-## 6.5 Design Recommendations
+## 6.5 Detail Assessment
 
-| Task(s) | Item Name | Recommendation | Rationale |
-|---------|-----------|----------------|-----------|
-| Task 7, 8 | Team Synergy System | **DESIGN REQUIRED** | Formula undefined. Pair-based vs team composition, stat bonus types, player transparency, and balance all need game design exploration. Clear boundary with GROUP action synergy (combat-time 1.5x is separate). |
-| Task 10 | Act 1 Narrative Design | **DESIGN REQUIRED** | Branching strategy (linear spine + variants vs true branching) determines scene content structure. Scene pacing, choice meaning, personality gate placement, and flag design are creative decisions requiring user input. |
-| Task 1 | Narrative Type System | Ready for execution | Additive type extension following established patterns. No design decisions — engineering determines field names and structure. |
-| Tasks 2, 3, 4 | Scene & Choice Engine | Ready for execution | Architecture decided (directed graph + flag-based consequences). Implementation is mechanical given the scene graph and consequence model decisions. |
-| Task 5 | Narrative State Updaters | Ready for execution | Follows established pure-function pattern in stateUpdaters.ts. No novel design. |
-| Task 6 | Persistence Integration | Ready for execution | Validation and possible extension of existing save/load. Narrative state is JSON-serializable by design. |
-| Task 9 | Narrative REST API | Ready for execution | Follows established Fastify plugin pattern. Endpoint design derives from the narrative operations. |
-| Task 11 | Integration Validation | Ready for execution | Test scenarios derive from the implemented systems. No novel design. |
+| Task(s) | Domain | Depth | Rationale |
+|---------|--------|-------|-----------|
+| Task 1 | code/backend | Light — autonomous | Additive type extension following established patterns (Sprint 2 used types/combat.ts). No design decisions. |
+| Task 2 | code/backend | Standard — confirmation needed | New module but mirrors existing dialogue engine pattern. Key decisions: graph data structure, prerequisite evaluation API. |
+| Task 3 | code/backend | Standard — confirmation needed | Follows existing stateUpdaters pattern but interfaces between scene engine and state system need definition. |
+| Task 4 | code/backend | Standard — confirmation needed | Integrates Tasks 2+3 into coherent state machine. Transition function API and error handling model need confirmation. |
+| Task 5 | code/backend | Light — autonomous | Straightforward pattern application — extends stateUpdaters.ts following established conventions. |
+| Task 6 | code/backend | Light — autonomous | Validation work, possibly requiring minimal code changes. JSON serialization constraints already defined. |
+| Task 7 | code/backend | Light — autonomous | Approved design spec provides complete types, algorithms, edge cases, and test scenarios. Implementation is mechanical. |
+| Task 8 | code/backend | Light — autonomous | Well-defined integration point. Design spec specifies exact `initCombatState` modification. |
+| Task 9 | code/backend | Standard — confirmation needed | Follows Fastify plugin pattern but has multiple endpoints. Request/response shapes and error handling need confirmation. |
+| Task 10 | narrative/game-design | Deep — design exploration required | Creative decisions: branching strategy, scene pacing, choice meaning, personality gate placement, flag design. No existing spec. |
+| Task 11 | narrative/content | Standard — confirmation needed | Mechanical authoring guided by Task 10 design, but JSON structure and scene data format need confirmation against engine expectations. |
+| Task 12 | code/backend | Light — autonomous | Test scenarios derive from implemented systems. No novel design. |
 
-**Design sessions must complete before Task 7 and Task 10 begin.** Both design sessions can run concurrently with Tasks 1-6 implementation (they touch different surfaces). Task 8 (combat synergy integration) depends on Task 7's design being resolved.
+**Cross-domain note:** Task 10 (narrative/game-design) produces the design that Task 11 (narrative/content) implements. Tasks 1-9 and 12 are all code/backend and can be handled by a single specialist. Task 10 requires a different specialist with game design / narrative expertise.
 
 ---
 
@@ -254,16 +300,17 @@ Build the narrative progression layer for Act 1: a scene graph engine with perso
 | Type | What | Which Tasks |
 |------|------|-------------|
 | Unit | Scene graph traversal, prerequisite evaluation, choice processing, flag system, narrative state transitions, synergy calculation | Tasks 2, 3, 4, 5, 7 |
-| Integration | Full API request flows, save/load with narrative state, cross-system narrative + combat | Tasks 6, 9, 11 |
+| Integration | Full API request flows, save/load with narrative state, cross-system narrative + combat | Tasks 6, 9, 12 |
 | Validation | Dead-end detection on scene graphs, backward compatibility with pre-narrative saves | Tasks 2, 6 |
-| TDD (synergy) | Known party composition → expected bonus values once formula is designed | Task 7 |
+| TDD (synergy) | Known party composition → expected bonus values per design spec test scenarios | Task 7 |
 
 **Critical scenarios:**
 - No dead ends: every scene reachable through normal traversal has at least one available choice (Task 2)
 - Flag propagation: choice in Scene A sets flag → Scene C prerequisite checks that flag (Tasks 3, 4)
 - Backward compatibility: loading a Sprint 1+2 save (no NarrativeState) doesn't crash (Task 6)
 - Synergy-combat bridge: synergy bonuses correctly modify combatant stats in initCombatState (Task 8)
-- Full narrative arc via API: start → traverse → choose → observe consequences (Task 11)
+- Full narrative arc via API: start → traverse → choose → observe consequences (Task 12)
+- Synergy TDD targets: Well Rounded pass/fail, Bond pass/fail, both satisfied, no synergy, default personality (Task 7)
 
 **Test file convention:** Co-located (`.test.ts` next to source), matching Sprint 1+2 pattern.
 
@@ -274,44 +321,60 @@ Build the narrative progression layer for Act 1: a scene graph engine with perso
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
 | GameState type extension breaks Sprint 1+2 code | Low | High | NarrativeState is nullable (`NarrativeState \| null`). Existing code never reads it. Run full Sprint 1+2 test suite after type changes. |
-| Synergy design reveals scope larger than one task | Medium | Medium | Design session bounds the POC: simple formula, limited bonus types. Complex synergy deferred to future sprint. |
-| Scene content authoring takes longer than engine code | Medium | Medium | Start with 2 scenes minimum. Third scene is stretch. Engine is proven with test fixtures regardless. |
-| Branching strategy design produces more content than fits in sprint | Medium | Medium | Linear spine + variants is the recommended starting point in design — caps content volume. |
+| Scene content authoring takes longer than engine code | Medium | Medium | Split into design (Task 10) and authoring (Task 11). Start with 2 scenes minimum. Engine is proven with test fixtures regardless. |
+| Branching strategy design produces more content than fits in sprint | Medium | Medium | Linear spine + variants is the recommended starting point — caps content volume. Deep exploration in Task 10 resolves this before authoring begins. |
 | Narrative state makes save files backward-incompatible | Low | Medium | Task 6 explicitly tests loading pre-narrative saves. NarrativeState defaults to null if missing. |
-| Visited scene set implemented as JS Set — fails JSON serialization | Low | Medium | NarrativeState constraint: no Sets, Maps, or circular references. Visited scenes must be stored as an array or object, not a `Set`. Serialization constraint is confirmed — apply at type definition time (Task 1). |
-| Scene graph engine duplicates dialogue engine patterns | Low | Low | Intentional parallel — both are graph traversal with gates. `src/dialogue/dialogueEngine.ts` is the reference. Consider shared utilities if overlap is significant (engineering decision). |
+| Visited scene set implemented as JS Set — fails JSON serialization | Low | Medium | NarrativeState constraint: no Sets, Maps, or circular references. Visited scenes stored as array or object. Enforced at type definition time (Task 1). |
+| Scene graph engine duplicates dialogue engine patterns | Low | Low | Intentional parallel — both are graph traversal with gates. Consider shared utilities if overlap is significant (detail phase decision). |
+| Narrative design (Task 10) delays engine work | Low | Medium | Task 10 has no dependencies on engine tasks. Can run in parallel with Tasks 1-9. Only Task 11 is blocked on it. |
 
 ---
 
-## 10. Planning Context for Engineer
+## 10. Planning Context for Detail Phase
 
-**Sequencing Considerations:**
-- Tasks 1-4 form a dependency chain (types → engine → choices → state machine). Task 5 extends state updaters after the state machine is stable.
-- Task 6 (persistence) can proceed once Task 5 is done — it's validation work, possibly requiring minimal code changes.
-- Task 9 (API) depends on Tasks 5 and 6 but is independent of synergy work.
-- Tasks 7-8 (synergy) are blocked on design but independent of Tasks 2-6. Once design completes, they can be built in parallel with or after the engine tasks.
-- Task 10 (scene content) is blocked on narrative design but the scene engine (Task 2) can be tested with fixture data.
+### Domain-Specific Considerations
 
-**Parallelization Opportunities:**
-- Design sessions (synergy + narrative) can run concurrently with Tasks 1-6 implementation
-- Task 6 (persistence) and Task 9 (API) touch independent surfaces once Task 5 is complete
-- Tasks 7-8 (synergy) and Task 10 (scenes) are independent of each other after their respective design specs
-
-**Engineering Questions:**
-- Should narrative types live in `types/index.ts` (extending the existing file) or `types/narrative.ts` (new file importing from index)? Sprint 2 used a separate `types/combat.ts` — same pattern may apply.
-- How much overlap exists between the scene graph engine and the existing dialogue engine? `src/dialogue/dialogueEngine.ts` and `src/dialogue/fixtures.ts` are direct reference patterns — both use personality-gated graph traversal. Should they share graph traversal utilities or remain independent?
-- Where does the synergy calculator live: `narrative/` (it's a narrative-layer concept) or `combat/` (it's consumed by combat)? Design spec may inform this.
-- Scene JSON files: `src/fixtures/scenes/` (alongside encounter.json) or `src/narrative/scenes/` (co-located with engine)? Reference: `src/dialogue/fixtures.ts` shows the existing fixture co-location pattern.
-- The choice consequence engine should reuse `updateNPCAffection`, `updateNPCTrust`, `updateNPCRelationship`, and `processDialogueChoice` from `stateUpdaters.ts` — engineer should read these before designing the consequence updater API to avoid duplication or inconsistency.
-
-**Constraints:**
-- All narrative state transitions must produce new objects (ADR-012)
+**code/backend (Tasks 1-9, 12):**
+- All state transitions must produce new objects (ADR-012)
 - NarrativeState must be JSON-serializable — no Sets, Maps, or circular references
 - Scene prerequisites must always have an ungated fallback path (no dead ends constraint)
 - Synergy bonuses integrate through `initCombatState` in sync.ts, not by modifying CombatState directly (ADR-013)
 - Sprint 1+2 test suite must remain green after all Sprint 3 changes
+- Reference `src/dialogue/dialogueEngine.ts` as the pattern for graph traversal with personality gates
+- Reference `src/state/stateUpdaters.ts` for the existing pure-function state transition pattern
+- Synergy calculator has a complete approved design spec (git history: `design_spec_team_synergy_system.md`) — Tasks 7-8 should reference it directly
 
-**Risk Context:**
-- The synergy system is the highest design risk — formula undefined, integration point is sensitive (combat init). Keep the initial implementation simple and bounded.
-- Scene content authoring is the highest effort risk — real narrative text is slower to produce than code. The 2-3 scene target is intentionally conservative.
-- GameState extension is the highest regression risk — changes to the root type affect every module. The additive nullable field approach minimizes blast radius.
+**narrative/game-design (Task 10):**
+- Act 1 is for investor demo — pacing must hook quickly and demonstrate choice consequence within 2-3 scenes
+- 3 NPCs (Elena, Lars, Kade) with fixed personality archetypes — gates must be achievable through dialogue
+- Branching strategy determines content volume and test complexity — favor bounded scope
+- Flag naming must be consistent and documented for cross-scene prerequisite evaluation
+- Personality gate thresholds must be achievable through normal gameplay (traits range 5-35%)
+
+**narrative/content (Task 11):**
+- Scene JSON must match the schema defined by the scene graph engine (Task 2)
+- All flags referenced in prerequisites must be settable by a prior scene's choices
+- Dead-end validation must pass — every scene needs at least one ungated choice
+
+### Cross-Domain Dependencies
+
+- Task 10 (narrative/game-design) → Task 11 (narrative/content): design document defines what scenes to author
+- Task 11 (narrative/content) → Task 2 (code/backend): scene JSON must conform to engine's expected format
+- Task 7 (code/backend) references approved design spec — no cross-domain dependency (spec is complete)
+
+### Sequencing Considerations
+
+- Tasks 1-4 form a dependency chain (types → engine → choices → state machine). Task 5 extends state updaters after the state machine is stable.
+- Task 6 (persistence) can proceed once Task 5 is done — it's validation work, possibly requiring minimal code changes.
+- Task 9 (API) depends on Tasks 5 and 6 but is independent of synergy work.
+- Tasks 7-8 (synergy) are independent of Tasks 2-6. They depend only on Task 1 (types) and the completed design spec.
+- Task 10 (narrative design) can run in parallel with all code tasks — it has no code dependencies.
+- Task 11 (scene authoring) is blocked on both Task 10 (design) and Tasks 2-3 (engine, so JSON format is defined).
+- Task 12 (integration) is the final task, blocked on Tasks 8, 9, and 11.
+
+### Open Questions
+
+- Should narrative types live in `types/index.ts` (extending the existing file) or `types/narrative.ts` (new file importing from index)? Sprint 2 used a separate `types/combat.ts` — same pattern may apply.
+- How much overlap exists between the scene graph engine and the existing dialogue engine? Should they share graph traversal utilities or remain independent?
+- Scene JSON files: `src/fixtures/scenes/` (alongside encounter.json) or `src/narrative/scenes/` (co-located with engine)?
+- The choice consequence engine should reuse `updateNPCAffection`, `updateNPCTrust`, `updateNPCRelationship`, and `processDialogueChoice` from `stateUpdaters.ts` — detail phase should read these before designing the consequence API.

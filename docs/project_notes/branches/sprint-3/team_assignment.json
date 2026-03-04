@@ -1,0 +1,80 @@
+{
+  "specialist_assignments": [
+    {
+      "specialist": "game-backend-engine",
+      "tasks": [
+        {"task_id": "T1", "depth": "Light"},
+        {"task_id": "T2", "depth": "Standard"},
+        {"task_id": "T3", "depth": "Standard"},
+        {"task_id": "T4", "depth": "Standard"},
+        {"task_id": "T5", "depth": "Light"},
+        {"task_id": "T6", "depth": "Light"},
+        {"task_id": "T7", "depth": "Light"},
+        {"task_id": "T8", "depth": "Light"},
+        {"task_id": "T9", "depth": "Standard"},
+        {"task_id": "T12", "depth": "Light"}
+      ],
+      "rationale": "All code/backend tasks. Domain tags (backend, typescript, game-engine, state-machine, immutable-state, narrative, scene-graph, rpg, rest-api, persistence) match task domains for all 10 tasks."
+    },
+    {
+      "specialist": "narrative-designer",
+      "tasks": [
+        {"task_id": "T10", "depth": "Deep"},
+        {"task_id": "T11", "depth": "Standard"}
+      ],
+      "rationale": "Narrative/game-design and narrative/content tasks. Domain tags (narrative, game-design, scene-design, branching-narrative, choice-design, consequence-system, personality-gates, scene-graph) match both task domains."
+    }
+  ],
+  "producer_assignments": [
+    {
+      "specialist": "game-backend-engine",
+      "producer": "code-writer",
+      "output_format": "source",
+      "tasks_output_files": [
+        "src/types/narrative.ts",
+        "src/narrative/sceneEngine.ts",
+        "src/narrative/choiceEngine.ts",
+        "src/narrative/narrativeStateMachine.ts",
+        "src/state/stateUpdaters.ts",
+        "src/persistence/saveLoad.ts",
+        "src/narrative/synergyCalculator.ts",
+        "src/fixtures/synergyConfig.ts",
+        "src/combat/sync.ts",
+        "src/api/narrative.ts",
+        "src/api/index.ts"
+      ]
+    },
+    {
+      "specialist": "narrative-designer",
+      "producer": "document-writer",
+      "output_format": "markdown",
+      "tasks_output_files": [
+        "docs/project_notes/branches/sprint-3/blueprint_narrative_designer.md"
+      ]
+    }
+  ],
+  "execution_order": [
+    {
+      "phase": 1,
+      "specialists": ["game-backend-engine"],
+      "rationale": "All code/backend tasks (T1-T9, T12) with no cross-specialist dependencies. Handles type system, engine modules, synergy system, REST API, and integration validation."
+    },
+    {
+      "phase": 2,
+      "specialists": ["narrative-designer"],
+      "rationale": "T10 (narrative design) has no code dependencies but T11 (scene JSON authoring) requires the scene engine JSON format from T2-T3 game-backend-engine blueprints. Running after Phase 1 ensures schema is defined before authoring."
+    }
+  ],
+  "dependencies": [
+    {
+      "specialist": "narrative-designer",
+      "reads_blueprint_from": "game-backend-engine",
+      "reason": "T11 (Act 1 Scene JSON Authoring) must conform to the scene engine JSON format defined in T2 (Scene Graph Engine) and T3 (Choice & Consequence Engine) blueprints."
+    }
+  ],
+  "unmatched_tasks": [],
+  "prerequisite_check": {
+    "code-writer/source": "PASS — no required tools",
+    "document-writer/markdown": "PASS — no required tools"
+  }
+}

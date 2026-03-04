@@ -1,0 +1,64 @@
+{
+  "specialist": "game-backend-engine",
+  "gate_started": "2026-03-02T15:00:00Z",
+  "gate_completed": "2026-03-02T15:15:00Z",
+  "assumptions": [
+    { "id": "A1", "title": "Narrative Types in Separate File", "default": "Create types/narrative.ts as standalone leaf file", "status": "accepted", "user_override": null },
+    { "id": "A2", "title": "Scene Graphs Are Stateless Parameters", "default": "Scene data passed as parameter, not stored on GameState", "status": "accepted", "user_override": null },
+    { "id": "A3", "title": "Visited Scenes Stored as Array", "default": "NarrativeState.visitedSceneIds is readonly string[]", "status": "accepted", "user_override": null },
+    { "id": "A4", "title": "Choice Flag Map Is Record<string, boolean>", "default": "Simple string-to-boolean map", "status": "accepted", "user_override": null },
+    { "id": "A5", "title": "Scene Engine and Dialogue Engine Independent", "default": "No shared utilities between scene and dialogue engines", "status": "accepted", "user_override": null },
+    { "id": "A6", "title": "Silent Error Handling for Missing Narrative State", "default": "Return input state unchanged when narrativeState is null", "status": "accepted", "user_override": null },
+    { "id": "A7", "title": "Synergy Types in types/narrative.ts", "default": "SynergyBonus, SynergyResult, ParadigmConfig in narrative.ts", "status": "accepted", "user_override": null }
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "Scene Prerequisite Model",
+      "context": "Scenes need prerequisites (trait checks, flag checks, visited-scene checks). Options: flat array implicit AND, flat with operator field (all/any), or compound AND/OR nesting.",
+      "options": ["A: Flat array, implicit AND", "B: Flat list with operator field", "C: Compound AND/OR nesting"],
+      "chosen": "A",
+      "user_input": null
+    },
+    {
+      "id": "D2",
+      "title": "SceneChoice Effect Reuse",
+      "context": "Choice engine needs to apply personality adjustments and NPC state changes. Can reuse existing stateUpdaters (applyPersonalityAdjustment, updateNPCRelationship) or create new ones.",
+      "options": ["A: Reuse existing updaters directly", "B: New narrative-specific effect updaters", "C: Shared effect types with generic applier"],
+      "chosen": "A",
+      "user_input": null
+    },
+    {
+      "id": "D3",
+      "title": "Scene JSON Location",
+      "context": "Scene JSON data files need a home. Existing pattern: encounter.json in src/fixtures/, NPC templates in src/state/npcs.ts.",
+      "options": ["A: src/fixtures/scenes/", "B: src/narrative/scenes/", "C: src/data/scenes/"],
+      "chosen": "A",
+      "user_input": null
+    },
+    {
+      "id": "D4",
+      "title": "NarrativeState Result Type",
+      "context": "State machine transitions need a return type. Plan requires typed errors for invalid transitions. Options: discriminated union, bundled result like DialogueResult, or state-only return.",
+      "options": ["A: Discriminated union (success | error)", "B: Bundled result like DialogueResult", "C: State-only return"],
+      "chosen": "A",
+      "user_input": null
+    },
+    {
+      "id": "D5",
+      "title": "initCombatState Synergy Integration",
+      "context": "initCombatState has an unused _gameState parameter (placeholder). Synergy calculator needs player + NPC personality data. Options: read from GameState internally, pass synergy as extra param, or post-process externally.",
+      "options": ["A: Read from GameState parameter", "B: Synergy as extra parameter", "C: Post-processing by caller"],
+      "chosen": "A",
+      "user_input": null
+    },
+    {
+      "id": "D6",
+      "title": "Narrative Error Codes Location",
+      "context": "Narrative needs error codes (SCENE_NOT_FOUND, CHOICE_NOT_AVAILABLE, NARRATIVE_NOT_STARTED). Options: extend existing ErrorCodes in types/index.ts or create separate NarrativeErrorCodes in types/narrative.ts.",
+      "options": ["A: Extend existing ErrorCodes", "B: Separate NarrativeErrorCodes"],
+      "chosen": "A",
+      "user_input": null
+    }
+  ]
+}

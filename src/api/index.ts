@@ -23,6 +23,7 @@ import { playerPlugin } from './player.js';
 import { npcPlugin } from './npc.js';
 import { dialoguePlugin } from './dialogue.js';
 import { combatPlugin } from './combat.js';
+import { narrativePlugin } from './narrative.js';
 
 // ============================================================================
 // Shared session state container
@@ -126,6 +127,61 @@ async function globalErrorHandler(
     return;
   }
 
+  // Narrative-specific error codes
+  if (domainCode === ErrorCodes.SCENE_NOT_FOUND) {
+    const response: ApiResponse<never> = {
+      success: false,
+      error: { code: ErrorCodes.SCENE_NOT_FOUND, message: error.message },
+    };
+    await reply.code(404).send(response);
+    return;
+  }
+
+  if (domainCode === ErrorCodes.NARRATIVE_NOT_STARTED) {
+    const response: ApiResponse<never> = {
+      success: false,
+      error: { code: ErrorCodes.NARRATIVE_NOT_STARTED, message: error.message },
+    };
+    await reply.code(400).send(response);
+    return;
+  }
+
+  if (domainCode === ErrorCodes.CHOICE_NOT_AVAILABLE) {
+    const response: ApiResponse<never> = {
+      success: false,
+      error: { code: ErrorCodes.CHOICE_NOT_AVAILABLE, message: error.message },
+    };
+    await reply.code(400).send(response);
+    return;
+  }
+
+  if (domainCode === ErrorCodes.CHOICE_NOT_FOUND) {
+    const response: ApiResponse<never> = {
+      success: false,
+      error: { code: ErrorCodes.CHOICE_NOT_FOUND, message: error.message },
+    };
+    await reply.code(404).send(response);
+    return;
+  }
+
+  if (domainCode === ErrorCodes.PREREQUISITE_NOT_MET) {
+    const response: ApiResponse<never> = {
+      success: false,
+      error: { code: ErrorCodes.PREREQUISITE_NOT_MET, message: error.message },
+    };
+    await reply.code(400).send(response);
+    return;
+  }
+
+  if (domainCode === ErrorCodes.INVALID_TRANSITION) {
+    const response: ApiResponse<never> = {
+      success: false,
+      error: { code: ErrorCodes.INVALID_TRANSITION, message: error.message },
+    };
+    await reply.code(400).send(response);
+    return;
+  }
+
   // Fallback: generic 500
   const response: ApiResponse<never> = {
     success: false,
@@ -171,6 +227,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(npcPlugin, { prefix: '/api/npc' });
   await fastify.register(dialoguePlugin, { prefix: '/api/dialogue' });
   await fastify.register(combatPlugin, { prefix: '/api/combat' });
+  await fastify.register(narrativePlugin, { prefix: '/api/narrative' });
 
   return fastify;
 }

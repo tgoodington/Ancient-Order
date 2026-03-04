@@ -18,10 +18,14 @@ import {
   addConversationEntry,
   processDialogueChoice,
   updateCombatState,
+  initializeNarrative,
+  updateNarrativeState,
+  clearNarrative,
 } from './stateUpdaters.js';
 import { createNewGameState } from './gameState.js';
 import { GameState, Personality, ConversationEntry, DialogueOption } from '../types/index.js';
 import type { CombatState } from '../types/combat.js';
+import type { NarrativeState } from '../types/narrative.js';
 
 // ============================================================================
 // Helpers
@@ -549,5 +553,124 @@ describe('updateCombatState', () => {
     const stateWithOldTimestamp = { ...baseState, timestamp: 0 };
     const updated = updateCombatState(stateWithOldTimestamp, null);
     expect(updated.timestamp).toBeGreaterThan(0);
+  });
+});
+
+// ============================================================================
+// initializeNarrative
+// ============================================================================
+
+describe('initializeNarrative', () => {
+  it('returns a new object (reference inequality)', () => {
+    const updated = initializeNarrative(baseState, 'scene_opening');
+    expect(updated).not.toBe(baseState);
+  });
+
+  it('sets narrativeState.currentSceneId to the provided scene ID', () => {
+    const updated = initializeNarrative(baseState, 'scene_opening');
+    expect(updated.narrativeState?.currentSceneId).toBe('scene_opening');
+  });
+
+  it('includes starting scene in visitedSceneIds', () => {
+    const updated = initializeNarrative(baseState, 'scene_opening');
+    expect(updated.narrativeState?.visitedSceneIds).toContain('scene_opening');
+  });
+
+  it('initializes choiceFlags as empty', () => {
+    const updated = initializeNarrative(baseState, 'scene_opening');
+    expect(Object.keys(updated.narrativeState?.choiceFlags ?? {})).toHaveLength(0);
+  });
+
+  it('initializes sceneHistory as empty', () => {
+    const updated = initializeNarrative(baseState, 'scene_opening');
+    expect(updated.narrativeState?.sceneHistory).toHaveLength(0);
+  });
+
+  it('does not mutate the input state', () => {
+    const originalNarrative = baseState.narrativeState;
+    initializeNarrative(baseState, 'scene_opening');
+    expect(baseState.narrativeState).toBe(originalNarrative);
+  });
+
+  it('updates the timestamp', () => {
+    const stale = { ...baseState, timestamp: 0 };
+    const updated = initializeNarrative(stale, 'scene_opening');
+    expect(updated.timestamp).toBeGreaterThan(0);
+  });
+
+  it('preserves other fields (player, npcs, conversationLog)', () => {
+    const updated = initializeNarrative(baseState, 'scene_opening');
+    expect(updated.player).toBe(baseState.player);
+    expect(updated.npcs).toBe(baseState.npcs);
+    expect(updated.conversationLog).toBe(baseState.conversationLog);
+  });
+});
+
+// ============================================================================
+// updateNarrativeState
+// ============================================================================
+
+describe('updateNarrativeState', () => {
+  const sampleNarrative: NarrativeState = {
+    currentSceneId: 'scene_two',
+    visitedSceneIds: ['scene_opening', 'scene_two'],
+    choiceFlags: { cautious_opening: true },
+    sceneHistory: [
+      { sceneId: 'scene_opening', choiceId: 'choice_cautious', timestamp: 1000 },
+    ],
+  };
+
+  it('returns a new object (reference inequality)', () => {
+    const updated = updateNarrativeState(baseState, sampleNarrative);
+    expect(updated).not.toBe(baseState);
+  });
+
+  it('replaces narrativeState with the provided NarrativeState', () => {
+    const updated = updateNarrativeState(baseState, sampleNarrative);
+    expect(updated.narrativeState).toBe(sampleNarrative);
+  });
+
+  it('does not mutate the input state', () => {
+    const originalNarrative = baseState.narrativeState;
+    updateNarrativeState(baseState, sampleNarrative);
+    expect(baseState.narrativeState).toBe(originalNarrative);
+  });
+
+  it('preserves other fields (player, npcs)', () => {
+    const updated = updateNarrativeState(baseState, sampleNarrative);
+    expect(updated.player).toBe(baseState.player);
+    expect(updated.npcs).toBe(baseState.npcs);
+  });
+});
+
+// ============================================================================
+// clearNarrative
+// ============================================================================
+
+describe('clearNarrative', () => {
+  it('returns a new object (reference inequality)', () => {
+    const withNarrative = initializeNarrative(baseState, 'scene_opening');
+    const cleared = clearNarrative(withNarrative);
+    expect(cleared).not.toBe(withNarrative);
+  });
+
+  it('sets narrativeState to null', () => {
+    const withNarrative = initializeNarrative(baseState, 'scene_opening');
+    const cleared = clearNarrative(withNarrative);
+    expect(cleared.narrativeState).toBeNull();
+  });
+
+  it('does not mutate the input state', () => {
+    const withNarrative = initializeNarrative(baseState, 'scene_opening');
+    const originalNarrative = withNarrative.narrativeState;
+    clearNarrative(withNarrative);
+    expect(withNarrative.narrativeState).toBe(originalNarrative);
+  });
+
+  it('preserves other fields (player, npcs)', () => {
+    const withNarrative = initializeNarrative(baseState, 'scene_opening');
+    const cleared = clearNarrative(withNarrative);
+    expect(cleared.player).toBe(withNarrative.player);
+    expect(cleared.npcs).toBe(withNarrative.npcs);
   });
 });

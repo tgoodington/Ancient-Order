@@ -93,4 +93,28 @@ This file logs work completed on tickets. Keep it simple - just enough to rememb
 - **Artifacts**: build_report.md, 793 tests, ~5000 lines of production code
 - **URL**: https://github.com/tgoodington/Ancient-Order (push candidate after git confirmation)
 
+### 2026-03-03 - BUILD-002: Sprint 3 Narrative & State Machine Implementation
+- **Status**: Completed
+- **Description**: Full implementation of Sprint 3: scene graph engine, choice/consequence system, team synergy bonuses, narrative REST API, and Act 1 demo content
+- **Scope**: 12 tasks (T1-T12), 2 specialist domains (Game Backend Engine, Narrative Designer)
+- **Completion**: 969/969 tests passing across 31 test files (up from 793)
+- **Files**: 16 new files, 9 modified files
+- **Review Chain**:
+  - Phase 1 (Backend): Specialist review PASS (1 remediation), Security review PASS (2 issues fixed: maxLength on API inputs, gate detail leak removed)
+  - Phase 2 (Narrative): Specialist review PASS (1 remediation: flag prerequisite scene added, tests strengthened), Security review PASS (no findings)
+- **Key Deliverables**:
+  - `src/types/narrative.ts` — 20 type exports
+  - `src/narrative/` — sceneEngine, choiceEngine, narrativeStateMachine, synergyCalculator
+  - `src/api/narrative.ts` — 6 REST endpoints
+  - `src/fixtures/scenes/act1_demo.json` — 4 demo scenes
+- **Deviations**: 4 scenes instead of 3 (added scene_combat_briefing to satisfy flag prerequisite AC)
+- **Artifacts**: build_report.md, 4 new ADRs (036-039)
+
+### 2026-03-03 - PLAN-003: Sprint 3 Planning & Detail Phase
+- **Status**: Completed
+- **Description**: v9 workflow planning, team assembly, and detail phase for Sprint 3
+- **Scope**: 12 tasks planned, 2 specialists assembled (Game Backend Engine, Narrative Designer)
+- **Key Decisions**: Flat AND prerequisites (D1), scene fixtures in src/fixtures/scenes/ (D3), synergy via initCombatState (D5), Ironhold town name (D5-narrative)
+- **Artifacts**: plan.md, team_assignment.json, 2 blueprints, build_brief.md
+
 <!-- Add work log entries below this line -->

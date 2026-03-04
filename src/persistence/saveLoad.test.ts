@@ -59,6 +59,7 @@ function makeGameState(playerName: string = 'Rin'): GameState {
     currentDialogueNode: null,
     saveSlot: null,
     combatState: null,
+    narrativeState: null,
     conversationLog: [],
     timestamp: 1_700_000_000_000,
   };
@@ -442,5 +443,148 @@ describe('directory creation', () => {
     // Directory should now exist
     const stat = await fs.stat(nested);
     expect(stat.isDirectory()).toBe(true);
+  });
+});
+
+// ============================================================================
+// Narrative State Persistence
+// ============================================================================
+
+describe('narrativeState persistence', () => {
+  it('saves and loads a state with narrativeState: null', async () => {
+    const state = makeGameState();
+    await saveGame(state, 1, tempDir);
+    const loaded = await loadGame(1, tempDir);
+    expect(loaded.narrativeState).toBeNull();
+  });
+
+  it('saves and loads a state with a full NarrativeState (round-trip)', async () => {
+    const state: GameState = {
+      ...makeGameState(),
+      narrativeState: {
+        currentSceneId: 'scene_two',
+        visitedSceneIds: ['scene_opening', 'scene_two'],
+        choiceFlags: { cautious_opening: true },
+        sceneHistory: [
+          { sceneId: 'scene_opening', choiceId: 'choice_cautious', timestamp: 1700000001000 },
+        ],
+      },
+    };
+    await saveGame(state, 2, tempDir);
+    const loaded = await loadGame(2, tempDir);
+    expect(loaded.narrativeState).not.toBeNull();
+    expect(loaded.narrativeState?.currentSceneId).toBe('scene_two');
+    expect(loaded.narrativeState?.visitedSceneIds).toContain('scene_opening');
+    expect(loaded.narrativeState?.visitedSceneIds).toContain('scene_two');
+    expect(loaded.narrativeState?.choiceFlags['cautious_opening']).toBe(true);
+    expect(loaded.narrativeState?.sceneHistory).toHaveLength(1);
+  });
+
+  it('preserves choice flags across save/load', async () => {
+    const state: GameState = {
+      ...makeGameState(),
+      narrativeState: {
+        currentSceneId: 'scene_ending',
+        visitedSceneIds: ['scene_opening', 'scene_two', 'scene_ending'],
+        choiceFlags: { brave_opening: true, flag_two: true },
+        sceneHistory: [],
+      },
+    };
+    await saveGame(state, 3, tempDir);
+    const loaded = await loadGame(3, tempDir);
+    expect(loaded.narrativeState?.choiceFlags['brave_opening']).toBe(true);
+    expect(loaded.narrativeState?.choiceFlags['flag_two']).toBe(true);
+  });
+
+  it('loads an old save (missing narrativeState) and normalizes to null', async () => {
+    // Write a JSON file that does not include narrativeState (simulates Sprint 1/2 save)
+    const oldSave = {
+      player: {
+        id: 'player-old',
+        name: 'OldPlayer',
+        personality: {
+          patience: 16.67, empathy: 16.67, cunning: 16.67,
+          logic: 16.67, kindness: 16.67, charisma: 16.65,
+        },
+      },
+      npcs: {
+        npc_scout_elena: {
+          id: 'npc_scout_elena',
+          archetype: 'Loyal Scout',
+          personality: { patience: 25, empathy: 30, cunning: 10, logic: 15, kindness: 15, charisma: 5 },
+          affection: 0,
+          trust: 0,
+        },
+      },
+      currentDialogueNode: null,
+      saveSlot: null,
+      combatState: null,
+      // narrativeState intentionally omitted
+      conversationLog: [],
+      timestamp: 1_600_000_000_000,
+    };
+    const filePath = path.join(tempDir, 'slot_4.json');
+    await fs.writeFile(filePath, JSON.stringify(oldSave, null, 2), 'utf-8');
+
+    const loaded = await loadGame(4, tempDir);
+    // narrativeState should be normalized to null (not undefined)
+    expect(loaded.narrativeState).toBeNull();
+  });
+
+  it('validateGameState accepts narrativeState: null', () => {
+    const state = makeGameState(); // narrativeState: null
+    expect(validateGameState(state)).toBe(true);
+  });
+
+  it('validateGameState accepts a valid NarrativeState structure', () => {
+    const state: GameState = {
+      ...makeGameState(),
+      narrativeState: {
+        currentSceneId: 'scene_two',
+        visitedSceneIds: ['scene_opening', 'scene_two'],
+        choiceFlags: { test_flag: true },
+        sceneHistory: [],
+      },
+    };
+    expect(validateGameState(state)).toBe(true);
+  });
+
+  it('validateGameState rejects narrativeState with non-string currentSceneId', () => {
+    const bad = {
+      ...makeGameState(),
+      narrativeState: {
+        currentSceneId: 123,
+        visitedSceneIds: [],
+        choiceFlags: {},
+        sceneHistory: [],
+      },
+    };
+    expect(validateGameState(bad)).toBe(false);
+  });
+
+  it('validateGameState rejects narrativeState with non-array visitedSceneIds', () => {
+    const bad = {
+      ...makeGameState(),
+      narrativeState: {
+        currentSceneId: 'scene_opening',
+        visitedSceneIds: 'not_an_array',
+        choiceFlags: {},
+        sceneHistory: [],
+      },
+    };
+    expect(validateGameState(bad)).toBe(false);
+  });
+
+  it('validateGameState rejects narrativeState with non-object choiceFlags', () => {
+    const bad = {
+      ...makeGameState(),
+      narrativeState: {
+        currentSceneId: 'scene_opening',
+        visitedSceneIds: [],
+        choiceFlags: 'not_an_object',
+        sceneHistory: [],
+      },
+    };
+    expect(validateGameState(bad)).toBe(false);
   });
 });

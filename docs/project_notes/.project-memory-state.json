@@ -1,5 +1,5 @@
 {
-  "version": "5.0",
+  "version": "6.0",
   "initialized": true,
   "active_context": "sprint-3",
   "trunk": {
@@ -59,6 +59,15 @@
         "completed": true,
         "started_at": "2026-02-21T21:30:00Z",
         "completed_at": "2026-02-23T20:00:00Z"
+      },
+      "detail": {
+        "started": false,
+        "completed": false,
+        "completed_at": null,
+        "team_assignment": null,
+        "specialists": [],
+        "current_specialist": null,
+        "execution_phase": 1
       }
     }
   },
@@ -68,7 +77,7 @@
       "created_from": "trunk",
       "created_at": "2026-02-23T20:15:00Z",
       "purpose": "Implement Sprint 3: Narrative & State Machine — Act 1 scene progression, choice-tracking & consequence system, team synergy bonus calculations",
-      "status": "design",
+      "status": "complete",
       "workflow": {
         "prompt": {
           "started": true,
@@ -84,33 +93,16 @@
           "started": true,
           "completed": true,
           "started_at": "2026-02-23T20:30:00Z",
-          "completed_at": "2026-02-24T00:50:00Z",
+          "completed_at": "2026-03-02T02:54:16Z",
           "approved": true
         },
         "design": {
-          "started": true,
+          "started": false,
           "completed": false,
-          "started_at": "2026-02-24T00:52:47Z",
+          "started_at": null,
           "completed_at": null,
-          "items": [
-            {
-              "name": "team_synergy_system",
-              "display_name": "Team Synergy System",
-              "status": "completed",
-              "plan_tasks": [7, 8],
-              "spec_file": "design_spec_team_synergy_system.md",
-              "flagged_reason": "Formula undefined. Pair-based vs team composition, stat bonus types, player transparency, and balance all need game design exploration. Clear boundary with GROUP action synergy (combat-time 1.5x is separate)."
-            },
-            {
-              "name": "act1_narrative_design",
-              "display_name": "Act 1 Narrative Design",
-              "status": "in_progress",
-              "plan_tasks": [10],
-              "spec_file": null,
-              "flagged_reason": "Branching strategy (linear spine + variants vs true branching) determines scene content structure. Scene pacing, choice meaning, personality gate placement, and flag design are creative decisions requiring user input."
-            }
-          ],
-          "current_item": "act1_narrative_design"
+          "items": [],
+          "current_item": null
         },
         "engineering": {
           "started": false,
@@ -119,14 +111,38 @@
           "completed_at": null
         },
         "build": {
-          "started": false,
-          "completed": false,
-          "started_at": null,
-          "completed_at": null
+          "started": true,
+          "completed": true,
+          "started_at": "2026-03-03T13:00:00Z",
+          "completed_at": "2026-03-04T00:00:00Z"
+        },
+        "detail": {
+          "started": true,
+          "completed": true,
+          "completed_at": "2026-03-03T13:00:00Z",
+          "team_assignment": "team_assignment.json",
+          "specialists": [
+            {
+              "name": "game-backend-engine",
+              "status": "completed",
+              "stage": "done",
+              "blueprint_path": "blueprints/game-backend-engine.md",
+              "decisions_path": "scratch/game-backend-engine-decisions.json"
+            },
+            {
+              "name": "narrative-designer",
+              "status": "completed",
+              "stage": "done",
+              "blueprint_path": "blueprints/narrative-designer.md",
+              "decisions_path": "scratch/narrative-designer-decisions.json"
+            }
+          ],
+          "current_specialist": null,
+          "execution_phase": 1
         }
       }
     }
   },
-  "last_handoff": "2026-02-24T02:30:00Z",
-  "last_handoff_transition": "design_to_design"
+  "last_handoff": "2026-03-04T00:00:00Z",
+  "last_handoff_transition": "build_to_complete"
 }

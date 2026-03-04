@@ -16,6 +16,7 @@ import {
   DialogueOption,
 } from '../types/index.js';
 import type { CombatState } from '../types/combat.js';
+import type { NarrativeState } from '../types/narrative.js';
 import { adjustPersonality } from '../personality/personalitySystem.js';
 
 // ============================================================================
@@ -233,5 +234,59 @@ export function updateCombatState(
   return updateTimestamp({
     ...state,
     combatState,
+  });
+}
+
+// ============================================================================
+// Narrative State Updaters
+// ============================================================================
+
+/**
+ * Initializes the narrative state with a starting scene.
+ *
+ * Creates a fresh NarrativeState and sets it on GameState.
+ * The starting scene is added to visitedSceneIds immediately.
+ */
+export function initializeNarrative(
+  state: Readonly<GameState>,
+  startingSceneId: string
+): GameState {
+  return updateTimestamp({
+    ...state,
+    narrativeState: {
+      currentSceneId: startingSceneId,
+      visitedSceneIds: [startingSceneId],
+      choiceFlags: {},
+      sceneHistory: [],
+    },
+  });
+}
+
+/**
+ * Replaces the narrativeState field on GameState with the provided NarrativeState.
+ *
+ * The caller is responsible for providing a valid NarrativeState.
+ * If the current narrativeState is null and a valid state is provided,
+ * this effectively initializes the narrative.
+ */
+export function updateNarrativeState(
+  state: Readonly<GameState>,
+  narrativeState: NarrativeState
+): GameState {
+  return updateTimestamp({
+    ...state,
+    narrativeState,
+  });
+}
+
+/**
+ * Sets narrativeState to null, clearing the active narrative.
+ */
+export function clearNarrative(
+  state: Readonly<GameState>
+): GameState {
+  return updateTimestamp({
+    ...state,
+    narrativeState: null,
   });
 }

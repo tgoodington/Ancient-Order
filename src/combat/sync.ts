@@ -13,7 +13,7 @@
  * No mutations to input states.
  */
 
-import type { GameState } from '../types/index.js';
+import type { GameState, Personality } from '../types/index.js';
 import type {
   CombatState,
   Combatant,
@@ -21,7 +21,10 @@ import type {
   EncounterConfig,
 } from '../types/combat.js';
 import { ASCENSION_STARTING_SEGMENTS } from '../types/combat.js';
+import type { SynergyResult } from '../types/narrative.js';
 import { updateCombatState } from '../state/stateUpdaters.js';
+import { calculateSynergy } from '../narrative/synergyCalculator.js';
+import { DEFAULT_PARADIGMS } from '../fixtures/synergyConfig.js';
 
 // ============================================================================
 // Internal Helpers
@@ -74,16 +77,30 @@ function _configToCombatant(config: CombatantConfig): Combatant {
  * The resulting CombatState starts at round 1, phase AI_DECISION, with empty
  * action queue and history, and status 'active'.
  *
- * @param _gameState  Current game state (passed for future stat-sync extensibility)
- * @param encounter   Static encounter configuration with both party configs
- * @returns           A fresh CombatState ready to begin
+ * Sprint 3: reads gameState to calculate team synergy bonus and applies it
+ * to the player party stats. Guarded: null/missing personality data = no synergy.
+ *
+ * @param gameState  Current game state (used for synergy calculation)
+ * @param encounter  Static encounter configuration with both party configs
+ * @returns          A fresh CombatState ready to begin
  */
 export function initCombatState(
-  _gameState: Readonly<GameState>,
+  gameState: Readonly<GameState>,
   encounter: Readonly<EncounterConfig>
 ): CombatState {
-  const playerParty: Combatant[] = encounter.playerParty.map(_configToCombatant);
+  let playerParty: Combatant[] = encounter.playerParty.map(_configToCombatant);
   const enemyParty: Combatant[] = encounter.enemyParty.map(_configToCombatant);
+
+  // --- Synergy bonus application [Sprint 3] ---
+  const synergyResult = _calculatePartySynergy(gameState);
+  if (synergyResult !== null) {
+    playerParty = playerParty.map(combatant => ({
+      ...combatant,
+      [synergyResult.stat]: Math.round(
+        combatant[synergyResult.stat] * synergyResult.multiplier
+      ),
+    }));
+  }
 
   return {
     round: 1,
@@ -94,6 +111,28 @@ export function initCombatState(
     roundHistory: [],
     status: 'active',
   };
+}
+
+/**
+ * Extracts party personality data from GameState and calculates synergy.
+ * Returns null if GameState lacks personality data.
+ * All 3 NPCs are treated as party members for Sprint 3 (no party selection mechanic).
+ */
+function _calculatePartySynergy(gameState: Readonly<GameState>): SynergyResult {
+  // Guard: if player or player personality is missing, skip synergy
+  if (!gameState.player?.personality) return null;
+
+  const npcPersonalities: Personality[] = Object.values(gameState.npcs)
+    .filter(npc => npc?.personality)
+    .map(npc => npc.personality);
+
+  if (npcPersonalities.length === 0) return null;
+
+  return calculateSynergy(
+    gameState.player.personality,
+    npcPersonalities,
+    DEFAULT_PARADIGMS
+  );
 }
 
 /**

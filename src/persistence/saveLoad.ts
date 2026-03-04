@@ -125,6 +125,18 @@ export function validateGameState(data: unknown): data is GameState {
   }
 
   // combatState: unknown | null — any value is acceptable
+
+  // narrativeState: NarrativeState | null — accept presence or absence
+  // Deep validation of NarrativeState structure when present
+  if (s.narrativeState !== null && s.narrativeState !== undefined) {
+    if (typeof s.narrativeState !== 'object') return false;
+    const ns = s.narrativeState as Record<string, unknown>;
+    if (typeof ns.currentSceneId !== 'string') return false;
+    if (!Array.isArray(ns.visitedSceneIds)) return false;
+    if (!ns.choiceFlags || typeof ns.choiceFlags !== 'object' || Array.isArray(ns.choiceFlags)) return false;
+    if (!Array.isArray(ns.sceneHistory)) return false;
+  }
+
   return true;
 }
 
@@ -196,6 +208,11 @@ export async function loadGame(
     const err = new Error(`Save file in slot ${slot} is corrupted or has an invalid format.`);
     (err as NodeJS.ErrnoException & { code: string }).code = ErrorCodes.SAVE_NOT_FOUND;
     throw err;
+  }
+
+  // Normalize missing narrativeState to null for backward compatibility
+  if ((data as Record<string, unknown>).narrativeState === undefined) {
+    (data as Record<string, unknown>).narrativeState = null;
   }
 
   return data;

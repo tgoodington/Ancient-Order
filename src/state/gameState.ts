@@ -36,6 +36,7 @@ export function createNewGameState(): GameState {
     currentDialogueNode: null,
     saveSlot: null,
     combatState: null,
+    narrativeState: null,
     conversationLog: [],
     timestamp: Date.now(),
   };

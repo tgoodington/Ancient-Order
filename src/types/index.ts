@@ -9,6 +9,9 @@
  */
 
 import type { CombatState } from './combat.js';
+import type { NarrativeState } from './narrative.js';
+
+export type { NarrativeState } from './narrative.js';
 
 // ============================================================================
 // Personality System
@@ -95,6 +98,7 @@ export interface GameState {
   readonly currentDialogueNode: string | null;
   readonly saveSlot: number | null;
   readonly combatState: CombatState | null;
+  readonly narrativeState: NarrativeState | null;
   readonly conversationLog: ConversationEntry[];
   readonly timestamp: number;
 }
@@ -192,6 +196,13 @@ export const ErrorCodes = {
   INVALID_PERSONALITY_ADJUSTMENT: 'INVALID_PERSONALITY_ADJUSTMENT',
   TEAM_COMPOSITION_INVALID: 'TEAM_COMPOSITION_INVALID',
   VALIDATION_ERROR: 'VALIDATION_ERROR',
+  // Narrative error codes (Sprint 3)
+  SCENE_NOT_FOUND: 'SCENE_NOT_FOUND',
+  CHOICE_NOT_AVAILABLE: 'CHOICE_NOT_AVAILABLE',
+  CHOICE_NOT_FOUND: 'CHOICE_NOT_FOUND',
+  NARRATIVE_NOT_STARTED: 'NARRATIVE_NOT_STARTED',
+  INVALID_TRANSITION: 'INVALID_TRANSITION',
+  PREREQUISITE_NOT_MET: 'PREREQUISITE_NOT_MET',
 } as const;
 
 export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];

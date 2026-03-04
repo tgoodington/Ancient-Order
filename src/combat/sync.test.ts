@@ -224,14 +224,16 @@ describe('initCombatState', () => {
   });
 
   it('preserves combatant stats from config (rank, power, speed, archetype)', () => {
-    const gameState = createNewGameState();
+    // Use a game state with no NPCs to prevent synergy from triggering,
+    // ensuring base stat values are unchanged (synergy requires NPC personalities).
+    const gameState = { ...createNewGameState(), npcs: {} };
     const encounter = makeEncounterConfig({
       playerParty: [
         makeCombatantConfig({ id: 'p1', rank: 3.5, power: 20, speed: 15, archetype: 'warrior' }),
       ],
     });
 
-    const combat = initCombatState(gameState, encounter);
+    const combat = initCombatState(gameState as GameState, encounter);
     const hero = combat.playerParty[0];
 
     expect(hero.rank).toBe(3.5);
@@ -543,5 +545,156 @@ describe('save/load round-trip during active combat', () => {
 
     expect(ended.combatState).toBeNull();
     expect(ended.player.personality).toEqual(gameState.player.personality);
+  });
+});
+
+// ============================================================================
+// 5. Synergy Integration Tests (Sprint 3)
+// ============================================================================
+
+describe('initCombatState — synergy integration', () => {
+  it('applies no synergy boost when player personality is missing (guard)', () => {
+    // Construct a minimal GameState with no personality (edge case guard)
+    const gameState = createNewGameState();
+    const stateWithNoPersonality = {
+      ...gameState,
+      player: {
+        ...gameState.player,
+        personality: undefined as unknown as import('../types/index.js').Personality,
+      },
+    } as unknown as GameState;
+    const encounter = makeEncounterConfig({
+      playerParty: [makeCombatantConfig({ id: 'p1', power: 10, speed: 10 })],
+    });
+
+    // Should not throw; synergy is skipped
+    const combat = initCombatState(stateWithNoPersonality, encounter);
+    expect(combat.playerParty[0].power).toBe(10);
+    expect(combat.playerParty[0].speed).toBe(10);
+  });
+
+  it('applies no synergy boost when NPCs are empty', () => {
+    const gameState = { ...createNewGameState(), npcs: {} };
+    const encounter = makeEncounterConfig({
+      playerParty: [makeCombatantConfig({ id: 'p1', power: 10, speed: 10 })],
+    });
+    const combat = initCombatState(gameState, encounter);
+    // No NPCs -> no synergy
+    expect(combat.playerParty[0].power).toBe(10);
+    expect(combat.playerParty[0].speed).toBe(10);
+  });
+
+  it('produces same CombatState as before when personality does not meet synergy threshold', () => {
+    // Low personality values ensure neither paradigm fires
+    const gameState = createNewGameState();
+    const lowPersonalityState = {
+      ...gameState,
+      player: {
+        ...gameState.player,
+        personality: {
+          patience: 5, empathy: 5, cunning: 5,
+          logic: 5, kindness: 5, charisma: 5,
+        } as import('../types/index.js').Personality,
+      },
+    };
+    const encounter = makeEncounterConfig({
+      playerParty: [makeCombatantConfig({ id: 'p1', power: 10, speed: 10 })],
+    });
+    const combat = initCombatState(lowPersonalityState as GameState, encounter);
+    // No synergy -> stats unchanged
+    expect(combat.playerParty[0].power).toBe(10);
+    expect(combat.playerParty[0].speed).toBe(10);
+  });
+
+  it('applies synergy power boost (Well Rounded) when personality threshold is met', () => {
+    // Give player and NPCs personality values that satisfy Well Rounded (all traits >= 25)
+    const gameState = createNewGameState();
+    const highPersonalityState: GameState = {
+      ...gameState,
+      player: {
+        ...gameState.player,
+        personality: {
+          patience: 25, empathy: 25, cunning: 25,
+          logic: 25, kindness: 25, charisma: 25,
+        },
+      },
+      npcs: {
+        npc_scout_elena: {
+          ...gameState.npcs['npc_scout_elena']!,
+          personality: {
+            patience: 25, empathy: 25, cunning: 25,
+            logic: 25, kindness: 25, charisma: 25,
+          },
+        },
+      },
+    };
+    const basePower = 10;
+    const encounter = makeEncounterConfig({
+      playerParty: [makeCombatantConfig({ id: 'p1', power: basePower, speed: 10 })],
+    });
+    const combat = initCombatState(highPersonalityState, encounter);
+
+    // Well Rounded should apply power * 1.10 = 11
+    expect(combat.playerParty[0].power).toBe(Math.round(basePower * 1.10));
+  });
+
+  it('does not apply synergy boost to enemy party', () => {
+    const gameState = createNewGameState();
+    const highPersonalityState: GameState = {
+      ...gameState,
+      player: {
+        ...gameState.player,
+        personality: {
+          patience: 25, empathy: 25, cunning: 25,
+          logic: 25, kindness: 25, charisma: 25,
+        },
+      },
+      npcs: {
+        npc_scout_elena: {
+          ...gameState.npcs['npc_scout_elena']!,
+          personality: {
+            patience: 25, empathy: 25, cunning: 25,
+            logic: 25, kindness: 25, charisma: 25,
+          },
+        },
+      },
+    };
+    const baseEnemyPower = 15;
+    const encounter = makeEncounterConfig({
+      playerParty: [makeCombatantConfig({ id: 'p1', power: 10 })],
+      enemyParty: [makeCombatantConfig({ id: 'e1', power: baseEnemyPower })],
+    });
+    const combat = initCombatState(highPersonalityState, encounter);
+    // Enemy party should NOT be boosted
+    expect(combat.enemyParty[0].power).toBe(baseEnemyPower);
+  });
+
+  it('uses Math.round when applying synergy multiplier', () => {
+    // power * 1.10 = 9 * 1.10 = 9.9 -> rounds to 10
+    const gameState = createNewGameState();
+    const highPersonalityState: GameState = {
+      ...gameState,
+      player: {
+        ...gameState.player,
+        personality: {
+          patience: 25, empathy: 25, cunning: 25,
+          logic: 25, kindness: 25, charisma: 25,
+        },
+      },
+      npcs: {
+        npc_scout_elena: {
+          ...gameState.npcs['npc_scout_elena']!,
+          personality: {
+            patience: 25, empathy: 25, cunning: 25,
+            logic: 25, kindness: 25, charisma: 25,
+          },
+        },
+      },
+    };
+    const encounter = makeEncounterConfig({
+      playerParty: [makeCombatantConfig({ id: 'p1', power: 9, speed: 10 })],
+    });
+    const combat = initCombatState(highPersonalityState, encounter);
+    expect(combat.playerParty[0].power).toBe(Math.round(9 * 1.10)); // 10
   });
 });

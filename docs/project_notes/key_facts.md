@@ -12,7 +12,7 @@ This file stores project constants, configuration, and frequently-needed **non-s
 
 - **Project Name:** Ancient Order - Act 1 Prototype
 - **Purpose:** Turn-based combat RPG prototype for investor pitches / publisher support
-- **Current Sprint:** Sprint 1 (Backend / Narrative / State)
+- **Current Sprint:** Sprint 3 (Narrative & State Machine) — COMPLETE
 - **Target Deployment:** Vercel (stateless backend)
 
 ## Technical Stack
@@ -32,6 +32,8 @@ This file stores project constants, configuration, and frequently-needed **non-s
 **Sprint 1 Status (2026-02-22):** COMPLETE — 261 tests passing.
 
 **Sprint 2 Status (2026-02-23):** **COMPLETE** — 793 tests passing across 25 files, zero TypeScript errors, security review PASS. Ready for user verification of Excel formulas and encounter fixture stats before pitch demo.
+
+**Sprint 3 Status (2026-03-03):** **COMPLETE** — 969 tests passing across 31 files. Narrative progression layer fully implemented: scene graph engine, choice/consequence system, team synergy bonuses, narrative REST API, Act 1 demo content (4 scenes). Security review PASS (2 medium issues remediated).
 
 ## Fastify State Pattern (CRITICAL)
 
@@ -121,19 +123,33 @@ The investor/publisher demo uses a **purpose-built mid-journey scene set**, not 
 2. **Escalation** — Rogue run-in surfaces as a consequence of Scene 1 flag (how player handled DEUS determines Rogue approach)
 3. **Gym Fight** — Climactic combat encounter
 
-**Design spec:** `docs/project_notes/branches/sprint-3/design_spec_act1_narrative_design.md` (in progress — see `.design_research/act1_narrative_design/decisions.md` for current state)
+**Implemented scene set (Sprint 3):**
+- `scene_ironhold_arrival` — DEUS presence, personality choices, flag-setting
+- `scene_market_disturbance` — Rogue run-in, consequence of Scene 1 flags
+- `scene_gym_registration` — Climactic registration with personality gates
+- `scene_combat_briefing` — Flag-gated terminal scene (requires `gathered_intel`)
+- Scene data: `src/fixtures/scenes/act1_demo.json`
+
+**Narrative Engine Modules (Sprint 3):**
+- `src/narrative/sceneEngine.ts` — Scene graph traversal, prerequisite evaluation
+- `src/narrative/choiceEngine.ts` — Choice validation, consequence application
+- `src/narrative/narrativeStateMachine.ts` — State machine orchestrator
+- `src/narrative/synergyCalculator.ts` — Well Rounded + Bond paradigm calculators
+- `src/api/narrative.ts` — 6-endpoint Fastify plugin (prefix: /api/narrative)
 
 ## Project Structure
 
 ```
 /Ancient Order/
 ├── src/
-│   ├── types/           # TypeScript interfaces
+│   ├── types/           # TypeScript interfaces (index.ts, narrative.ts, combat.ts)
 │   ├── state/           # Game state management
 │   ├── dialogue/        # Dialogue trees and engine
 │   ├── personality/     # Personality adjustment logic
 │   ├── persistence/     # Save/load functions
-│   └── api/             # Express.js endpoints
+│   ├── narrative/       # Scene engine, choice engine, state machine, synergy calculator
+│   ├── fixtures/        # Synergy config, scenes/ (act1_demo.json)
+│   └── api/             # Fastify REST endpoints
 ├── saves/               # Save files (JSON)
 ├── docs/
 │   ├── From Claude Browser Chat/
@@ -152,7 +168,7 @@ The investor/publisher demo uses a **purpose-built mid-journey scene set**, not 
 └── tsconfig.json
 ```
 
-## API Endpoints (Sprint 1)
+## API Endpoints (Sprint 1 + Sprint 3)
 
 **Game Management:**
 - POST /api/game/new
@@ -171,6 +187,14 @@ The investor/publisher demo uses a **purpose-built mid-journey scene set**, not 
 - GET /api/player
 - GET /api/player/personality
 - POST /api/player/team
+
+**Narrative (Sprint 3):**
+- GET /api/narrative/start/:startingSceneId
+- GET /api/narrative/current
+- POST /api/narrative/choose
+- GET /api/narrative/state
+- POST /api/narrative/reset
+- GET /api/narrative/synergy
 
 ## Documentation Reference
 

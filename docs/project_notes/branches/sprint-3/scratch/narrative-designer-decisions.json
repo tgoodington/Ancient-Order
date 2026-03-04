@@ -1,0 +1,22 @@
+{
+  "specialist": "narrative-designer",
+  "gate_started": "2026-03-03T12:00:00Z",
+  "gate_completed": "2026-03-03T12:30:00Z",
+  "assumptions": [
+    {"id": "A1", "title": "3-Scene Linear Spine Structure", "default": "Three scenes in fixed sequence with variant content within each", "status": "accepted", "user_override": null},
+    {"id": "A2", "title": "Small Personality Adjustments (+1 to +3)", "default": "Primary trait +2/+3, secondary +1 per choice", "status": "accepted", "user_override": null},
+    {"id": "A3", "title": "Lars Is Encounter NPC, Not Party Member", "default": "Demo party is Kael + Elena + Kade; Lars is merchant encounter", "status": "accepted", "user_override": null},
+    {"id": "A4", "title": "Scene Text Is Narrative Prose", "default": "Scene text field contains prose descriptions, not dialogue trees", "status": "accepted", "user_override": null},
+    {"id": "A5", "title": "Moderate NPC Relationship Shifts (5-10)", "default": "Affection/trust deltas of 5-10 per choice", "status": "accepted", "user_override": null},
+    {"id": "A6", "title": "Combat Transition Out of Scope", "default": "Scene 3 ends with nextSceneId=null; combat init is integration logic", "status": "accepted", "user_override": null}
+  ],
+  "decisions": [
+    {"id": "D1", "title": "Gate Threshold Strategy", "context": "Player starts at ~16.67% per trait. Scene 2 gates after 1 choice, Scene 3 after 2. NPC party members (Elena, Kade) have fixed personalities that never change.", "options": ["A: Conservative (18-20)", "B: Moderate (20-23)", "C: Ambitious (24-28)"], "chosen": "B", "user_input": "Moderate gates. Confirmed NPC party members keep fixed personality values."},
+    {"id": "D2", "title": "Flag Naming Convention", "context": "Flags track player choices across scenes, checked as prerequisites. Need consistent, self-documenting names.", "options": ["A: Action-based (helped_thief)", "B: Scene-prefixed (scene1_friendly_approach)", "C: Trait-cluster (kind_response_market)", "D: Hybrid verb_object (defended_thief, gathered_intel)"], "chosen": "D", "user_input": null},
+    {"id": "D3", "title": "Choices Per Scene", "context": "Determines content volume and pacing. Each scene needs at least 1 ungated choice as fallback.", "options": ["A: 2-3 choices (minimal)", "B: 3-4 choices (standard RPG)", "C: 4-5 choices (rich)"], "chosen": "B", "user_input": null},
+    {"id": "D4", "title": "Rogue Encounter Intensity", "context": "ADR-029 says Rogues are low-level background presence in early scenes. Scene 2 market disturbance is the Rogue seed moment.", "options": ["A: Direct Rogue NPC with dialogue", "B: Indirect presence (thief with Rogue symbol)", "C: Pure atmosphere (graffiti, whispers)"], "chosen": "B", "user_input": null},
+    {"id": "D5", "title": "Gym Town Name", "context": "Setting name for the tournament town in the demo. Cosmetic but adds world-building polish.", "options": ["A: Keep 'Gym Town' placeholder", "B: Named town 'Ironhold'", "C: Unnamed (the town)"], "chosen": "B", "user_input": null},
+    {"id": "D6", "title": "Scene Text Length and Tone", "context": "Prose length and narrative voice for scene text field. Affects demo pacing and atmosphere.", "options": ["A: Brief/punchy 2-3 sentences", "B: Moderate prose 4-6 sentences", "C: Rich narrative 7+ sentences"], "chosen": "B", "user_input": null}
+  ],
+  "gate_completed": "2026-03-03T12:30:00Z"
+}
