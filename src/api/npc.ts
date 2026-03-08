@@ -42,15 +42,22 @@ export async function npcPlugin(fastify: FastifyInstance): Promise<void> {
       },
     },
   }, async (request, reply): Promise<ApiResponse<NPC>> => {
-    const npc = getNPC(request.params.id);
+    const { id } = request.params;
 
+    const liveNpc = fastify.gameStateContainer.state?.npcs[id];
+    if (liveNpc !== undefined) {
+      reply.code(200);
+      return { success: true, data: liveNpc };
+    }
+
+    const npc = getNPC(id);
     if (npc === undefined) {
       reply.code(404);
       return {
         success: false,
         error: {
           code: ErrorCodes.NPC_NOT_FOUND,
-          message: `NPC not found: "${request.params.id}"`,
+          message: `NPC not found: "${id}"`,
         },
       };
     }

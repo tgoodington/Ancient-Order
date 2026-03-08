@@ -1,0 +1,7 @@
+## Research Plan
+
+### R1: Existing API patterns, route structure, and ApiResponse/ErrorCodes conventions
+Examine the current Fastify plugin registration pattern, route definitions, ApiResponse envelope type, and ErrorCodes const to understand exactly how to wire new endpoints. Look at `src/api/` for all existing route files and plugin registration in `src/api/index.ts`. Also check `src/types/` for ApiResponse type definition and ErrorCodes. Check how existing endpoints (save/load, combat, dialogue) handle params, request validation, and error responses. Also look at `src/persistence/saveLoad.ts` to see the exact signatures of `listSaves()` and `deleteSave()` — what they accept and return — so the wiring is straightforward.
+
+### R2: GameState shape, NPC data model, personality types, and current validateGameState implementation
+Examine the full GameState interface in `src/types/` to understand all fields added across Sprints 1-3 (personality traits, combat state, narrative state, team composition if any). Look at NPC type definitions to understand what data is available (base info, affection, trust, relationship data) for the GET `/api/npc/:id` endpoint. Check `src/state/` for existing state updaters to understand the exact pattern for the new team composition updater. Examine the current `validateGameState()` implementation to understand what Sprint 3 narrative validation exists and where to add deeper personality/combat/narrative validation. Also check if there's any existing team composition concept in the state or if it needs to be added fresh.

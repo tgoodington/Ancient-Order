@@ -13,8 +13,8 @@
  */
 
 import { FastifyInstance } from 'fastify';
-import { ApiResponse, ErrorCodes, GameState, PersonalityAdjustment, PlayerCharacter } from '../types/index.js';
-import { applyPersonalityAdjustment } from '../state/stateUpdaters.js';
+import { ApiResponse, ErrorCodes, GameState, Personality, PersonalityAdjustment, PlayerCharacter } from '../types/index.js';
+import { applyPersonalityAdjustment, updateTeamComposition } from '../state/stateUpdaters.js';
 
 // ============================================================================
 // Plugin
@@ -74,5 +74,76 @@ export async function playerPlugin(fastify: FastifyInstance): Promise<void> {
 
     reply.code(200);
     return { success: true, data: newState };
+  });
+
+  // --------------------------------------------------------------------------
+  // GET /personality
+  // Return the player's current personality trait values.
+  // --------------------------------------------------------------------------
+  fastify.get('/personality', async (_request, reply): Promise<ApiResponse<Personality>> => {
+    if (fastify.gameStateContainer.state === null) {
+      reply.code(404);
+      return {
+        success: false,
+        error: { code: ErrorCodes.GAME_NOT_FOUND, message: 'No active game' },
+      };
+    }
+
+    reply.code(200);
+    return { success: true, data: fastify.gameStateContainer.state.player.personality };
+  });
+
+  // --------------------------------------------------------------------------
+  // POST /team
+  // Set the active team composition (exactly 2 NPC IDs).
+  // Locked during combat and narrative scenes.
+  // --------------------------------------------------------------------------
+  fastify.post<{ Body: { npcIds: string[] } }>('/team', {
+    schema: {
+      body: {
+        type: 'object',
+        properties: {
+          npcIds: {
+            type: 'array',
+            items: { type: 'string', maxLength: 64 },
+            minItems: 2,
+            maxItems: 2,
+          },
+        },
+        required: ['npcIds'],
+        additionalProperties: false,
+      },
+    },
+  }, async (request, reply): Promise<ApiResponse<{ team: readonly string[] }>> => {
+    if (fastify.gameStateContainer.state === null) {
+      reply.code(404);
+      return {
+        success: false,
+        error: { code: ErrorCodes.GAME_NOT_FOUND, message: 'No active game' },
+      };
+    }
+
+    if (fastify.gameStateContainer.state.combatState !== null) {
+      reply.code(400);
+      return {
+        success: false,
+        error: { code: ErrorCodes.TEAM_COMPOSITION_INVALID, message: 'Cannot change team during combat' },
+      };
+    }
+
+    if (fastify.gameStateContainer.state.narrativeState !== null) {
+      reply.code(400);
+      return {
+        success: false,
+        error: { code: ErrorCodes.TEAM_COMPOSITION_INVALID, message: 'Cannot change team during narrative scene' },
+      };
+    }
+
+    const { npcIds } = request.body;
+    const newState = updateTeamComposition(fastify.gameStateContainer.state, npcIds);
+    fastify.gameStateContainer.state = newState;
+
+    reply.code(200);
+    return { success: true, data: { team: newState.team } };
   });
 }

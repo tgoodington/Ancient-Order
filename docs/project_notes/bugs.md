@@ -43,6 +43,12 @@ Each bug entry includes:
 - **Solution:** Double-cast via unknown: `makeGameState() as unknown as Record<string, unknown>`.
 - **Prevention:** When casting to a structurally incompatible type for test purposes, use the `as unknown as T` pattern.
 
+### 2026-03-07 — Missing slot validation on DELETE endpoint (Security Pattern)
+- **Description:** DELETE /saves/:slot route was missing input validation before delegating to persistence layer. `parseInt` could return `NaN`, and even though `deleteSave()` would throw, the unvalidated value was echoed in the response.
+- **Root cause:** Blueprint omission — other slot routes (save/load) had the guard, but the new DELETE route was implemented without it. Security review caught the inconsistency.
+- **Solution:** Added `isNaN()` + range guard (`slot < 1 || slot > 10`) matching the established pattern on save/load routes.
+- **Prevention:** Slot validation must be enforced at the API layer BEFORE delegation to persistence functions. Never rely on lower layers as the sole input guard. When adding routes that follow an existing pattern, copy all guards, not just the happy-path logic.
+
 ## Prevention Notes
 
 When adding new bugs, think about:

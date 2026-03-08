@@ -1,7 +1,7 @@
 {
-  "version": "6.0",
+  "version": "8.0",
   "initialized": true,
-  "active_context": "sprint-3",
+  "active_context": "sprint-4",
   "trunk": {
     "status": "complete",
     "display_name": "Sprint 1 + Sprint 2",
@@ -16,7 +16,7 @@
           "discovery_output.json"
         ]
       },
-      "planning": {
+      "outline": {
         "started": true,
         "completed": true,
         "started_at": "2026-02-21T00:00:00Z",
@@ -60,6 +60,12 @@
         "started_at": "2026-02-21T21:30:00Z",
         "completed_at": "2026-02-23T20:00:00Z"
       },
+      "test": {
+        "started": false,
+        "completed": false,
+        "completed_at": null,
+        "skipped": false
+      },
       "detail": {
         "started": false,
         "completed": false,
@@ -89,7 +95,7 @@
             "planning_brief.md"
           ]
         },
-        "planning": {
+        "outline": {
           "started": true,
           "completed": true,
           "started_at": "2026-02-23T20:30:00Z",
@@ -116,6 +122,12 @@
           "started_at": "2026-03-03T13:00:00Z",
           "completed_at": "2026-03-04T00:00:00Z"
         },
+        "test": {
+          "started": false,
+          "completed": false,
+          "completed_at": null,
+          "skipped": false
+        },
         "detail": {
           "started": true,
           "completed": true,
@@ -141,8 +153,78 @@
           "execution_phase": 1
         }
       }
+    },
+    "sprint-4": {
+      "display_name": "Sprint 4",
+      "created_from": "sprint-3",
+      "created_at": "2026-03-07T00:00:00Z",
+      "purpose": "Sprint 4: Persistence & API Completion — wire missing endpoints, harden state validation, complete backend API surface for frontend handoff",
+      "status": "complete",
+      "workflow": {
+        "prompt": {
+          "started": true,
+          "completed": true,
+          "started_at": "2026-03-07T00:00:00Z",
+          "completed_at": "2026-03-07T00:00:00Z",
+          "output_files": [
+            "prompt_brief.md",
+            "prompt_output.json"
+          ]
+        },
+        "outline": {
+          "started": true,
+          "completed": true,
+          "completed_at": "2026-03-07T12:00:00Z",
+          "approved": true
+        },
+        "design": {
+          "started": false,
+          "completed": false,
+          "started_at": null,
+          "completed_at": null,
+          "items": [],
+          "current_item": null
+        },
+        "engineering": {
+          "started": false,
+          "completed": false,
+          "started_at": null,
+          "completed_at": null
+        },
+        "build": {
+          "started": true,
+          "completed": true,
+          "started_at": "2026-03-07T15:00:00Z",
+          "completed_at": "2026-03-07T20:00:00Z"
+        },
+        "test": {
+          "started": true,
+          "completed": true,
+          "completed_at": "2026-03-08T09:42:00Z",
+          "skipped": false
+        },
+        "detail": {
+          "started": true,
+          "completed": true,
+          "completed_at": "2026-03-07T15:00:00Z",
+          "team_assignment": "team_assignment.json",
+          "specialists": [
+            {
+              "name": "game-backend-engine",
+              "tasks": ["T1", "T2", "T3"],
+              "status": "completed",
+              "stage": "done",
+              "stage1_path": "scratch/game-backend-engine-stage1.md",
+              "decisions_path": "scratch/game-backend-engine-decisions.json",
+              "blueprint_path": "blueprints/game-backend-engine.md"
+            }
+          ],
+          "current_specialist": null,
+          "execution_phase": 1
+        }
+      }
     }
   },
-  "last_handoff": "2026-03-04T00:00:00Z",
-  "last_handoff_transition": "build_to_complete"
+  "last_handoff": "2026-03-08T09:42:00Z",
+  "last_handoff_transition": "test_to_complete"
 }

@@ -1,0 +1,76 @@
+{
+  "specialist": "game-backend-engine",
+  "gate_started": "2026-03-07T14:00:00Z",
+  "gate_completed": "2026-03-07T14:15:00Z",
+  "decision_policy": "conservative",
+  "assumptions": [
+    { "id": "A1", "title": "Team stored as NPC ID array on GameState", "status": "accepted", "user_override": null },
+    { "id": "A2", "title": "Saves list returns slot metadata only", "status": "accepted", "user_override": null },
+    { "id": "A3", "title": "NPC endpoint returns live GameState data when game active", "status": "accepted", "user_override": null },
+    { "id": "A4", "title": "New routes added to existing plugins", "status": "accepted", "user_override": null },
+    { "id": "A5", "title": "Change validateGameState return to result object", "status": "accepted", "user_override": null },
+    { "id": "A6", "title": "Floating-point tolerance for personality sum", "status": "accepted", "user_override": null }
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "Team composition rules",
+      "tier": "USER",
+      "classified_by": "outline",
+      "context": "When the player picks their party (2 of 3 NPCs), should they be able to swap at any time or lock during activities?",
+      "options": ["Changeable anytime", "Locked during combat/narrative", "Locked after first combat"],
+      "chosen": "Locked during combat/narrative",
+      "user_input": "It should be locked during the demo, and in the future, should be locked during combat and narrative scenes. POST /api/player/team returns error if combatState !== null or narrativeState !== null."
+    },
+    {
+      "id": "D2",
+      "title": "validateGameState return type change",
+      "tier": "SPEC",
+      "classified_by": "outline",
+      "context": "How to report specific validation failure details",
+      "options": ["Keep boolean + separate getValidationErrors()", "Change to ValidationResult object", "Keep boolean + throw on first failure"],
+      "chosen": "Change to ValidationResult object: { valid: true } | { valid: false; errors: string[] }",
+      "user_input": null
+    },
+    {
+      "id": "D3",
+      "title": "NPC endpoint data source",
+      "tier": "SPEC",
+      "classified_by": "outline",
+      "context": "Whether GET /api/npc/:id returns template or live GameState data",
+      "options": ["Always return template", "Return live state when game active, template otherwise", "Merge template + overlay live data"],
+      "chosen": "Return live GameState NPC when game active, template otherwise. NPC type is identical for both — no merging needed.",
+      "user_input": null
+    },
+    {
+      "id": "D4",
+      "title": "Error code for corrupt save validation failure",
+      "tier": "SILENT",
+      "classified_by": "outline",
+      "context": "What error code to use when validateGameState fails on load",
+      "options": ["Continue using SAVE_NOT_FOUND", "Add new VALIDATION_FAILED code", "Reuse existing VALIDATION_ERROR"],
+      "chosen": "Reuse existing VALIDATION_ERROR with descriptive message from validation result",
+      "user_input": null
+    },
+    {
+      "id": "D5",
+      "title": "Where to add team field to GameState",
+      "tier": "SILENT",
+      "classified_by": "outline",
+      "context": "Location for the new team field",
+      "options": ["Add to GameState in src/types/index.ts", "Create separate team type file"],
+      "chosen": "Add readonly team: readonly string[] directly to GameState in src/types/index.ts",
+      "user_input": null
+    },
+    {
+      "id": "D6",
+      "title": "Combat state validation depth",
+      "tier": "SPEC",
+      "classified_by": "outline",
+      "context": "How deeply to validate CombatState structure on save load",
+      "options": ["Full recursive validation", "Top-level shape only", "Top-level + first-level Combatant fields"],
+      "chosen": "Top-level shape only — check round, phase, status enums, and that arrays exist. Combat state is transient and created by the engine, so deep corruption is unlikely.",
+      "user_input": null
+    }
+  ]
+}

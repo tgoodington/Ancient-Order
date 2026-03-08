@@ -33,6 +33,7 @@ export function createNewGameState(): GameState {
       personality: createDefaultPersonality(),
     },
     npcs: { ...NPC_TEMPLATES },
+    team: [],
     currentDialogueNode: null,
     saveSlot: null,
     combatState: null,

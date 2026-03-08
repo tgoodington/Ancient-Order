@@ -12,7 +12,7 @@ This file stores project constants, configuration, and frequently-needed **non-s
 
 - **Project Name:** Ancient Order - Act 1 Prototype
 - **Purpose:** Turn-based combat RPG prototype for investor pitches / publisher support
-- **Current Sprint:** Sprint 3 (Narrative & State Machine) — COMPLETE
+- **Current Sprint:** Sprint 4 (Persistence & API Completion) — COMPLETE
 - **Target Deployment:** Vercel (stateless backend)
 
 ## Technical Stack
@@ -34,6 +34,8 @@ This file stores project constants, configuration, and frequently-needed **non-s
 **Sprint 2 Status (2026-02-23):** **COMPLETE** — 793 tests passing across 25 files, zero TypeScript errors, security review PASS. Ready for user verification of Excel formulas and encounter fixture stats before pitch demo.
 
 **Sprint 3 Status (2026-03-03):** **COMPLETE** — 969 tests passing across 31 files. Narrative progression layer fully implemented: scene graph engine, choice/consequence system, team synergy bonuses, narrative REST API, Act 1 demo content (4 scenes). Security review PASS (2 medium issues remediated).
+
+**Sprint 4 Status (2026-03-08):** **COMPLETE** — 1019 tests passing (969 existing + 50 new), zero regressions. Persistence & API Completion: saves management (GET/DELETE), player personality/team endpoints, NPC live-state fallback, deep ValidationResult type. All 50 tests passed on first run. Test files: `src/state/stateUpdaters.test.ts` (appended, 11 tests), `src/persistence/saveLoad.test.ts` (appended, 22 tests), `tests/sprint4.integration.test.ts` (new, 17 tests).
 
 ## Fastify State Pattern (CRITICAL)
 
@@ -380,3 +382,47 @@ ScoredCandidate: actionType, targetId, score, scoreBreakdown
 - **Elena (Loyal Scout):** Light path. Support-weighted. Responds strongly to ally danger (factor weight 1.8). Prefers DEFEND.
 - **Lars (Scheming Merchant):** Earth path. Defensive/efficient. Self-preservation (weight 1.5). Strategic energy use (weight 1.4). Adapts per round.
 - **Kade (Rogue Outlaw):** Fire path. Aggressive. Target vulnerability (weight 1.6) and speed advantage (weight 1.5). Ignores team needs.
+
+**Sprint 4 Status (2026-03-07):** **BUILD COMPLETE** — 969 tests passing. API surface completed: saves management (GET/DELETE), player personality/team endpoints, NPC live-state fallback. Deep 6-phase validation (ValidationResult type). Security review PASS (2 issues remediated). Test phase pending.
+
+## Sprint 4 Domain Facts (2026-03-07)
+
+### GameState.team Field
+- **Type:** `readonly team: readonly string[]` on `GameState` interface
+- **Values:** Empty `[]` when no team selected; exactly 2 NPC ID strings when team is set
+- **Position:** After `npcs` field in GameState interface
+- **Initialization:** `[]` in `createNewGameState()`
+- **Backward compat:** `loadGame()` normalizes missing `team` to `[]` (same pattern as `narrativeState`)
+
+### State Updater Signature Pattern
+- All state updaters follow: `(state: Readonly<GameState>, ...args) => GameState`
+- All updaters wrap return with `updateTimestamp()` (from `src/state/stateUpdaters.ts`)
+- New `updateTeamComposition(state, npcIds)` follows this pattern
+
+### ValidationResult Type
+- **Location:** `src/persistence/saveLoad.ts` (local export, not in types barrel)
+- **Shape:** `{ valid: true } | { valid: false; errors: string[] }` (discriminated union)
+- **Replaces:** Boolean type predicate return from `validateGameState()`
+
+### Validation Constants (for validateGameState)
+- **Personality traits:** `['patience', 'empathy', 'cunning', 'logic', 'kindness', 'charisma']`
+- **Personality sum tolerance:** 0.01 (floating-point)
+- **CombatPhase valid values:** `'AI_DECISION' | 'VISUAL_INFO' | 'PC_DECLARATION' | 'ACTION_RESOLUTION' | 'PER_ATTACK'`
+- **Combat status valid values:** `'active' | 'victory' | 'defeat'`
+- **Team validation:** accepts `undefined` (backward compat) or array of 0 or 2 strings
+
+### Error Codes (Pre-Existing, Confirmed)
+- `TEAM_COMPOSITION_INVALID` — already defined in `ErrorCodes` (src/types/index.ts line 197)
+- `VALIDATION_ERROR` — already defined in `ErrorCodes` (src/types/index.ts line 198), maps to HTTP 400
+- `loadGame()` now uses `VALIDATION_ERROR` instead of `SAVE_NOT_FOUND` for corrupt saves
+
+### Error Throwing Pattern (Codebase Convention)
+```typescript
+const err = new Error(message);
+(err as NodeJS.ErrnoException & { code: string }).code = ErrorCodes.CODE_NAME;
+throw err;
+```
+
+### Session State Access Pattern
+- `fastify.gameStateContainer.state` — shared mutable container across all plugins
+- Accessible in all registered plugins (game, player, npc, dialogue, combat, narrative)

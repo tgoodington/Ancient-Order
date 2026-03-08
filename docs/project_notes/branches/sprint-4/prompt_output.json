@@ -1,0 +1,95 @@
+{
+  "summary": {
+    "title": "Sprint 4 — Persistence & API Completion",
+    "one_liner": "Complete and harden the backend API surface before frontend integration",
+    "problem_statement": "The codebase has ~20/28 endpoints and all persistence functions from Sprints 1-3, but ~8 endpoints are missing, 2 persistence functions lack API exposure, and state validation on load is shallow. The backend must be complete and hardened for frontend handoff.",
+    "success_criteria": "All spec'd endpoints implemented with consistent ApiResponse<T> shapes; deep state validation on save/load; no regressions in existing behavior"
+  },
+  "commander_intent": {
+    "desired_end_state": "A frontend developer can hit any endpoint and get predictable, well-shaped responses. Any saved game loads back into a valid, uncorrupted state. No gaps in the API surface.",
+    "non_negotiables": [
+      "Consistent API contracts — same ApiResponse<T> envelope, clear error codes across all endpoints",
+      "Bulletproof state integrity — deep validation on load, no personality math drift, no orphaned state"
+    ],
+    "boundaries": [
+      "Tight scope — wire missing endpoints, harden validation only",
+      "No new features like auto-save, metadata enrichment, or session management",
+      "Extend existing patterns, do not redesign"
+    ]
+  },
+  "scope": {
+    "in": [
+      "Wire ~8 missing API endpoints (saves list/delete, player team CRUD, personality GET, NPC state)",
+      "Expose existing listSaves() and deleteSave() as API routes",
+      "Deepen validateGameState() — personality math, combat state, narrative state",
+      "Maintain existing ApiResponse<T> envelope and error code patterns"
+    ],
+    "out": [
+      "Auto-save functionality",
+      "Save metadata enrichment (playtime, location, character level)",
+      "Save file versioning or migration system",
+      "Session management or multi-game support",
+      "API documentation generation",
+      "Integration test infrastructure",
+      "Frontend work",
+      "Redesigning existing endpoint patterns"
+    ]
+  },
+  "constraints": [
+    "Fastify + TypeScript + ESM stack (established)",
+    "Immutable state management pattern",
+    "Personality: 6 traits, 5-35% range, sum=100%",
+    "Save slots 1-10, file-based JSON",
+    "NPC archetypes fixed (Elena, Kade, Lars)"
+  ],
+  "assumptions": [
+    {
+      "assumption": "Existing endpoint patterns are correct and should be extended, not redesigned",
+      "confidence": "high",
+      "basis": "3 sprints of consistent patterns, 969 passing tests"
+    },
+    {
+      "assumption": "Sprint 1 API Reference spec is still the target for missing endpoints",
+      "confidence": "medium",
+      "basis": "May need updates for Sprint 2-3 system additions"
+    },
+    {
+      "assumption": "Combat and narrative state shapes are stable enough to validate deeply",
+      "confidence": "high",
+      "basis": "Sprint 2-3 types are well-tested"
+    },
+    {
+      "assumption": "Party size is 3 (player + 2 NPCs) based on combat system",
+      "confidence": "high",
+      "basis": "Combat is 3v3, established in Sprint 2"
+    }
+  ],
+  "decision_posture": [
+    {
+      "area": "Team composition rules",
+      "posture": "i_decide",
+      "notes": "How player team endpoint works — max party size, NPC selection constraints"
+    },
+    {
+      "area": "Endpoint shapes & contracts",
+      "posture": "show_options",
+      "notes": "Specialist recommends request/response formats, user approves"
+    },
+    {
+      "area": "Validation behavior on load",
+      "posture": "show_options",
+      "notes": "Specialist recommends reject vs. repair strategy, user approves"
+    }
+  ],
+  "research_performed": [
+    {
+      "topic": "Existing API and persistence audit",
+      "finding": "20/28 endpoints exist, all 4 persistence functions implemented, validation is shallow"
+    }
+  ],
+  "open_questions": [
+    "Are there Sprint 2/3 endpoints that should have been in the spec but aren't?",
+    "Should validateGameState() attempt repair on load or reject outright?",
+    "What NPC state data should the NPC state endpoint return beyond affection/trust?"
+  ]
+}

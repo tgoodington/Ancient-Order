@@ -14,6 +14,7 @@ import {
   ConversationEntry,
   PersonalityAdjustment,
   DialogueOption,
+  ErrorCodes,
 } from '../types/index.js';
 import type { CombatState } from '../types/combat.js';
 import type { NarrativeState } from '../types/narrative.js';
@@ -289,4 +290,39 @@ export function clearNarrative(
     ...state,
     narrativeState: null,
   });
+}
+
+// ============================================================================
+// Team Composition
+// ============================================================================
+
+/**
+ * Updates the active team with exactly 2 NPC IDs from state.npcs.
+ * Throws TEAM_COMPOSITION_INVALID if npcIds is not exactly 2 valid, unique IDs.
+ */
+export function updateTeamComposition(
+  state: Readonly<GameState>,
+  npcIds: readonly string[]
+): GameState {
+  if (npcIds.length !== 2) {
+    const err = new Error('Team must contain exactly 2 NPCs');
+    (err as NodeJS.ErrnoException & { code: string }).code = ErrorCodes.TEAM_COMPOSITION_INVALID;
+    throw err;
+  }
+
+  for (const id of npcIds) {
+    if (!(id in state.npcs)) {
+      const err = new Error(`Invalid NPC ID: ${id}`);
+      (err as NodeJS.ErrnoException & { code: string }).code = ErrorCodes.TEAM_COMPOSITION_INVALID;
+      throw err;
+    }
+  }
+
+  if (npcIds[0] === npcIds[1]) {
+    const err = new Error(`Duplicate NPC ID: ${npcIds[0]}`);
+    (err as NodeJS.ErrnoException & { code: string }).code = ErrorCodes.TEAM_COMPOSITION_INVALID;
+    throw err;
+  }
+
+  return updateTimestamp({ ...state, team: npcIds });
 }

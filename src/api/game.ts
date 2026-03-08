@@ -17,7 +17,7 @@
 import { FastifyInstance } from 'fastify';
 import { ApiResponse, ErrorCodes, GameState } from '../types/index.js';
 import { createNewGameState } from '../state/gameState.js';
-import { saveGame, loadGame } from '../persistence/saveLoad.js';
+import { saveGame, loadGame, listSaves, deleteSave, SaveSlotInfo } from '../persistence/saveLoad.js';
 
 // ============================================================================
 // Internal helpers
@@ -142,5 +142,43 @@ export async function gamePlugin(fastify: FastifyInstance): Promise<void> {
 
     reply.code(200);
     return { success: true, data: state };
+  });
+
+  // --------------------------------------------------------------------------
+  // GET /saves
+  // Return the status and metadata for all 10 save slots.
+  // --------------------------------------------------------------------------
+  fastify.get('/saves', async (_request, reply): Promise<ApiResponse<SaveSlotInfo[]>> => {
+    const result = await listSaves();
+    reply.code(200);
+    return { success: true, data: result };
+  });
+
+  // --------------------------------------------------------------------------
+  // DELETE /saves/:slot
+  // Delete the save file in the given slot.
+  // --------------------------------------------------------------------------
+  fastify.delete<{ Params: { slot: string } }>('/saves/:slot', {
+    schema: {
+      params: {
+        type: 'object',
+        properties: {
+          slot: { type: 'string' },
+        },
+        required: ['slot'],
+      },
+    },
+  }, async (request, reply): Promise<ApiResponse<{ slot: number; deleted: boolean }>> => {
+    const slot = parseInt(request.params.slot, 10);
+    if (isNaN(slot) || slot < 1 || slot > 10) {
+      const response: ApiResponse<never> = {
+        success: false,
+        error: { code: ErrorCodes.INVALID_SLOT, message: 'Slot must be an integer between 1 and 10' },
+      };
+      return reply.code(400).send(response);
+    }
+    await deleteSave(slot);
+    reply.code(200);
+    return { success: true, data: { slot, deleted: true } };
   });
 }

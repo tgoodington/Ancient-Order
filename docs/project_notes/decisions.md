@@ -1037,3 +1037,161 @@ User <-> Waldo (Haiku)             User <-> Architect (Opus)
 - Players are not pressured to "pick a side" in the demo
 - Faction tension has narrative room to grow across acts 2-9
 - DEUS presence in early towns feels like normal world infrastructure, not an antagonistic force (yet)
+
+---
+
+### ADR-040: Team Composition Locked During Combat/Narrative (2026-03-07)
+
+**Date:** 2026-03-07
+**Status:** Accepted
+
+**Context:**
+- Sprint 4 adds POST `/api/player/team` endpoint for selecting party members (2 NPCs from 3 available)
+- Need to decide when team changes are permitted vs locked
+- Mid-scene party swaps would break narrative/combat continuity
+
+**Decision:**
+- Team composition is locked when `combatState !== null` or `narrativeState !== null`
+- POST `/api/player/team` returns 400 error with `TEAM_COMPOSITION_INVALID` if either state is active
+- Simple null-check at the API layer; no complex lock mechanism
+
+**Alternatives Considered:**
+- Changeable anytime: No restrictions. Rejected: allows mid-scene party swaps that break continuity.
+- Locked after first combat: Too restrictive; prevents legitimate team changes between encounters.
+
+**Consequences:**
+- Prevents mid-scene party swaps
+- Future-proofed for when combat/narrative scenes exist
+- Simple implementation (null checks on two fields)
+- Players can freely change team between encounters
+
+---
+
+### ADR-041: validateGameState Returns ValidationResult Object (2026-03-07)
+
+**Date:** 2026-03-07
+**Status:** Accepted
+
+**Context:**
+- `validateGameState()` currently returns a boolean type predicate (`data is GameState`)
+- Sprint 4 deepens validation with per-field checks for personality, combat state, and narrative state
+- Boolean return loses information about which fields failed and why
+- Need actionable error messages for debugging corrupted saves
+
+**Decision:**
+- Change return type to discriminated union: `ValidationResult = { valid: true } | { valid: false; errors: string[] }`
+- Accumulate all validation errors into `errors` array (don't short-circuit on first failure)
+- `loadGame()` includes error details in thrown error message; error code changes from `SAVE_NOT_FOUND` to `VALIDATION_ERROR`
+- `listSaves()` updated to use `.valid` property check
+
+**Alternatives Considered:**
+- Keep boolean + separate `getValidationErrors()`: Two-step API, easy to forget second call. Rejected.
+- Keep boolean + throw on first failure: Loses information about other failures. Rejected.
+
+**Consequences:**
+- All validation errors visible at once (better debugging)
+- Simple discriminated union (trivial call-site updates)
+- Error messages include specific field names and values
+- `loadGame()` error code changes from `SAVE_NOT_FOUND` to `VALIDATION_ERROR` for corrupt saves
+
+---
+
+### ADR-042: NPC Endpoint Returns Live State When Game Active (2026-03-07)
+
+**Date:** 2026-03-07
+**Status:** Accepted
+
+**Context:**
+- GET `/api/npc/:id` currently returns NPC template data from `getNPC(id)`
+- NPC templates lack live relationship data (affection, trust values that change during gameplay)
+- Consumers need live affection/trust values when a game is active
+
+**Decision:**
+- When a game is active (`gameStateContainer.state !== null`), return the live NPC from `GameState.npcs[id]`
+- When no game is active, fall back to template from `getNPC(id)`
+- NPC type is identical for both sources; no merging or transformation needed
+
+**Alternatives Considered:**
+- Always return template: Consumers never see live relationship data. Rejected: defeats purpose of relationship tracking.
+- Merge template + live overlay: Over-engineered; NPC type is already the same shape. Rejected.
+
+**Consequences:**
+- Consumers get live affection/trust values during active games
+- No data transformation needed (same NPC type from both sources)
+- Transparent fallback to templates when no game active
+
+---
+
+### ADR-043: Reuse VALIDATION_ERROR for Corrupt Save Files (2026-03-07)
+
+**Date:** 2026-03-07
+**Status:** Accepted
+
+**Context:**
+- `loadGame()` currently throws `SAVE_NOT_FOUND` when validation fails on a loaded save file
+- Sprint 4 changes `validateGameState()` to return detailed error messages
+- Need appropriate error code for "save exists but is corrupted/invalid"
+
+**Decision:**
+- Reuse existing `VALIDATION_ERROR` error code (already defined in `ErrorCodes` and mapped to HTTP 400 in global error handler)
+- Include descriptive validation errors from `ValidationResult` in the error message
+- No new error code needed
+
+**Alternatives Considered:**
+- Continue using `SAVE_NOT_FOUND`: Misleading; the save was found but is corrupt. Rejected.
+- Add new `VALIDATION_FAILED` code: Redundant with existing `VALIDATION_ERROR`. Rejected.
+
+**Consequences:**
+- Accurate error semantics (validation failure, not missing file)
+- No new error code to register or map in global error handler
+- Error messages include specific validation failure details
+
+---
+
+### ADR-044: Team Field Added Directly to GameState (2026-03-07)
+
+**Date:** 2026-03-07
+**Status:** Accepted
+
+**Context:**
+- Sprint 4 adds team composition tracking (which 2 of 3 NPCs are in the active party)
+- Need to decide where team data lives in the type system
+
+**Decision:**
+- Add `readonly team: readonly string[]` directly to `GameState` interface in `src/types/index.ts`
+- Placed after `npcs` field for logical grouping (NPC data, then NPC selection)
+- Empty array `[]` when no team selected; exactly 2 NPC ID entries when team is set
+- Initialized as `[]` in `createNewGameState()`; `loadGame()` normalizes missing `team` to `[]` for backward compatibility
+
+**Alternatives Considered:**
+- Create separate team type file: Over-engineered for a simple string array. Rejected.
+
+**Consequences:**
+- Simple, consistent with other top-level GameState fields
+- Backward compatible (old saves without `team` normalized to `[]` on load)
+- No new type files created
+
+---
+
+### ADR-045: Combat State Validation — Top-Level Shape Only (2026-03-07)
+
+**Date:** 2026-03-07
+**Status:** Accepted
+
+**Context:**
+- Sprint 4 deepens `validateGameState()` to check `combatState` when non-null
+- CombatState contains nested arrays of Combatant objects with many fields
+- Need to decide validation depth: full recursive vs top-level shape vs first-level fields
+
+**Decision:**
+- Validate top-level shape only: check `round` (number), `phase` (valid CombatPhase enum), `status` (valid enum), and that `playerParty`, `enemyParty`, `actionQueue`, `roundHistory` are arrays
+- No deep validation of individual Combatant fields or array element shapes
+
+**Alternatives Considered:**
+- Full recursive validation: Validates every Combatant field, action queue entries, etc. Rejected: combat state is transient and engine-created; deep corruption unlikely.
+- Top-level + first-level Combatant fields: Middle ground. Rejected: additional complexity for low probability of catching real issues.
+
+**Consequences:**
+- Catches serialization issues (wrong types, missing fields) without over-validating engine-created state
+- Lightweight validation that won't slow down save/load
+- Can deepen later if corruption issues surface in practice

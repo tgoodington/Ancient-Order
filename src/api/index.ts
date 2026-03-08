@@ -182,6 +182,15 @@ async function globalErrorHandler(
     return;
   }
 
+  if (domainCode === ErrorCodes.TEAM_COMPOSITION_INVALID) {
+    const response: ApiResponse<never> = {
+      success: false,
+      error: { code: ErrorCodes.TEAM_COMPOSITION_INVALID, message: error.message },
+    };
+    await reply.code(400).send(response);
+    return;
+  }
+
   // Fallback: generic 500
   const response: ApiResponse<never> = {
     success: false,

@@ -1,0 +1,35 @@
+{
+  "specialist_assignments": [
+    {
+      "specialist": "game-backend-engine",
+      "tasks": [
+        { "task_id": "T1", "depth": "Light" },
+        { "task_id": "T2", "depth": "Standard" },
+        { "task_id": "T3", "depth": "Light" }
+      ],
+      "rationale": "All tasks are code/backend domain. game-backend-engine domain_tags (backend, rest-api, persistence, game-state, immutable-state, typescript, turn-based, rpg) overlap directly with all three tasks: API route wiring, state updater addition, and validation deepening."
+    }
+  ],
+  "producer_assignments": [
+    {
+      "specialist": "game-backend-engine",
+      "producer": "code-writer",
+      "output_format": "source",
+      "tasks_output_files": [
+        "blueprints/game-backend-engine.md"
+      ]
+    }
+  ],
+  "execution_order": [
+    {
+      "phase": 1,
+      "specialists": ["game-backend-engine"],
+      "rationale": "Single specialist covers all tasks. Tasks are independent (no cross-task state dependencies at detail phase) and can be addressed sequentially within the specialist's blueprint."
+    }
+  ],
+  "dependencies": [],
+  "unmatched_tasks": [],
+  "prerequisite_check": {
+    "code-writer/source": "PASS — no required tools"
+  }
+}

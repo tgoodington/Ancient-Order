@@ -21,9 +21,10 @@ import {
   initializeNarrative,
   updateNarrativeState,
   clearNarrative,
+  updateTeamComposition,
 } from './stateUpdaters.js';
 import { createNewGameState } from './gameState.js';
-import { GameState, Personality, ConversationEntry, DialogueOption } from '../types/index.js';
+import { GameState, Personality, ConversationEntry, DialogueOption, ErrorCodes } from '../types/index.js';
 import type { CombatState } from '../types/combat.js';
 import type { NarrativeState } from '../types/narrative.js';
 
@@ -672,5 +673,99 @@ describe('clearNarrative', () => {
     const cleared = clearNarrative(withNarrative);
     expect(cleared.player).toBe(withNarrative.player);
     expect(cleared.npcs).toBe(withNarrative.npcs);
+  });
+});
+
+// ============================================================================
+// updateTeamComposition
+// ============================================================================
+
+describe('updateTeamComposition', () => {
+  const ELENA_ID = 'npc_scout_elena';
+  const LARS_ID = 'npc_merchant_lars';
+
+  it('sets team to provided NPC IDs', () => {
+    const updated = updateTeamComposition(baseState, [ELENA_ID, LARS_ID]);
+    expect(updated.team).toEqual([ELENA_ID, LARS_ID]);
+  });
+
+  it('returns a new object (reference inequality)', () => {
+    const updated = updateTeamComposition(baseState, [ELENA_ID, LARS_ID]);
+    expect(updated).not.toBe(baseState);
+  });
+
+  it('does not mutate the input state', () => {
+    const originalTeam = baseState.team;
+    updateTeamComposition(baseState, [ELENA_ID, LARS_ID]);
+    expect(baseState.team).toBe(originalTeam);
+  });
+
+  it('updates timestamp', () => {
+    const staleState = { ...baseState, timestamp: 0 };
+    const updated = updateTeamComposition(staleState, [ELENA_ID, LARS_ID]);
+    expect(updated.timestamp).toBeGreaterThan(0);
+  });
+
+  it('preserves other fields (player, npcs, conversationLog)', () => {
+    const updated = updateTeamComposition(baseState, [ELENA_ID, LARS_ID]);
+    expect(updated.player).toBe(baseState.player);
+    expect(updated.npcs).toBe(baseState.npcs);
+    expect(updated.conversationLog).toBe(baseState.conversationLog);
+  });
+
+  it('rejects empty array', () => {
+    try {
+      updateTeamComposition(baseState, []);
+      expect.fail('Expected an error to be thrown');
+    } catch (err) {
+      expect((err as { code: string }).code).toBe(ErrorCodes.TEAM_COMPOSITION_INVALID);
+    }
+  });
+
+  it('rejects array with 1 element', () => {
+    try {
+      updateTeamComposition(baseState, [ELENA_ID]);
+      expect.fail('Expected an error to be thrown');
+    } catch (err) {
+      expect((err as { code: string }).code).toBe(ErrorCodes.TEAM_COMPOSITION_INVALID);
+    }
+  });
+
+  it('rejects array with 3 elements', () => {
+    try {
+      updateTeamComposition(baseState, [ELENA_ID, LARS_ID, 'npc_outlaw_kade']);
+      expect.fail('Expected an error to be thrown');
+    } catch (err) {
+      expect((err as { code: string }).code).toBe(ErrorCodes.TEAM_COMPOSITION_INVALID);
+    }
+  });
+
+  it('rejects unknown NPC ID', () => {
+    const badId = 'npc_unknown_xyz';
+    try {
+      updateTeamComposition(baseState, [ELENA_ID, badId]);
+      expect.fail('Expected an error to be thrown');
+    } catch (err) {
+      expect((err as { code: string }).code).toBe(ErrorCodes.TEAM_COMPOSITION_INVALID);
+      expect((err as Error).message).toContain(badId);
+    }
+  });
+
+  it('rejects duplicate NPC IDs', () => {
+    try {
+      updateTeamComposition(baseState, [ELENA_ID, ELENA_ID]);
+      expect.fail('Expected an error to be thrown');
+    } catch (err) {
+      expect((err as { code: string }).code).toBe(ErrorCodes.TEAM_COMPOSITION_INVALID);
+    }
+  });
+
+  it('thrown error has code TEAM_COMPOSITION_INVALID', () => {
+    try {
+      updateTeamComposition(baseState, []);
+      expect.fail('Expected an error to be thrown');
+    } catch (err) {
+      expect((err as { code: string }).code).toBe(ErrorCodes.TEAM_COMPOSITION_INVALID);
+    }
   });
 });

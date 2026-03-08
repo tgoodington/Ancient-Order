@@ -95,6 +95,7 @@ export interface NPC {
 export interface GameState {
   readonly player: PlayerCharacter;
   readonly npcs: Record<string, NPC>;
+  readonly team: readonly string[];
   readonly currentDialogueNode: string | null;
   readonly saveSlot: number | null;
   readonly combatState: CombatState | null;

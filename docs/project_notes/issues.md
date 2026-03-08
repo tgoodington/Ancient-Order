@@ -117,4 +117,19 @@ This file logs work completed on tickets. Keep it simple - just enough to rememb
 - **Key Decisions**: Flat AND prerequisites (D1), scene fixtures in src/fixtures/scenes/ (D3), synergy via initCombatState (D5), Ironhold town name (D5-narrative)
 - **Artifacts**: plan.md, team_assignment.json, 2 blueprints, build_brief.md
 
+### 2026-03-07 - PLAN-004: Sprint 4 Planning & Detail Phase
+- **Status**: Completed
+- **Description**: v9 workflow planning, team assembly, and detail phase for Sprint 4
+- **Scope**: 3 tasks planned, 1 specialist assembled (Game Backend Engine)
+- **Key Decisions**: Team locked during combat/narrative (D1), ValidationResult discriminated union (D2), live NPC state when game active (D3), reuse VALIDATION_ERROR code (D4), team as string array on GameState (D5), top-level-only combat validation (D6)
+- **Artifacts**: outline.md, team_assignment.json, 1 blueprint, prompt_brief.md
+
+### 2026-03-07 - BUILD-003: Sprint 4 Persistence & API Completion
+- **Status**: Completed
+- **Description**: Full implementation of Sprint 4: saves management endpoints, player/NPC state endpoints, deepened state validation
+- **Scope**: 3 tasks (T1-T3), 9 files modified (8 source + 1 test)
+- **Completion**: 969/969 tests passing (no regressions)
+- **Review Chain**: Specialist review PASS, Builder verification PASS, Security review PASS (2 issues remediated: missing DELETE slot validation, unbounded POST /team schema)
+- **Artifacts**: build_report.md
+
 <!-- Add work log entries below this line -->
