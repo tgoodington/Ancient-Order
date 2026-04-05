@@ -49,6 +49,18 @@ Each bug entry includes:
 - **Solution:** Added `isNaN()` + range guard (`slot < 1 || slot > 10`) matching the established pattern on save/load routes.
 - **Prevention:** Slot validation must be enforced at the API layer BEFORE delegation to persistence functions. Never rely on lower layers as the sole input guard. When adding routes that follow an existing pattern, copy all guards, not just the happy-path logic.
 
+### 2026-03-22 — Vitest + @testing-library/react requires explicit cleanup
+- **Description:** DOM from previous tests leaked into subsequent tests, causing "Found multiple elements" errors with `getByText` and `getByRole` queries.
+- **Root cause:** `@testing-library/react` does not auto-cleanup in Vitest (unlike Jest). The `cleanup()` function must be called explicitly via `afterEach(cleanup)` in the test setup file.
+- **Solution:** Added `import { cleanup } from '@testing-library/react'` and `afterEach(() => { cleanup(); })` to `client/src/test/setup.ts`.
+- **Prevention:** Always include explicit cleanup in Vitest setup when using @testing-library/react. This is a known Vitest compatibility issue.
+
+### 2026-03-22 — vi.mock hoisting breaks ApiClientError instanceof checks
+- **Description:** Auto-mocking a module containing both functions and a class (`apiClient.ts` with `apiGet`, `apiPost`, and `ApiClientError`) replaced the class with a mock, breaking `err instanceof ApiClientError` checks in production code under test.
+- **Root cause:** `vi.mock()` is hoisted to the top of the file. Variables referenced inside the factory must use `vi.hoisted()`. The class must be re-defined inline in the factory function.
+- **Solution:** Used `vi.hoisted()` for mock function refs, defined `ApiClientError` class inline in `vi.mock()` factory, then imported the mocked class after the mock declaration.
+- **Prevention:** When mocking modules that export both functions and classes used with `instanceof`, always define the class inline in the `vi.mock()` factory. Never rely on auto-mock for modules with class exports that are used in type checks.
+
 ## Prevention Notes
 
 When adding new bugs, think about:

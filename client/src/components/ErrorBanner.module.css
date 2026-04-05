@@ -1,0 +1,29 @@
+.banner {
+  background: #5c2020;
+  border: var(--border-width) solid #8b3030;
+  border-radius: var(--border-radius-md);
+  padding: var(--space-sm) var(--space-md);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-md);
+  color: var(--color-text-primary);
+}
+
+.message {
+  flex: 1;
+  font-size: var(--font-size-sm);
+}
+
+.dismissButton {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-lg);
+  padding: var(--space-xs);
+  line-height: 1;
+}
+
+.dismissButton:hover {
+  color: var(--color-text-primary);
+}

@@ -12,7 +12,7 @@ This file stores project constants, configuration, and frequently-needed **non-s
 
 - **Project Name:** Ancient Order - Act 1 Prototype
 - **Purpose:** Turn-based combat RPG prototype for investor pitches / publisher support
-- **Current Sprint:** Sprint 4 (Persistence & API Completion) — COMPLETE
+- **Current Sprint:** Sprint 5 (Frontend React Phase 1) — BUILDING
 - **Target Deployment:** Vercel (stateless backend)
 
 ## Technical Stack
@@ -34,6 +34,8 @@ This file stores project constants, configuration, and frequently-needed **non-s
 **Sprint 2 Status (2026-02-23):** **COMPLETE** — 793 tests passing across 25 files, zero TypeScript errors, security review PASS. Ready for user verification of Excel formulas and encounter fixture stats before pitch demo.
 
 **Sprint 3 Status (2026-03-03):** **COMPLETE** — 969 tests passing across 31 files. Narrative progression layer fully implemented: scene graph engine, choice/consequence system, team synergy bonuses, narrative REST API, Act 1 demo content (4 scenes). Security review PASS (2 medium issues remediated).
+
+**Sprint 5 Status (2026-03-22):** **COMPLETE** — React frontend bootstrapped. 27 client files produced, 54 frontend tests passing across 8 test files. `npm install` in `client/` required. Vite dev server at localhost:5173 (proxy to backend at 3000). Run `npm run dev:all` from root to start both.
 
 **Sprint 4 Status (2026-03-08):** **COMPLETE** — 1019 tests passing (969 existing + 50 new), zero regressions. Persistence & API Completion: saves management (GET/DELETE), player personality/team endpoints, NPC live-state fallback, deep ValidationResult type. All 50 tests passed on first run. Test files: `src/state/stateUpdaters.test.ts` (appended, 11 tests), `src/persistence/saveLoad.test.ts` (appended, 22 tests), `tests/sprint4.integration.test.ts` (new, 17 tests).
 
@@ -248,7 +250,8 @@ All docs in `docs/Reference Documents/`:
 - **Sprint 2:** Combat Engine (port Excel formulas, 5-phase rounds, path/energy system)
 - **Sprint 3:** Narrative & State Machine (Act 1 scenes, choice tracking, team synergy)
 - **Sprint 4:** Persistence & API (save/load, REST endpoints)
-- **Sprint 5-7:** Frontend (React - Equinox HUD, Town scenes, Combat UI)
+- **Sprint 5:** Frontend React Phase 1 (Vite setup, GameStateProvider, Equinox HUD) — COMPLETE (54 tests)
+- **Sprint 6-7:** Frontend (Town scenes, Combat UI)
 - **Sprint 8-9:** Testing & Deployment (Vercel)
 
 ## Local Development
@@ -290,11 +293,20 @@ All docs in `docs/Reference Documents/`:
 | 3 | 180 | +50% | 2 |
 
 ### Stamina Color Coding
+**Game design spec (Visual Info Phase, original):**
 - Green: 100%-75%
 - Yellow: 74%-50%
 - Orange: 49%-25%
 - Red: 24%-1%
 - Black: 0% (KO)
+
+**Frontend HUD implementation (Sprint 5 — user-accepted specialist design):**
+- Green: >60%
+- Yellow: >40%
+- Orange: >20%
+- Red: >0%
+- Black: 0% (KO)
+Note: Frontend uses symmetric 20% bands. Diverges from design spec. User accepted this during Sprint 5 build (2026-03-22).
 
 ### Team Synergy Bonuses (Sprint 3)
 

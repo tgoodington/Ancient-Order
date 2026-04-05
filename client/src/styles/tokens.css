@@ -1,0 +1,70 @@
+:root {
+  /* Color Palette -- Leather Browns */
+  --color-bg-deep: #1a1410;
+  --color-bg-panel: #2a2118;
+  --color-bg-panel-hover: #352a1f;
+  --color-border-frame: #5c4a3a;
+  --color-border-accent: #8b7355;
+  --color-text-primary: #e8dcc8;
+  --color-text-secondary: #a89880;
+  --color-text-muted: #6b5d50;
+
+  /* Metal Grays */
+  --color-metal-light: #c0b8a8;
+  --color-metal-mid: #7a7060;
+  --color-metal-dark: #4a4238;
+
+  /* Stamina States (5 defined thresholds) */
+  --color-stamina-green: #4a9e4a;       /* >60% */
+  --color-stamina-green-light: #6ab86a; /* gradient light end for green */
+  --color-stamina-yellow: #c4a833;      /* 40-60% */
+  --color-stamina-yellow-light: #d4c050; /* gradient light end for yellow */
+  --color-stamina-orange: #c87533;      /* 20-40% */
+  --color-stamina-orange-light: #d89050; /* gradient light end for orange */
+  --color-stamina-red: #c44040;         /* 1-20% */
+  --color-stamina-red-light: #d86060;   /* gradient light end for red */
+  --color-stamina-black: #1a1a1a;       /* 0% -- KO */
+
+  /* Energy */
+  --color-energy-filled: #5088c0;
+  --color-energy-empty: #2a2a30;
+  --color-energy-border: #4a6888;
+
+  /* Personality Trait Colors */
+  --color-trait-patience: #6a9fb5;
+  --color-trait-empathy: #b56a9f;
+  --color-trait-cunning: #b5956a;
+  --color-trait-logic: #6ab58a;
+  --color-trait-kindness: #b57a6a;
+  --color-trait-charisma: #8a6ab5;
+
+  /* Spacing Scale */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+
+  /* Typography */
+  --font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.5rem;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+
+  /* Border & Shadow */
+  --border-radius-sm: 4px;
+  --border-radius-md: 8px;
+  --border-width: 2px;
+  --shadow-panel: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-inset: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow: 400ms ease;
+}

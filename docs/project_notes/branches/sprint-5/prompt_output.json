@@ -1,0 +1,91 @@
+{
+  "summary": {
+    "title": "Sprint 5 — Frontend React Phase 1",
+    "one_liner": "Bootstrap React app with GameStateProvider and fully interactive Equinox HUD over live backend API",
+    "problem_statement": "The backend is complete through Sprint 4 with a full REST API surface, but there is no frontend. Sprint 5 bootstraps the React application and delivers the first player-facing component — the Equinox HUD — fully functional over live backend data.",
+    "success_criteria": "React app connects to Fastify backend, GameStateProvider manages all API state, Equinox HUD renders all elements (stamina, energy, stance, personality, path) with full interactivity and armor-themed aesthetic"
+  },
+  "commander_intent": {
+    "desired_end_state": "A player sees a polished, armor-themed HUD displaying their real game state with all interactive elements working — feels like part of the game world, not a developer prototype",
+    "non_negotiables": [
+      "HUD connects to real backend API, not mock data",
+      "All HUD elements from spec implemented and interactive",
+      "Visual aesthetic matches armor/leather design language"
+    ],
+    "boundaries": [
+      "Phase 1 frontend only — no town scene, dialogue UI, or combat UI",
+      "No backend modifications",
+      "Toolchain choice deferred to outline phase"
+    ]
+  },
+  "scope": {
+    "in": [
+      "React project initialization and build toolchain setup",
+      "GameStateProvider context wrapping API state synchronization",
+      "Complete Equinox HUD component with all interactive elements",
+      "Visual styling matching armor/leather aesthetic",
+      "Development proxy or CORS setup for backend communication"
+    ],
+    "out": [
+      "Town navigation / dialogue UI (Sprint 6)",
+      "Combat UI / action declaration (Sprint 7)",
+      "Backend code changes",
+      "Deployment pipeline / CI/CD",
+      "Authentication / user management"
+    ]
+  },
+  "constraints": [
+    "Must consume existing REST API without backend modifications",
+    "Immutable state pattern (ADR-005)",
+    "ESM modules with .js extensions (ADR-016)",
+    "Vercel deployment target (stateless)",
+    "Existing backend runs on Fastify, port 3000"
+  ],
+  "assumptions": [
+    {
+      "assumption": "Existing API endpoints provide all data the HUD needs",
+      "confidence": "high",
+      "basis": "Sprint 4 completed full API surface with game state, player, personality, and narrative endpoints"
+    },
+    {
+      "assumption": "No authentication needed for Phase 1",
+      "confidence": "medium",
+      "basis": "Single-player local dev environment; no multi-user scenario yet"
+    },
+    {
+      "assumption": "HUD design spec in handoff doc is complete enough to implement from",
+      "confidence": "medium",
+      "basis": "Spec lists all elements but may need creative decisions on exact interaction behavior"
+    },
+    {
+      "assumption": "Backend CORS/proxy configuration is straightforward",
+      "confidence": "high",
+      "basis": "Standard dev setup for React + API server"
+    }
+  ],
+  "decision_posture": [
+    {
+      "area": "React toolchain & project structure",
+      "posture": "i_decide",
+      "notes": "Outline recommends, user approves build tool, styling, and folder layout"
+    },
+    {
+      "area": "HUD visual design & aesthetic",
+      "posture": "i_decide",
+      "notes": "Outline recommends, user approves color palette, component styling, layout"
+    },
+    {
+      "area": "GameStateProvider architecture",
+      "posture": "i_decide",
+      "notes": "Outline recommends, user approves state management patterns and API integration"
+    }
+  ],
+  "research_performed": [],
+  "open_questions": [
+    "React toolchain choice (Vite vs Next.js, styling approach)",
+    "Frontend project structure (monorepo subfolder vs separate project)",
+    "How GameStateProvider handles state refresh (polling, event-driven, or on-demand)",
+    "Exact interaction behavior for path selector",
+    "Personality expansion UX details"
+  ]
+}

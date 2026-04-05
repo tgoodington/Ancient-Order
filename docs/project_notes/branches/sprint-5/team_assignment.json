@@ -1,0 +1,64 @@
+{
+  "specialist_assignments": [
+    {
+      "specialist": "frontend-component",
+      "tasks": [
+        {"task_id": "T1", "depth": "Light"},
+        {"task_id": "T2", "depth": "Light"},
+        {"task_id": "T3", "depth": "Standard"},
+        {"task_id": "T4", "depth": "Standard"},
+        {"task_id": "T5", "depth": "Standard"},
+        {"task_id": "T6", "depth": "Light"}
+      ],
+      "rationale": "All tasks are code/frontend domain. frontend-component has domain_tags [frontend, ui, components, react, vue, angular, css, html, accessibility, responsive, state-management] — 'frontend' tag matches all task domains directly."
+    }
+  ],
+  "producer_assignments": [
+    {
+      "specialist": "frontend-component",
+      "producer": "code-writer",
+      "output_format": "source",
+      "tasks_output_files": [
+        "client/package.json",
+        "client/tsconfig.json",
+        "client/vite.config.ts",
+        "client/src/main.tsx",
+        "client/src/App.tsx",
+        "client/index.html",
+        "client/src/styles/tokens.css",
+        "client/src/styles/reset.css",
+        "client/src/context/GameStateProvider.tsx",
+        "client/src/context/useGameState.ts",
+        "client/src/components/StaminaBar.tsx",
+        "client/src/components/StaminaBar.module.css",
+        "client/src/components/EnergyDisplay.tsx",
+        "client/src/components/EnergyDisplay.module.css",
+        "client/src/components/StanceIndicator.tsx",
+        "client/src/components/PersonalityBreakdown.tsx",
+        "client/src/components/PathSelector.tsx",
+        "client/src/components/EquinoxHUD.tsx",
+        "client/src/components/EquinoxHUD.module.css"
+      ]
+    }
+  ],
+  "execution_order": [
+    {
+      "phase": 1,
+      "specialists": ["frontend-component"],
+      "rationale": "Single specialist covers all tasks. Internal task sequencing: T1 → [T2, T3] → [T4, T5] → T6, handled within the detail phase."
+    }
+  ],
+  "dependencies": [],
+  "unmatched_tasks": [],
+  "prerequisite_check": {
+    "code-writer/source": "PASS — no required tooling"
+  },
+  "format_overrides": [
+    {
+      "specialist": "frontend-component",
+      "original_format": "code",
+      "overridden_format": "source",
+      "reason": "frontend-component default_output_format is 'code'; code-writer supports 'source' (semantically equivalent). Override applied for producer compatibility."
+    }
+  ]
+}

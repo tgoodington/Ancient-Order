@@ -1195,3 +1195,144 @@ User <-> Waldo (Haiku)             User <-> Architect (Opus)
 - Catches serialization issues (wrong types, missing fields) without over-validating engine-created state
 - Lightweight validation that won't slow down save/load
 - Can deepen later if corruption issues surface in practice
+
+### ADR-046: Vite + React Frontend Toolchain (2026-03-20)
+
+**Context:**
+- Sprint 5 bootstraps the React frontend; toolchain choice locks in for Sprints 6-7
+- Backend is Fastify on port 3000 with ESM modules (ADR-016/021)
+- Single-player game with no SSR/SEO requirements
+
+**Decision:**
+- Vite + React in `client/` subfolder with own package.json and tsconfig.json
+- Vite dev server proxies `/api/*` to backend on port 3000
+
+**Alternatives Considered:**
+- Next.js → Rejected: SSR/API routes/file-based routing unused; adds complexity for zero benefit
+- Separate repo → Rejected: unnecessary isolation for solo dev prototype
+
+**Consequences:**
+- ESM-native output aligns with existing backend patterns
+- Two dev servers required (solved with `concurrently` script)
+- Vitest config sharing possible between backend and frontend
+
+### ADR-047: CSS Modules + Custom Properties for Game UI (2026-03-20)
+
+**Context:**
+- Equinox HUD requires armor/leather/metal aesthetic — highly custom, not standard web UI
+- Stamina bar has 5 discrete color states based on thresholds
+- Need a design token system that carries through Sprints 6-7
+
+**Decision:**
+- CSS Modules (*.module.css) for component scoping, built into Vite
+- CSS custom properties for design tokens (colors, spacing, typography)
+- Stamina color states via data-attribute selectors (pure CSS, no JS injection)
+
+**Alternatives Considered:**
+- Tailwind → Rejected: utility classes fight custom game aesthetic; arbitrary overrides dominate
+- Styled Components → Rejected: runtime cost for a problem CSS attribute selectors already solve
+
+**Consequences:**
+- Full aesthetic control with zero runtime cost
+- Design tokens reusable across all future components
+- More manual CSS writing but appropriate for custom game UI
+
+### ADR-048: On-Demand State Fetching for GameStateProvider (2026-03-20)
+
+**Context:**
+- Single-player game — no external actors modify state
+- GameStateProvider wraps React Context to expose backend state to components
+- State only changes when the player takes an action
+
+**Decision:**
+- Fetch game state from API on component mount
+- Re-fetch after user actions (path switch, etc.)
+- No polling or event-driven updates
+
+**Alternatives Considered:**
+- Polling interval → Rejected: wasted network requests for state that only changes on user input
+- SSE/WebSocket → Rejected: requires backend modifications (out of scope) for no benefit
+
+**Consequences:**
+- Simple, predictable data flow
+- No timer/subscription cleanup complexity
+- May need to evolve if multiplayer is added in future sprints
+
+### ADR-049: Combat-Conditional HUD Rendering (2026-03-22)
+
+**Context:**
+- Stamina, energy, and stance data exist only on `Combatant` inside `CombatState`, which is null outside combat
+- `PlayerCharacter` has only id, name, personality — no combat stats
+- Outline assumed these stats were always available for HUD display
+
+**Decision:**
+- HUD renders conditionally: personality + team always visible; stamina/energy appear only during active combat
+- EquinoxHUD checks `gameState.combatState !== null` to toggle combat section
+
+**Alternatives Considered:**
+- Mock placeholders (100% stamina, full energy when not in combat) → Rejected: misleading, fabricated data
+- Defer all combat HUD to Sprint 7 → Rejected: delays architectural patterns needed for combat UI
+
+**Consequences:**
+- HUD adapts to game phase (exploration vs combat)
+- Components are built now, ready for Sprint 7 combat UI integration
+- Conditional rendering pattern established early
+
+### ADR-050: PathSelector Reinterpreted as TeamSelector (2026-03-22)
+
+**Context:**
+- Outline specified "path selector allowing switching between two paths" with backend API call
+- `ElementalPath` is combat-only (on `Combatant`), no API endpoint exists for switching path outside combat
+- `POST /api/player/team` is the only player-level selection endpoint available
+
+**Decision:**
+- Reinterpret PathSelector as TeamSelector using `POST /api/player/team`
+- Shows available NPCs, allows selecting exactly 2 party members
+- Disabled during combat and narrative (backend enforces this)
+
+**Alternatives Considered:**
+- ElementalPath display (combat-only, read-only) → Rejected: no switching interaction, combat-only
+- Defer to Sprint 7 → Rejected: misses opportunity for real interactivity with existing API
+
+**Consequences:**
+- Sprint 5 HUD has a working interactive component with real backend integration
+- "Path" terminology in outline refers to team composition in implementation
+- Sprint 7 combat UI may add an actual ElementalPath display
+
+### ADR-051: StanceIndicator Deferred to Sprint 7 (2026-03-22)
+
+**Context:**
+- Outline describes showing stance as A/D/E/S/G letters
+- `VisualInfo.stance` field is actually "active" or "KO" (alive/dead status)
+- Action type (ATTACK/DEFEND/EVADE/SPECIAL/GROUP) is a per-round declaration, not persistent combatant state
+
+**Decision:**
+- Defer StanceIndicator implementation to Sprint 7 when combat UI is built
+- No placeholder or stub component in Sprint 5
+
+**Alternatives Considered:**
+- Show active/KO status → Rejected: not the tactical stance info the outline envisioned
+- Client-side declaration tracking → Rejected: premature without combat UI to declare actions from
+
+**Consequences:**
+- Sprint 5 HUD has no stance display
+- Sprint 7 can implement properly with combat declaration flow
+
+### ADR-052: Duplicate Frontend Types (2026-03-22)
+
+**Context:**
+- Frontend `client/tsconfig.json` uses `bundler` moduleResolution; backend uses `NodeNext` — incompatible
+- Frontend needs subset of backend types (GameState, Personality, Combatant, ApiResponse)
+
+**Decision:**
+- Duplicate needed types in `client/src/types/index.ts` as a minimal subset
+- No shared types package or import from backend source
+
+**Alternatives Considered:**
+- Shared types package → Rejected: monorepo tooling overhead not justified for prototype
+- Import from backend src/types → Rejected: incompatible tsconfig, creates build coupling
+
+**Consequences:**
+- Types could drift if backend changes, but backend is locked for Sprint 5
+- Simple, zero-coupling frontend build
+- Can be migrated to shared package if project grows

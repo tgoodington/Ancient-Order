@@ -1,0 +1,28 @@
+.container {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.segment {
+  width: 12px;
+  height: 20px;
+  border-radius: 2px;
+  border: 1px solid var(--color-energy-border);
+  transition: background-color var(--transition-fast);
+}
+
+.segment[data-filled="true"] {
+  background-color: var(--color-energy-filled);
+  box-shadow: 0 0 4px rgba(80, 136, 192, 0.3);
+}
+
+.segment[data-filled="false"] {
+  background-color: var(--color-energy-empty);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .segment {
+    transition: none;
+  }
+}

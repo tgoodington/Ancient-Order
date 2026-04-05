@@ -1,0 +1,48 @@
+.hud {
+  width: 100%;
+  max-width: 400px;
+}
+
+.frame {
+  background: var(--color-bg-panel);
+  border: var(--border-width) solid var(--color-border-frame);
+  border-radius: var(--border-radius-md);
+  padding: var(--space-md);
+  box-shadow: var(--shadow-panel);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Top accent line for "armor" feel */
+.frame::before {
+  content: '';
+  display: block;
+  height: 3px;
+  background: linear-gradient(to right, transparent, var(--color-border-accent), transparent);
+  margin: 0 calc(-1 * var(--space-md));
+  margin-top: calc(-1 * var(--space-md));
+  border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;
+}
+
+.title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-metal-light);
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+.combatSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.personalitySection {
+  /* no special styles beyond container */
+}
+
+.teamSection {
+  /* no special styles beyond container */
+}

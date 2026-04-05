@@ -30,7 +30,9 @@
       "Bash(cd \"C:\\\\Users\\\\taylo\\\\Claude Projects\\\\Ancient-Order\" && npm test -- roundManager 2>&1)",
       "Bash(cd \"C:\\\\Users\\\\taylo\\\\Claude Projects\\\\Ancient-Order\" && npm test -- --reporter=verbose --filter=\"groupAction\" 2>&1)",
       "Bash(cd \"C:\\\\Users\\\\taylo\\\\Claude Projects\\\\Ancient-Order\" && npm test -- --reporter=verbose \"groupAction\" 2>&1)",
-      "Bash(cd \"C:\\\\Users\\\\taylo\\\\Claude Projects\\\\Ancient-Order\" && npm test -- --reporter=verbose src/combat/sync.test.ts 2>&1)"
+      "Bash(cd \"C:\\\\Users\\\\taylo\\\\Claude Projects\\\\Ancient-Order\" && npm test -- --reporter=verbose src/combat/sync.test.ts 2>&1)",
+      "Skill(intuition-assemble)",
+      "Bash(npx vitest:*)"
     ],
     "autoApprove": [
       "Read",
