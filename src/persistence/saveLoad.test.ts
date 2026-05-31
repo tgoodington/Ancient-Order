@@ -62,6 +62,7 @@ function makeGameState(playerName: string = 'Rin'): GameState {
     combatState: null,
     narrativeState: null,
     conversationLog: [],
+    reactionProgress: {},
     timestamp: 1_700_000_000_000,
   };
 }
@@ -540,6 +541,61 @@ describe('narrativeState persistence', () => {
     const loaded = await loadGame(4, tempDir);
     // narrativeState should be normalized to null (not undefined)
     expect(loaded.narrativeState).toBeNull();
+  });
+
+  it('round-trips a populated reactionProgress map (ADR-054 Layer B)', async () => {
+    const state: GameState = {
+      ...makeGameState(),
+      reactionProgress: {
+        player_1: { block: 215, dodge: 4, parry: 0 },
+        player_2: { block: 0, dodge: 0, parry: 1675 },
+      },
+    };
+    await saveGame(state, 5, tempDir);
+    const loaded = await loadGame(5, tempDir);
+    expect(loaded.reactionProgress).toEqual(state.reactionProgress);
+  });
+
+  it('loads an old save (missing reactionProgress) and normalizes to {}', async () => {
+    const oldSave = {
+      player: {
+        id: 'player-old',
+        name: 'OldPlayer',
+        personality: {
+          patience: 16.67, empathy: 16.67, cunning: 16.67,
+          logic: 16.67, kindness: 16.67, charisma: 16.65,
+        },
+      },
+      npcs: {
+        npc_scout_elena: {
+          id: 'npc_scout_elena',
+          archetype: 'Loyal Scout',
+          personality: { patience: 25, empathy: 30, cunning: 10, logic: 15, kindness: 15, charisma: 5 },
+          affection: 0,
+          trust: 0,
+        },
+      },
+      currentDialogueNode: null,
+      saveSlot: null,
+      combatState: null,
+      conversationLog: [],
+      // reactionProgress intentionally omitted (pre-Layer-B save)
+      timestamp: 1_600_000_000_000,
+    };
+    const filePath = path.join(tempDir, 'slot_6.json');
+    await fs.writeFile(filePath, JSON.stringify(oldSave, null, 2), 'utf-8');
+
+    const loaded = await loadGame(6, tempDir);
+    expect(loaded.reactionProgress).toEqual({});
+  });
+
+  it('validateGameState rejects reactionProgress with a non-number rate', () => {
+    const bad = {
+      ...makeGameState(),
+      reactionProgress: { player_1: { block: 'lots', dodge: 0, parry: 0 } },
+    } as unknown;
+    const result = validateGameState(bad);
+    expect(result.valid).toBe(false);
   });
 
   it('validateGameState accepts narrativeState: null', () => {

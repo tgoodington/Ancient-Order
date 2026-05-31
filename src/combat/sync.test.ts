@@ -15,6 +15,11 @@ import * as path from 'path';
 import { initCombatState, syncToGameState, endCombat } from './sync.js';
 import { saveGame, loadGame } from '../persistence/saveLoad.js';
 import { createNewGameState } from '../state/gameState.js';
+import {
+  reactionSkillsFromProgress,
+  ratesForRank,
+  ZERO_REACTION_PROGRESS,
+} from './reactionProgression.js';
 import type { GameState } from '../types/index.js';
 import type {
   CombatState,
@@ -274,6 +279,79 @@ describe('initCombatState', () => {
 
     expect(gameState.timestamp).toBe(originalTimestamp);
     expect(gameState.combatState).toBeNull();
+  });
+});
+
+// ============================================================================
+// 1b. Reaction Progression seeding / harvest (ADR-054 Layer B)
+// ============================================================================
+
+describe('initCombatState — reaction progression seeding', () => {
+  it('replaces player-party fixture rates with rank-1 derived rates for a new game', () => {
+    const gameState = createNewGameState(); // reactionProgress = {}
+    const encounter = makeEncounterConfig();
+
+    const combatState = initCombatState(gameState, encounter);
+    const player = combatState.playerParty[0];
+
+    expect(player.reactionProgress).toEqual(ZERO_REACTION_PROGRESS);
+    expect(player.reactionSkills).toEqual(
+      reactionSkillsFromProgress(ZERO_REACTION_PROGRESS),
+    );
+    // The literal fixture block SMR (0.3) is gone — now the rank-1 band floor.
+    expect(player.reactionSkills.block.SMR).toBeCloseTo(0.55, 5);
+  });
+
+  it('derives rates from an existing per-combatant XP entry', () => {
+    const gameState = {
+      ...createNewGameState(),
+      reactionProgress: { player_1: { block: 215, dodge: 0, parry: 0 } },
+    };
+    const encounter = makeEncounterConfig();
+
+    const player = initCombatState(gameState, encounter).playerParty[0];
+
+    expect(player.reactionProgress).toEqual({ block: 215, dodge: 0, parry: 0 });
+    expect(player.reactionSkills.block).toEqual(ratesForRank('block', 3));
+    expect(player.reactionSkills.dodge).toEqual(ratesForRank('dodge', 1));
+  });
+
+  it('leaves enemy reaction skills as literal fixtures with no progress', () => {
+    const gameState = createNewGameState();
+    const encounter = makeEncounterConfig();
+
+    const enemy = initCombatState(gameState, encounter).enemyParty[0];
+
+    expect(enemy.reactionProgress).toBeUndefined();
+    expect(enemy.reactionSkills.block).toEqual({ SR: 0.6, SMR: 0.3, FMR: 0.1 });
+  });
+});
+
+describe('syncToGameState — reaction progression harvest', () => {
+  it('writes each player combatant live XP back into the persistent map', () => {
+    const base = makeCombatState();
+    const earned = { block: 8, dodge: 4, parry: 0 };
+    const combatState = {
+      ...base,
+      playerParty: base.playerParty.map((c) => ({ ...c, reactionProgress: earned })),
+    };
+
+    const synced = syncToGameState(createNewGameState(), combatState);
+
+    expect(synced.reactionProgress[base.playerParty[0].id]).toEqual(earned);
+  });
+
+  it('never records enemy progress and preserves unrelated map entries', () => {
+    const gameState = {
+      ...createNewGameState(),
+      reactionProgress: { someoneElse: { block: 100, dodge: 0, parry: 0 } },
+    };
+    const combatState = makeCombatState(); // enemy carries no reactionProgress
+
+    const synced = syncToGameState(gameState, combatState);
+
+    expect(synced.reactionProgress.someoneElse).toEqual({ block: 100, dodge: 0, parry: 0 });
+    expect(synced.reactionProgress.enemy_1).toBeUndefined();
   });
 });
 

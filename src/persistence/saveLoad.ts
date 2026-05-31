@@ -241,6 +241,34 @@ export function validateGameState(data: unknown): ValidationResult {
     }
   }
 
+  // Phase 5b: Reaction progression map validation (ADR-054 Layer B).
+  // Optional for backward compatibility; loadGame normalizes a missing map to {}.
+  if (s.reactionProgress !== undefined) {
+    if (
+      s.reactionProgress === null ||
+      typeof s.reactionProgress !== 'object' ||
+      Array.isArray(s.reactionProgress)
+    ) {
+      errors.push('reactionProgress: expected object');
+    } else {
+      const rp = s.reactionProgress as Record<string, unknown>;
+      for (const [combatantId, entry] of Object.entries(rp)) {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+          errors.push(`reactionProgress.${combatantId}: expected object`);
+          continue;
+        }
+        const e = entry as Record<string, unknown>;
+        for (const reaction of ['block', 'dodge', 'parry']) {
+          if (typeof e[reaction] !== 'number') {
+            errors.push(
+              `reactionProgress.${combatantId}.${reaction}: expected number, got ${typeof e[reaction]}`,
+            );
+          }
+        }
+      }
+    }
+  }
+
   // Phase 6: Narrative state validation
   if (s.narrativeState !== null && s.narrativeState !== undefined) {
     if (typeof s.narrativeState !== 'object') {
@@ -375,6 +403,12 @@ export async function loadGame(
   // Normalize missing team to [] for backward compatibility
   if ((data as Record<string, unknown>).team === undefined) {
     (data as Record<string, unknown>).team = [];
+  }
+
+  // Normalize missing reactionProgress to {} for backward compatibility (ADR-054
+  // Layer B). An empty map means every combatant defaults to rank 1 at combat init.
+  if ((data as Record<string, unknown>).reactionProgress === undefined) {
+    (data as Record<string, unknown>).reactionProgress = {};
   }
 
   return data as GameState;

@@ -32,6 +32,7 @@
 import { resolveDefense, effectiveReactionSkills } from './defense.js';
 import { getPreferredDefense } from './elementalPaths.js';
 import { calculateBaseDamage } from './formulas.js';
+import { awardReactionXp } from './reactionProgression.js';
 import type { CombatState, Combatant, AttackResult } from '../types/combat.js';
 
 // ============================================================================
@@ -95,6 +96,26 @@ function _applyDamage(state: CombatState, targetId: string, damage: number): Com
     ...state,
     enemyParty: state.enemyParty.map(updateCombatant),
   };
+}
+
+/**
+ * Replaces a single combatant (by id) in whichever party it belongs to.
+ * Returns a new CombatState; input is never mutated. No-op if not found.
+ */
+function _replaceCombatant(state: CombatState, updated: Combatant): CombatState {
+  if (state.playerParty.some((c) => c.id === updated.id)) {
+    return {
+      ...state,
+      playerParty: state.playerParty.map((c) => (c.id === updated.id ? updated : c)),
+    };
+  }
+  if (state.enemyParty.some((c) => c.id === updated.id)) {
+    return {
+      ...state,
+      enemyParty: state.enemyParty.map((c) => (c.id === updated.id ? updated : c)),
+    };
+  }
+  return state;
 }
 
 // ============================================================================
@@ -196,6 +217,19 @@ export function resolveCounterChain(
     // Mitigated damage applies on every exchange (successful Parry/Dodge no longer
     // negate fully — see ADR-054).
     currentState = _applyDamage(currentState, targetId, finalDamage);
+
+    // Reaction XP (ADR-054 Layer B): the reacting defender trains the reaction it
+    // used on this exchange. getPreferredDefense always yields a real reaction;
+    // awardReactionXp is a no-op for combatants without reactionProgress (enemies).
+    if (selectedDefense !== 'defenseless') {
+      const reactor = _findCombatant(currentState, targetId);
+      if (reactor) {
+        currentState = _replaceCombatant(
+          currentState,
+          awardReactionXp(reactor, selectedDefense, defenseOutcome.success),
+        );
+      }
+    }
 
     // The chain continues only on a successful Parry: the target becomes the new
     // attacker and counters back. A Block, Dodge, or failed Parry ends it.

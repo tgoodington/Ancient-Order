@@ -19,12 +19,17 @@ import type {
   Combatant,
   CombatantConfig,
   EncounterConfig,
+  ReactionProgress,
 } from '../types/combat.js';
 import { ASCENSION_STARTING_SEGMENTS } from '../types/combat.js';
 import type { SynergyResult } from '../types/narrative.js';
 import { updateCombatState } from '../state/stateUpdaters.js';
 import { calculateSynergy } from '../narrative/synergyCalculator.js';
 import { DEFAULT_PARADIGMS } from '../fixtures/synergyConfig.js';
+import {
+  reactionSkillsFromProgress,
+  ZERO_REACTION_PROGRESS,
+} from './reactionProgression.js';
 
 // ============================================================================
 // Internal Helpers
@@ -65,6 +70,48 @@ function _configToCombatant(config: CombatantConfig): Combatant {
   };
 }
 
+/**
+ * Seeds a player-party combatant's reaction progression (ADR-054 Layer B).
+ *
+ * Reads the combatant's persistent per-reaction XP from GameState (defaulting to
+ * zero = rank 1 for any combatant not yet recorded) and *replaces* the literal
+ * fixture reactionSkills with rank-derived rates. The accumulated XP is attached
+ * as `reactionProgress` so it can keep accruing and rederive rates on rank-up.
+ *
+ * Only player-party combatants are seeded; enemies keep their literal fixture
+ * rates and carry no progress (only-player-party-progresses, ADR-054).
+ */
+function _seedReactionProgress(
+  combatant: Combatant,
+  gameState: Readonly<GameState>,
+): Combatant {
+  const progress: ReactionProgress =
+    gameState.reactionProgress[combatant.id] ?? ZERO_REACTION_PROGRESS;
+  return {
+    ...combatant,
+    reactionProgress: progress,
+    reactionSkills: reactionSkillsFromProgress(progress),
+  };
+}
+
+/**
+ * Harvests live reaction XP from a combat's player party back into the persistent
+ * GameState map (ADR-054 Layer B), so XP earned in combat survives afterward.
+ * Enemy progress is never recorded. Returns a new map; inputs are not mutated.
+ */
+function _harvestReactionProgress(
+  existing: Readonly<Record<string, ReactionProgress>>,
+  combatState: Readonly<CombatState>,
+): Record<string, ReactionProgress> {
+  const merged: Record<string, ReactionProgress> = { ...existing };
+  for (const combatant of combatState.playerParty) {
+    if (combatant.reactionProgress !== undefined) {
+      merged[combatant.id] = combatant.reactionProgress;
+    }
+  }
+  return merged;
+}
+
 // ============================================================================
 // Public API
 // ============================================================================
@@ -88,7 +135,9 @@ export function initCombatState(
   gameState: Readonly<GameState>,
   encounter: Readonly<EncounterConfig>
 ): CombatState {
-  let playerParty: Combatant[] = encounter.playerParty.map(_configToCombatant);
+  let playerParty: Combatant[] = encounter.playerParty.map((config) =>
+    _seedReactionProgress(_configToCombatant(config), gameState),
+  );
   const enemyParty: Combatant[] = encounter.enemyParty.map(_configToCombatant);
 
   // --- Synergy bonus application [Sprint 3] ---
@@ -152,8 +201,14 @@ export function syncToGameState(
   combatState: Readonly<CombatState>
 ): GameState {
   // updateCombatState already creates a new GameState with combatState set
-  // and all other fields preserved via spread.
-  return updateCombatState(gameState, combatState);
+  // and all other fields preserved via spread. Additionally harvest any reaction
+  // XP earned this combat into the persistent map (ADR-054 Layer B) so it is
+  // current even if the player saves mid-combat.
+  const reactionProgress = _harvestReactionProgress(
+    gameState.reactionProgress,
+    combatState,
+  );
+  return { ...updateCombatState(gameState, combatState), reactionProgress };
 }
 
 /**

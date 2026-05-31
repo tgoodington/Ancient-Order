@@ -78,6 +78,20 @@ export interface ReactionSkills {
 }
 
 /**
+ * Accumulated reaction experience (in XP "points") for a single combatant,
+ * tracked independently per reaction (ADR-054 Layer B). XP is the single source
+ * of truth: a reaction's rank and its SR/SMR/FMR are *derived* from these totals
+ * via reactionProgression.ts, never stored. Each total is capped at the rank-11
+ * threshold (1675). Player-party combatants accumulate XP by using a reaction;
+ * enemies use fixed archetype rates and carry no progress.
+ */
+export interface ReactionProgress {
+  readonly block: number; // accumulated block XP points
+  readonly dodge: number; // accumulated dodge XP points
+  readonly parry: number; // accumulated parry XP points
+}
+
+/**
  * An active buff or debuff applied to a combatant.
  */
 export interface Buff {
@@ -115,6 +129,11 @@ export interface Combatant {
   readonly activeBuffs: readonly Buff[];
   readonly elementalPath: ElementalPath;
   readonly reactionSkills: ReactionSkills;
+  // Per-reaction accumulated XP, present only for player-party combatants who
+  // progress (ADR-054 Layer B). Seeded from GameState.reactionProgress at combat
+  // init and rederives reactionSkills on rank-up. Absent for enemies/NPCs, who
+  // keep fixed archetype rates.
+  readonly reactionProgress?: ReactionProgress;
   readonly isKO: boolean;
 }
 

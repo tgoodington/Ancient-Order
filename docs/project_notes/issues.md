@@ -157,3 +157,12 @@ This file logs work completed on tickets. Keep it simple - just enough to rememb
 - **Verification**: 1030/1030 tests pass.
 - **Note**: Interim values — Layer B will derive all reaction rates from per-reaction rank via the same table.
 - **Refs**: ADR-054 (decoded table); commits cc96cba (Layer A), 7c71e60 (balance pass).
+
+### 2026-05-31 - COMBAT-003: Reaction Progression Layer B (ADR-054)
+- **Status**: Completed
+- **Description**: Implemented per-reaction rank/XP progression. Player-party combatants accumulate reaction XP by using a reaction; rank and SR/SMR/FMR are derived from the decoded tables. Rates rederive mid-combat on rank-up; XP persists across combats in `GameState`.
+- **Decisions (with designer)**: XP success +4 / fail +2 (cap 1675); recompute rates mid-combat on rank-up; **every player-party combatant progresses** (revises the ADR's single-player assumption — companions train too); new game starts at rank 1, demo seeding deferred. Decoded the XP curve from the `Reaction Progression & Log` sheet into ADR-054.
+- **Scope**: new `src/combat/reactionProgression.ts`; `src/types/combat.ts` (`ReactionProgress`, `Combatant.reactionProgress`); `src/types/index.ts` + `src/state/gameState.ts` (`GameState.reactionProgress` map); `src/combat/sync.ts` (seed + derive + harvest); `src/combat/pipeline.ts` + `src/combat/counterChain.ts` (XP-on-use); `src/persistence/saveLoad.ts` (validate + back-compat). Tests: new `reactionProgression.test.ts` + additions to `sync.test.ts`, `saveLoad.test.ts`, `pipeline.test.ts`.
+- **Verification**: 1060/1060 tests pass; tsc + eslint clean. No existing combat test re-baselined (they build Combatants directly, bypassing init-time seeding).
+- **Known edge**: a mid-fight *block* rank-up rederives base block rates and would overwrite an outstanding Crushing Blow degradation (rare; documented in ADR-054).
+- **Refs**: ADR-054 (Layer B implementation note, decoded XP curve).

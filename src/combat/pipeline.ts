@@ -46,6 +46,7 @@ import {
 } from './formulas.js';
 import { resolveDefense, effectiveReactionSkills } from './defense.js';
 import { resolveCounterChain } from './counterChain.js';
+import { awardReactionXp } from './reactionProgression.js';
 import {
   applyPathBuff,
   applyPathDebuff,
@@ -466,6 +467,21 @@ function _resolveAttack(
   // ------------------------------------------------------------------
   // Step 7: Stamina/energy updates, buff/debuff application
   // ------------------------------------------------------------------
+
+  // Reaction XP (ADR-054 Layer B): the defender trains the reaction it used.
+  // A Blindsided 'defenseless' target trained nothing, so it earns no XP. The
+  // award is applied after the counter chain so an initial parry that ranks up
+  // affects the defender's *next* turn, not the chain it just spawned. For
+  // non-player combatants (no reactionProgress) awardReactionXp is a no-op.
+  if (selectedDefense !== 'defenseless') {
+    const targetBeforeXp = _findCombatant(currentState, trueTargetId)!;
+    const targetWithXp = awardReactionXp(
+      targetBeforeXp,
+      selectedDefense,
+      defenseResult.success,
+    );
+    currentState = _replaceCombatant(currentState, targetWithXp);
+  }
 
   // Attacker energy gain
   const freshAttackerAfterDamage = _findCombatant(currentState, attacker.id)!;

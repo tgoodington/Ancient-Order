@@ -8,7 +8,7 @@
  * combat.ts imports from this file (not the reverse), so there is no circular dependency.
  */
 
-import type { CombatState } from './combat.js';
+import type { CombatState, ReactionProgress } from './combat.js';
 import type { NarrativeState } from './narrative.js';
 
 export type { NarrativeState } from './narrative.js';
@@ -101,6 +101,11 @@ export interface GameState {
   readonly combatState: CombatState | null;
   readonly narrativeState: NarrativeState | null;
   readonly conversationLog: ConversationEntry[];
+  // Persistent per-reaction XP for every player-party combatant, keyed by
+  // combatant id (ADR-054 Layer B). Survives across combats; seeds the live
+  // Combatant.reactionProgress at combat init and is refreshed on each sync.
+  // A missing key defaults to zero XP (rank 1). Enemies are never stored here.
+  readonly reactionProgress: Record<string, ReactionProgress>;
   readonly timestamp: number;
 }
 

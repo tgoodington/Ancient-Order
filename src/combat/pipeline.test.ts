@@ -999,3 +999,82 @@ describe('resolveAction — Crushing Blow effect', () => {
     expect(newTarget.reactionSkills.block.FMR).toBe(0);
   });
 });
+
+// ============================================================================
+// resolveAction — reaction XP (ADR-054 Layer B)
+// ============================================================================
+
+describe('resolveAction — reaction XP', () => {
+  // Earth defender reacts with Block; equal rank+speed+power means the only roll
+  // consumed is the defense roll (no Rank KO / Blindside / Crushing Blow rolls).
+  // STANDARD block SR 0.6 → threshold 12: roll 10 succeeds, roll 19 fails.
+  const earthDefender = (): Combatant =>
+    makeCombatant('p1', {
+      power: 50,
+      speed: 10,
+      rank: 1.0,
+      elementalPath: 'Earth',
+      reactionProgress: { block: 0, dodge: 0, parry: 0 },
+    });
+
+  it('awards +4 to a player defender on a successful reaction', () => {
+    const attacker = makeCombatant('e1', { power: 50, speed: 10, rank: 1.0 });
+    const state = makeState([earthDefender()], [attacker]);
+    const action: CombatAction = { combatantId: 'e1', type: 'ATTACK', targetId: 'p1' };
+
+    const { state: after, result } = resolveAction(state, action, () => 10);
+    const p = after.playerParty.find((c) => c.id === 'p1')!;
+
+    expect(result.attackResult?.defenseOutcome.success).toBe(true);
+    expect(p.reactionProgress).toEqual({ block: 4, dodge: 0, parry: 0 });
+  });
+
+  it('awards +2 to a player defender on a failed reaction', () => {
+    const attacker = makeCombatant('e1', { power: 50, speed: 10, rank: 1.0 });
+    const state = makeState([earthDefender()], [attacker]);
+    const action: CombatAction = { combatantId: 'e1', type: 'ATTACK', targetId: 'p1' };
+
+    const { state: after, result } = resolveAction(state, action, () => 19);
+    const p = after.playerParty.find((c) => c.id === 'p1')!;
+
+    expect(result.attackResult?.defenseOutcome.success).toBe(false);
+    expect(p.reactionProgress).toEqual({ block: 2, dodge: 0, parry: 0 });
+  });
+
+  it('never accrues XP for an enemy defender (no reactionProgress)', () => {
+    const attacker = makeCombatant('p1', { power: 50, speed: 10, rank: 1.0 });
+    const defender = makeCombatant('e1', {
+      power: 50,
+      speed: 10,
+      rank: 1.0,
+      elementalPath: 'Earth',
+    });
+    const state = makeState([attacker], [defender]);
+    const action: CombatAction = { combatantId: 'p1', type: 'ATTACK', targetId: 'e1' };
+
+    const { state: after } = resolveAction(state, action, () => 10);
+    const e = after.enemyParty.find((c) => c.id === 'e1')!;
+
+    expect(e.reactionProgress).toBeUndefined();
+  });
+
+  it('awards no XP to a Blindsided (defenseless) player defender', () => {
+    // Attacker is faster → a low roll lands the Blindside, forcing Defenseless.
+    const attacker = makeCombatant('e1', { power: 50, speed: 20, rank: 1.0 });
+    const defender = makeCombatant('p1', {
+      power: 50,
+      speed: 1,
+      rank: 1.0,
+      elementalPath: 'Earth',
+      reactionProgress: { block: 0, dodge: 0, parry: 0 },
+    });
+    const state = makeState([defender], [attacker]);
+    const action: CombatAction = { combatantId: 'e1', type: 'ATTACK', targetId: 'p1' };
+
+    const { state: after, result } = resolveAction(state, action, () => 1);
+    const p = after.playerParty.find((c) => c.id === 'p1')!;
+
+    expect(result.attackResult?.blindside).toBe(true);
+    expect(p.reactionProgress).toEqual({ block: 0, dodge: 0, parry: 0 });
+  });
+});

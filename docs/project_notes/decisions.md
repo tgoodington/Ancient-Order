@@ -1397,3 +1397,26 @@ User <-> Waldo (Haiku)             User <-> Architect (Opus)
 | Parry    | 0.10 / +0.025  | 0.90 / +0.01    | 0.00 / +0.025   | 0.90 → 1.00     |
 
 Rate at rank R = base + step·(R−1). Confirmed against `Defense Simulations` rows 3–13, base/increment block rows 16–18. Note the current hand-authored fixtures (block SMR 0.35–0.55) sit *below* the sheet's block band — fixtures were never table-derived, so Layer B is a re-baseline, not a tweak.
+
+**Layer B source — decoded XP curve (`Reaction Progression & Log`, sheet9):** cumulative XP to *reach* each rank, ranks 1–11:
+
+| Rank | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 |
+|------|---|---|---|---|---|---|---|---|---|----|----|
+| Cumulative XP | 0 | 100 | 215 | 345 | 490 | 650 | 825 | 1015 | 1220 | 1440 | 1675 |
+
+Per-rank step grows by +15 (100, 115, … 235). Rank 11 (1675 XP) is the cap; columns E/F/G of the sheet track Block/Dodge/Parry XP independently per actor. The sheet's import log awards points per reaction event of 0/2/4 (manual GM entries, not a formula) — read by the designer as **success = 4, fail = 2, 0 = reaction not exercised**, adopted as the XP rule.
+
+**Implementation note — Layer B (2026-05-31):** *Implemented ad-hoc on master (like Layer A).* Four open decisions were resolved with the designer before building:
+1. **XP per use:** successful reaction **+4**, failed **+2**, capped at 1675 (rank 11).
+2. **Rank-up timing:** **recompute mid-combat** — on crossing a threshold, the leveled reaction's base rates are rederived immediately on the live `Combatant` (only that one reaction; the other two are untouched).
+3. **Whose ranks apply (revises the earlier "player character in GameState" assumption):** the designer clarified that **every player-party combatant progresses** (protagonist *and* the two companions), not just the single protagonist. This does not conflict with the only-player-*personality* constraint (reaction skill ≠ personality/archetype). Identification is therefore structural — player-party members progress, enemies don't — needing no `isPlayerCharacter` flag or id-matching.
+4. **Start ranks:** new game → rank 1 across the board (empty map ⇒ default). The demo encounter may later seed higher starting XP to make combat livelier (deferred; the seeding hook is the persistent map).
+
+- **Data model:** `ReactionProgress { block, dodge, parry }` = accumulated XP (single source of truth; rank + rates derived, never stored). New `GameState.reactionProgress: Record<combatantId, ReactionProgress>` (persistent, keyed by combatant id). Optional `Combatant.reactionProgress` carries it live during combat; absent on enemies.
+- **`reactionProgression.ts`:** `XP_THRESHOLDS`, `rankFromXp`, `ratesForRank` (decoded ramp), `reactionSkillsFromProgress`, `awardReactionXp` (success/fail, cap, rank-up rederive of only the leveled reaction).
+- **Sync wiring (`sync.ts`):** `initCombatState` seeds each player-party combatant's progress from the map (default zero ⇒ rank 1) and *replaces* the literal fixture `reactionSkills` with rank-derived rates; enemies keep fixtures. `syncToGameState` harvests live player-party XP back into the map every sync (fresh even on a mid-combat save).
+- **XP-on-use:** the reacting defender trains the reaction it used — in `pipeline._resolveAttack` (after the counter chain, so an initial parry's rank-up affects the *next* turn, not the chain it spawned) and in each `counterChain` exchange. `'defenseless'` (Blindside) earns nothing. `awardReactionXp` is a no-op for combatants without progress, so enemies never accrue.
+- **Persistence:** `validateGameState` checks the optional map; `loadGame` normalizes a missing map to `{}` (pre-Layer-B saves load clean). Round-trip covered.
+- **Known edge:** a *block* rank-up mid-fight rederives base block rates and would overwrite an outstanding Crushing Blow degradation (which also writes base block). Rare (requires a block rank-up in the same fight after a Crushing Blow); the rederive deliberately touches only the leveled reaction to minimize this.
+- **Tests/checks:** new `reactionProgression.test.ts`; sync seed/harvest + persistence round-trip/back-compat + pipeline XP-flow tests added. 1060 tests pass, tsc + eslint clean. No existing combat test re-baselined — those build `Combatant`s directly and bypass the init-time seeding.
+- **Still open:** demo-encounter starting-XP seeding (cosmetic balance); `Buff.duration` ticking (cf. ADR-053).

@@ -39,6 +39,7 @@ export function createNewGameState(): GameState {
     combatState: null,
     narrativeState: null,
     conversationLog: [],
+    reactionProgress: {},
     timestamp: Date.now(),
   };
 }
