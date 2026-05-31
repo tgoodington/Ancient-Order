@@ -67,11 +67,13 @@ export interface ReactionSkills {
   };
   readonly dodge: {
     readonly SR: number; // probability of successful dodge
-    readonly FMR: number; // damage multiplier on dodge failure
+    readonly SMR: number; // damage multiplier on dodge success (reduction factor)
+    readonly FMR: number; // damage multiplier on dodge failure (reduction factor)
   };
   readonly parry: {
     readonly SR: number; // probability of successful parry
-    readonly FMR: number; // damage multiplier on parry failure
+    readonly SMR: number; // damage multiplier on parry success (reduction factor)
+    readonly FMR: number; // damage multiplier on parry failure (reduction factor)
   };
 }
 

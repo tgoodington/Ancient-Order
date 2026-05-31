@@ -141,3 +141,11 @@ This file logs work completed on tickets. Keep it simple - just enough to rememb
 - **Artifacts**: test_report.md, test_strategy.md, 8 test files in client/src/
 
 <!-- Add work log entries below this line -->
+
+### 2026-05-31 - COMBAT-001: Reaction Overhaul Layer A (ADR-054)
+- **Status**: Completed
+- **Description**: Implemented Layer A of the corrected reaction model — SMR-mitigated dodge/parry success and a reworked counter chain that routes through reaction selection.
+- **Scope**: `types/combat.ts`, `formulas.ts`, `defense.ts` (+ new shared `effectiveReactionSkills`), `pipeline.ts`, `counterChain.ts`, `encounter.json`, `api/combat.ts`; 7 combat test files re-baselined.
+- **Verification**: 1030/1030 tests pass; `tsc --noEmit` clean; eslint clean.
+- **Follow-ups**: Layer B (reaction rank/XP progression) pending; fixture dodge/parry SMR are placeholders (0.80/0.90) awaiting a balance pass.
+- **Refs**: ADR-054; bugs.md "Dodge/Parry success" (now resolved).

@@ -29,8 +29,8 @@ import type { ReactionSkills } from '../types/combat.js';
 /** Standard reaction skills used for most tests. */
 const STANDARD_REACTION_SKILLS: ReactionSkills = {
   block: { SR: 0.6, SMR: 0.5, FMR: 0.2 },
-  dodge: { SR: 0.5, FMR: 0.15 },
-  parry: { SR: 0.4, FMR: 0.1 },
+  dodge: { SR: 0.5, SMR: 0.8, FMR: 0.15 },
+  parry: { SR: 0.4, SMR: 0.9, FMR: 0.1 },
 };
 
 const RAW_DAMAGE = 100;
@@ -94,36 +94,43 @@ describe('resolveBlock', () => {
 // ============================================================================
 
 describe('resolveDodge', () => {
-  it('succeeds (0 damage) when roll is at threshold (roll === SR * 20)', () => {
+  it('succeeds with SMR-mitigated damage when roll is at threshold (roll === SR * 20)', () => {
     // SR = 0.5 → threshold = 10 → roll = 10 → success
-    const result = resolveDodge(RAW_DAMAGE, 0.5, 0.15, 10);
+    const result = resolveDodge(RAW_DAMAGE, 0.5, 0.8, 0.15, 10);
     expect(result.success).toBe(true);
-    expect(result.damage).toBe(0);
+    // damage = 100 * (1 - SMR) = 100 * 0.2 = 20
+    expect(result.damage).toBeCloseTo(20);
   });
 
-  it('succeeds (0 damage) when roll is below threshold', () => {
-    const result = resolveDodge(RAW_DAMAGE, 0.5, 0.15, 1);
+  it('succeeds with SMR-mitigated damage when roll is below threshold', () => {
+    const result = resolveDodge(RAW_DAMAGE, 0.5, 0.8, 0.15, 1);
     expect(result.success).toBe(true);
-    expect(result.damage).toBe(0);
+    expect(result.damage).toBeCloseTo(20);
   });
 
   it('fails with partial damage when roll is above threshold', () => {
     // SR = 0.5 → threshold = 10 → roll = 11 → failure
-    const result = resolveDodge(RAW_DAMAGE, 0.5, 0.15, 11);
+    const result = resolveDodge(RAW_DAMAGE, 0.5, 0.8, 0.15, 11);
     expect(result.success).toBe(false);
     // damage = 100 * (1 - FMR) = 100 * 0.85 = 85
     expect(result.damage).toBe(85);
   });
 
   it('fails when roll is at maximum (roll = 20)', () => {
-    const result = resolveDodge(RAW_DAMAGE, 0.5, 0.15, 20);
+    const result = resolveDodge(RAW_DAMAGE, 0.5, 0.8, 0.15, 20);
     expect(result.success).toBe(false);
     expect(result.damage).toBe(85);
   });
 
+  it('applies SMR correctly on success', () => {
+    // SMR = 0.6 → success damage = damage * (1 - 0.6) = damage * 0.4
+    const result = resolveDodge(50, 0.4, 0.6, 0.3, 1); // guaranteed success
+    expect(result.damage).toBeCloseTo(50 * 0.4); // 20
+  });
+
   it('applies FMR correctly on failure', () => {
     // FMR = 0.3 → failure damage = damage * (1 - 0.3) = damage * 0.7
-    const result = resolveDodge(50, 0.4, 0.3, 20); // guaranteed failure
+    const result = resolveDodge(50, 0.4, 0.8, 0.3, 20); // guaranteed failure
     expect(result.damage).toBeCloseTo(50 * 0.7); // 35
   });
 });
@@ -133,24 +140,25 @@ describe('resolveDodge', () => {
 // ============================================================================
 
 describe('resolveParry', () => {
-  it('succeeds (0 damage, counter triggered) when roll is at threshold (roll === SR * 20)', () => {
+  it('succeeds (SMR-mitigated damage, counter triggered) when roll is at threshold (roll === SR * 20)', () => {
     // SR = 0.4 → threshold = 8 → roll = 8 → success
-    const result = resolveParry(RAW_DAMAGE, 0.4, 0.1, 8);
+    const result = resolveParry(RAW_DAMAGE, 0.4, 0.9, 0.1, 8);
     expect(result.success).toBe(true);
-    expect(result.damage).toBe(0);
+    // damage = 100 * (1 - SMR) = 100 * 0.1 = 10 (counter is independent of mitigation)
+    expect(result.damage).toBeCloseTo(10);
     expect(result.counterTriggered).toBe(true);
   });
 
   it('succeeds when roll is below threshold', () => {
-    const result = resolveParry(RAW_DAMAGE, 0.4, 0.1, 1);
+    const result = resolveParry(RAW_DAMAGE, 0.4, 0.9, 0.1, 1);
     expect(result.success).toBe(true);
-    expect(result.damage).toBe(0);
+    expect(result.damage).toBeCloseTo(10);
     expect(result.counterTriggered).toBe(true);
   });
 
   it('fails with partial damage and no counter when roll is above threshold', () => {
     // SR = 0.4 → threshold = 8 → roll = 9 → failure
-    const result = resolveParry(RAW_DAMAGE, 0.4, 0.1, 9);
+    const result = resolveParry(RAW_DAMAGE, 0.4, 0.9, 0.1, 9);
     expect(result.success).toBe(false);
     // damage = 100 * (1 - FMR) = 100 * 0.9 = 90
     expect(result.damage).toBe(90);
@@ -158,20 +166,26 @@ describe('resolveParry', () => {
   });
 
   it('fails when roll is at maximum (roll = 20)', () => {
-    const result = resolveParry(RAW_DAMAGE, 0.4, 0.1, 20);
+    const result = resolveParry(RAW_DAMAGE, 0.4, 0.9, 0.1, 20);
     expect(result.success).toBe(false);
     expect(result.damage).toBe(90);
     expect(result.counterTriggered).toBe(false);
   });
 
   it('counterTriggered is false on failure', () => {
-    const result = resolveParry(RAW_DAMAGE, 0.1, 0.2, 20); // guaranteed failure
+    const result = resolveParry(RAW_DAMAGE, 0.1, 0.9, 0.2, 20); // guaranteed failure
     expect(result.counterTriggered).toBe(false);
+  });
+
+  it('applies SMR correctly on success', () => {
+    // SMR = 0.7 → success damage = damage * (1 - 0.7) = damage * 0.3
+    const result = resolveParry(80, 0.9, 0.7, 0.25, 1); // guaranteed success
+    expect(result.damage).toBeCloseTo(80 * 0.3); // 24
   });
 
   it('applies FMR correctly on failure', () => {
     // FMR = 0.25 → failure damage = damage * (1 - 0.25) = damage * 0.75
-    const result = resolveParry(80, 0.2, 0.25, 20); // guaranteed failure
+    const result = resolveParry(80, 0.2, 0.9, 0.25, 20); // guaranteed failure
     expect(result.damage).toBeCloseTo(80 * 0.75); // 60
   });
 });
@@ -226,12 +240,13 @@ describe('resolveDefense', () => {
   });
 
   describe('dodge dispatch', () => {
-    it('returns type = dodge and damageMultiplier = 0 on success', () => {
-      // SR = 0.5 → threshold = 10 → roll = 5 → success
+    it('returns type = dodge and SMR-based damageMultiplier on success', () => {
+      // SR = 0.5 → threshold = 10 → roll = 5 → success; dodge SMR = 0.8
       const result = resolveDefense('dodge', RAW_DAMAGE, STANDARD_REACTION_SKILLS, 5);
       expect(result.type).toBe('dodge');
       expect(result.success).toBe(true);
-      expect(result.damageMultiplier).toBe(0);
+      // damageMultiplier = 1 - SMR = 0.2
+      expect(result.damageMultiplier).toBeCloseTo(0.2);
     });
 
     it('returns type = dodge and partial damageMultiplier on failure', () => {
@@ -245,12 +260,13 @@ describe('resolveDefense', () => {
   });
 
   describe('parry dispatch', () => {
-    it('returns type = parry and damageMultiplier = 0 on success', () => {
-      // SR = 0.4 → threshold = 8 → roll = 1 → success
+    it('returns type = parry and SMR-based damageMultiplier on success', () => {
+      // SR = 0.4 → threshold = 8 → roll = 1 → success; parry SMR = 0.9
       const result = resolveDefense('parry', RAW_DAMAGE, STANDARD_REACTION_SKILLS, 1);
       expect(result.type).toBe('parry');
       expect(result.success).toBe(true);
-      expect(result.damageMultiplier).toBe(0);
+      // damageMultiplier = 1 - SMR = 0.1
+      expect(result.damageMultiplier).toBeCloseTo(0.1);
     });
 
     it('returns type = parry and partial damageMultiplier on failure', () => {

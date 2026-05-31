@@ -32,15 +32,15 @@ import type { CombatState, Combatant, ReactionSkills } from '../types/combat.js'
 /** Reaction skills giving a high success rate (guaranteed success with roll = 1) */
 const HIGH_PARRY_SKILLS: ReactionSkills = {
   block: { SR: 0.9, SMR: 0.5, FMR: 0.2 },
-  dodge: { SR: 0.9, FMR: 0.15 },
-  parry: { SR: 0.9, FMR: 0.1 }, // threshold = 18 → roll <= 18 succeeds
+  dodge: { SR: 0.9, SMR: 0.8, FMR: 0.15 },
+  parry: { SR: 0.9, SMR: 0.9, FMR: 0.1 }, // threshold = 18 → roll <= 18 succeeds
 };
 
 /** Reaction skills giving a low success rate (guaranteed failure with roll = 19) */
 const LOW_PARRY_SKILLS: ReactionSkills = {
   block: { SR: 0.1, SMR: 0.2, FMR: 0.05 },
-  dodge: { SR: 0.1, FMR: 0.05 },
-  parry: { SR: 0.1, FMR: 0.2 }, // threshold = 2 → roll > 2 fails; roll = 19 → failure
+  dodge: { SR: 0.1, SMR: 0.8, FMR: 0.05 },
+  parry: { SR: 0.1, SMR: 0.9, FMR: 0.2 }, // threshold = 2 → roll > 2 fails; roll = 19 → failure
 };
 
 function makeCombatant(
@@ -188,11 +188,13 @@ describe('resolveCounterChain — chain length 2', () => {
     expect(result.chainLength).toBe(2);
     expect(result.actions).toHaveLength(2);
 
-    // Exchange 1: player attacks enemy, enemy parry succeeds
+    // Exchange 1: player attacks enemy, enemy parry succeeds.
+    // Successful parry now deals SMR-mitigated damage (ADR-054): 50 * (1 - 0.9) = 5.
+    const parrySuccessDamage = 50 * (1 - HIGH_PARRY_SKILLS.parry.SMR);
     expect(result.actions[0].attackerId).toBe('player_2');
     expect(result.actions[0].targetId).toBe('enemy_2');
     expect(result.actions[0].defenseOutcome.success).toBe(true);
-    expect(result.actions[0].damage).toBe(0);
+    expect(result.actions[0].damage).toBeCloseTo(parrySuccessDamage, 5);
 
     // Exchange 2: enemy attacks player, player parry fails
     expect(result.actions[1].attackerId).toBe('enemy_2');
@@ -204,9 +206,9 @@ describe('resolveCounterChain — chain length 2', () => {
     const updatedPlayer = result.state.playerParty.find((c) => c.id === 'player_2');
     expect(updatedPlayer!.stamina).toBeLessThan(200);
 
-    // Enemy stamina untouched
+    // Enemy took the mitigated parry-success damage from exchange 1 (200 - 5 = 195)
     const updatedEnemy = result.state.enemyParty.find((c) => c.id === 'enemy_2');
-    expect(updatedEnemy!.stamina).toBe(200);
+    expect(updatedEnemy!.stamina).toBeCloseTo(200 - parrySuccessDamage, 5);
   });
 });
 
@@ -238,31 +240,35 @@ describe('resolveCounterChain — chain length 3', () => {
     expect(result.chainLength).toBe(3);
     expect(result.actions).toHaveLength(3);
 
-    // Exchange 1: player → enemy, success (no damage)
+    // Successful parry now deals SMR-mitigated damage (ADR-054): 50 * (1 - 0.9) = 5.
+    const parrySuccessDamage = 50 * (1 - HIGH_PARRY_SKILLS.parry.SMR);
+
+    // Exchange 1: player → enemy, success (mitigated damage to enemy)
     expect(result.actions[0].attackerId).toBe('player_3');
     expect(result.actions[0].targetId).toBe('enemy_3');
     expect(result.actions[0].defenseOutcome.success).toBe(true);
-    expect(result.actions[0].damage).toBe(0);
+    expect(result.actions[0].damage).toBeCloseTo(parrySuccessDamage, 5);
 
-    // Exchange 2: enemy → player, success (no damage)
+    // Exchange 2: enemy → player, success (mitigated damage to player)
     expect(result.actions[1].attackerId).toBe('enemy_3');
     expect(result.actions[1].targetId).toBe('player_3');
     expect(result.actions[1].defenseOutcome.success).toBe(true);
-    expect(result.actions[1].damage).toBe(0);
+    expect(result.actions[1].damage).toBeCloseTo(parrySuccessDamage, 5);
 
-    // Exchange 3: player → enemy, failure (damage applied)
+    // Exchange 3: player → enemy, failure (full mitigated-by-FMR damage applied)
     expect(result.actions[2].attackerId).toBe('player_3');
     expect(result.actions[2].targetId).toBe('enemy_3');
     expect(result.actions[2].defenseOutcome.success).toBe(false);
     expect(result.actions[2].damage).toBeGreaterThan(0);
 
-    // Enemy stamina reduced by the damage from exchange 3
+    // Enemy took exchange 1 (parry success) + exchange 3 (parry fail) damage
+    const exchange3Damage = 50 * (1 - HIGH_PARRY_SKILLS.parry.FMR);
     const updatedEnemy = result.state.enemyParty.find((c) => c.id === 'enemy_3');
-    expect(updatedEnemy!.stamina).toBeLessThan(500);
+    expect(updatedEnemy!.stamina).toBeCloseTo(500 - parrySuccessDamage - exchange3Damage, 5);
 
-    // Player stamina untouched (only enemy took damage)
+    // Player took the mitigated parry-success damage from exchange 2 (500 - 5 = 495)
     const updatedPlayer = result.state.playerParty.find((c) => c.id === 'player_3');
-    expect(updatedPlayer!.stamina).toBe(500);
+    expect(updatedPlayer!.stamina).toBeCloseTo(500 - parrySuccessDamage, 5);
   });
 });
 

@@ -21,8 +21,8 @@ import type { CombatAction, CombatState, Combatant, ReactionSkills } from '../ty
 
 const STANDARD_REACTION_SKILLS: ReactionSkills = {
   block: { SR: 0.6, SMR: 0.5, FMR: 0.2 },
-  dodge: { SR: 0.5, FMR: 0.15 },
-  parry: { SR: 0.4, FMR: 0.1 },
+  dodge: { SR: 0.5, SMR: 0.8, FMR: 0.15 },
+  parry: { SR: 0.4, SMR: 0.9, FMR: 0.1 },
 };
 
 /**

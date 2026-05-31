@@ -30,20 +30,20 @@ import type { CombatAction, CombatState, Combatant, ReactionSkills } from '../ty
 
 const STANDARD_REACTION_SKILLS: ReactionSkills = {
   block: { SR: 0.6, SMR: 0.5, FMR: 0.2 },
-  dodge: { SR: 0.5, FMR: 0.15 },
-  parry: { SR: 0.4, FMR: 0.1 },
+  dodge: { SR: 0.5, SMR: 0.8, FMR: 0.15 },
+  parry: { SR: 0.4, SMR: 0.9, FMR: 0.1 },
 };
 
 const HIGH_PARRY_SKILLS: ReactionSkills = {
   block: { SR: 0.9, SMR: 0.5, FMR: 0.2 },
-  dodge: { SR: 0.9, FMR: 0.15 },
-  parry: { SR: 0.9, FMR: 0.1 }, // threshold = 18 → roll <= 18 succeeds
+  dodge: { SR: 0.9, SMR: 0.8, FMR: 0.15 },
+  parry: { SR: 0.9, SMR: 0.9, FMR: 0.1 }, // threshold = 18 → roll <= 18 succeeds
 };
 
 const LOW_PARRY_SKILLS: ReactionSkills = {
   block: { SR: 0.1, SMR: 0.2, FMR: 0.05 },
-  dodge: { SR: 0.1, FMR: 0.05 },
-  parry: { SR: 0.1, FMR: 0.2 }, // threshold = 2 → roll > 2 fails
+  dodge: { SR: 0.1, SMR: 0.8, FMR: 0.05 },
+  parry: { SR: 0.1, SMR: 0.9, FMR: 0.2 }, // threshold = 2 → roll > 2 fails
 };
 
 function makeCombatant(
@@ -439,8 +439,8 @@ describe('resolvePerAttack — ATTACK full resolution', () => {
       elementalPath: 'Earth', // action path → reacts with Block (scenario tests Block)
       reactionSkills: {
         block: { SR: 0.6, SMR: 0.5, FMR: 0.2 },
-        dodge: { SR: 0.5, FMR: 0.15 },
-        parry: { SR: 0.4, FMR: 0.1 },
+        dodge: { SR: 0.5, SMR: 0.8, FMR: 0.15 },
+        parry: { SR: 0.4, SMR: 0.9, FMR: 0.1 },
       },
     });
     const state = makeState([attacker], [target]);
@@ -739,8 +739,8 @@ describe('resolvePerAttack — SPECIAL resolution', () => {
       maxStamina: 200,
       reactionSkills: {
         block: { SR: 0.6, SMR: 0.5, FMR: 0 },
-        dodge: { SR: 0.5, FMR: 0.15 },
-        parry: { SR: 0.4, FMR: 0.1 },
+        dodge: { SR: 0.5, SMR: 0.8, FMR: 0.15 },
+        parry: { SR: 0.4, SMR: 0.9, FMR: 0.1 },
       },
     });
     const state = makeState([attacker], [target]);
@@ -859,9 +859,13 @@ describe('resolvePerAttack — counter chain', () => {
 
     const result = resolvePerAttack(state, specialAction, deterministicRoll);
 
-    // Parry succeeded: target took 0 damage from the original SPECIAL attack
+    // Parry succeeded: target took SMR-mitigated damage from the original SPECIAL
+    // attack (ADR-054 — a successful parry no longer fully negates). SPECIAL action
+    // power = 50 * (1 + 0.1*2) = 60; parry success damage = 60 * (1 - 0.9) = 6.
     const targetAfter = result.enemyParty.find((c) => c.id === 'target')!;
-    expect(targetAfter.stamina).toBe(100); // original attack dealt 0 damage (parry success)
+    const specialActionPower = 50 * (1 + 0.1 * 2);
+    const expectedParryDamage = specialActionPower * (1 - HIGH_PARRY_SKILLS.parry.SMR);
+    expect(targetAfter.stamina).toBeCloseTo(100 - expectedParryDamage, 5); // 94
 
     // Attacker took counter chain damage (attacker failed to parry the counter → FMR damage applied)
     const attackerAfter = result.playerParty.find((c) => c.id === 'attacker')!;
@@ -977,8 +981,8 @@ describe('resolveAction — Crushing Blow effect', () => {
       elementalPath: 'Earth', // action path → reacts with Block (Crushing-Blow eligible)
       reactionSkills: {
         block: { SR: 0.05, SMR: 0.05, FMR: 0.0 },
-        dodge: { SR: 0.1, FMR: 0.05 },
-        parry: { SR: 0.1, FMR: 0.05 },
+        dodge: { SR: 0.1, SMR: 0.8, FMR: 0.05 },
+        parry: { SR: 0.1, SMR: 0.9, FMR: 0.05 },
       },
     });
     const state = makeState([attacker], [target]);

@@ -1361,7 +1361,7 @@ User <-> Waldo (Haiku)             User <-> Architect (Opus)
 
 ### ADR-054: Reaction Skill Model — SMR for All Defenses, Reaction Progression, and Counter-as-New-Attack (2026-05-31)
 
-**Status:** Records the *corrected* intended model and the divergences in the current implementation. No code change in this ADR — implementation is scoped as a future combat pass (Layers A + B below), to be planned via `/intuition-plan`. Source confirmed against `GM Combat Tracker.xlsx` (`Math` sheet rows 39–41, `Defense Simulations` table, `Reaction Progression & Log` sheet) and clarified with the designer.
+**Status:** Records the *corrected* intended model and the divergences in the current implementation. **Layer A implemented 2026-05-31** (see Implementation note below); Layer B (reaction progression) remains pending. Source confirmed against `GM Combat Tracker.xlsx` (`Math` sheet rows 39–41, `Defense Simulations` table, `Reaction Progression & Log` sheet) and clarified with the designer.
 
 **Context — the intended model:**
 - **All three reactions have SR/SMR/FMR.** Block, Dodge, and Parry each carry a Success Rate, Success Mitigation Rate, and Fail Mitigation Rate. A *successful* defense of any type applies `(1 − SMR) × ActionPower` damage (not necessarily zero); a failed one applies `(1 − FMR) × ActionPower`. Excel `Math!R40/T40/V40` confirm this. (Sample combatant: dodge SMR 0.80 → 20% damage on a successful dodge; parry SMR 0.90 → 10% on a successful parry.)
@@ -1382,3 +1382,8 @@ User <-> Waldo (Haiku)             User <-> Architect (Opus)
 - The current full-negation dodge/parry model and parry-only counter loop are now documented as **known simplifications**, superseded by this target model (not accepted long-term).
 - Layer A is balance-affecting (re-baseline); Layer B introduces new persistent state and an XP loop — sized as its own combat sprint.
 - Until implemented, the bugs.md "Dodge/Parry success" item stays open and references this ADR.
+
+**Implementation note — Layer A (2026-05-31):**
+- **Delivered:** `dodge.SMR`/`parry.SMR` added to `ReactionSkills`; `calculateDodgeDamage`/`calculateParryDamage` apply `(1 − SMR) × ActionPower` on success (counter triggers independently of mitigation); the dodge "Order Speed" base bug is moot since the code already used Action Power. `ModifiedStats`/`BUFF_STAT_MAP` extended with `dodgeSMR`/`parrySMR` (+ `_debuff` variants). Counter chain reworked: each counter is a new attack resolved via `getPreferredDefense` + `resolveDefense`, continuing only on a successful Parry (Block/Dodge ends it). The buff-folding helper was lifted to `defense.ts#effectiveReactionSkills` and is now shared by `pipeline.ts` and `counterChain.ts` (avoids the pipeline→counterChain circular import). All 12 combatant fixtures migrated; 7 combat test files re-baselined; 1030 tests pass, tsc + eslint clean.
+- **Balance caveat:** fixture dodge/parry SMR are uniform placeholders (dodge 0.80, parry 0.90), not yet tuned per archetype the way Block SMR is. A balance pass is owed before the pitch demo.
+- **Deferred to Layer B:** per-reaction rank/XP progression and the rank→rates table from the Excel `Defense Simulations` sheet. `Buff.duration` remains unticked (cf. ADR-053).

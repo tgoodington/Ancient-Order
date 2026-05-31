@@ -17,8 +17,10 @@ import {
   calculateDodgeDamage,
   calculateParryDamage,
   calculateDefenselessDamage,
+  applyDynamicModifiers,
+  type ModifiedStats,
 } from './formulas.js';
-import type { DefenseType, DefenseResult, ReactionSkills } from '../types/combat.js';
+import type { DefenseType, DefenseResult, ReactionSkills, Combatant } from '../types/combat.js';
 
 // ============================================================================
 // Individual Defense Handlers
@@ -62,11 +64,12 @@ export function resolveBlock(
  * Resolves a Dodge defense attempt.
  *
  * Success threshold: roll <= SR * 20
- * Success damage:    0 (full evasion)
- * Failure damage:    damage * (1 - FMR)
+ * Success damage:    damage * (1 - SMR)  (partial mitigation via Success Mitigation Rate)
+ * Failure damage:    damage * (1 - FMR)  (lesser mitigation via Fail Mitigation Rate)
  *
  * @param damage - Raw incoming damage before mitigation
  * @param SR     - Success Rate (0.0–1.0): probability of a successful dodge
+ * @param SMR    - Success Mitigation Rate (0.0–1.0): damage reduction on success
  * @param FMR    - Fail Mitigation Rate (0.0–1.0): damage reduction on failure
  * @param roll   - Injected roll value in the 0–20 range
  * @returns Dodge outcome: success flag and final damage
@@ -74,11 +77,12 @@ export function resolveBlock(
 export function resolveDodge(
   damage: number,
   SR: number,
+  SMR: number,
   FMR: number,
   roll: number,
 ): { success: boolean; damage: number } {
   const success = roll <= SR * 20;
-  const finalDamage = calculateDodgeDamage(damage, FMR, success);
+  const finalDamage = calculateDodgeDamage(damage, SMR, FMR, success);
   return { success, damage: finalDamage };
 }
 
@@ -86,14 +90,17 @@ export function resolveDodge(
  * Resolves a Parry defense attempt.
  *
  * Success threshold: roll <= SR * 20
- * Success damage:    0 (counter attack triggered — caller inserts counter into queue)
+ * Success damage:    damage * (1 - SMR)  (partial mitigation; counter also triggered)
  * Failure damage:    damage * (1 - FMR)
  *
  * counterTriggered is true only on success — the pipeline/counter chain is
  * responsible for actually constructing and queuing the counter CombatAction.
+ * Mitigation and the counter are independent: a successful parry both reduces
+ * incoming damage by SMR and spawns a counter.
  *
  * @param damage - Raw incoming damage before mitigation
  * @param SR     - Success Rate (0.0–1.0): probability of a successful parry
+ * @param SMR    - Success Mitigation Rate (0.0–1.0): damage reduction on success
  * @param FMR    - Fail Mitigation Rate (0.0–1.0): damage reduction on failure
  * @param roll   - Injected roll value in the 0–20 range
  * @returns Parry outcome: success flag, final damage, counter trigger flag
@@ -101,11 +108,12 @@ export function resolveDodge(
 export function resolveParry(
   damage: number,
   SR: number,
+  SMR: number,
   FMR: number,
   roll: number,
 ): { success: boolean; damage: number; counterTriggered: boolean } {
   const success = roll <= SR * 20;
-  const finalDamage = calculateParryDamage(damage, FMR, success);
+  const finalDamage = calculateParryDamage(damage, SMR, FMR, success);
   return { success, damage: finalDamage, counterTriggered: success };
 }
 
@@ -167,10 +175,11 @@ export function resolveDefense(
       const result = resolveDodge(
         damage,
         reactionSkills.dodge.SR,
+        reactionSkills.dodge.SMR,
         reactionSkills.dodge.FMR,
         roll,
       );
-      const damageMultiplier = damage > 0 ? result.damage / damage : result.success ? 0 : 1 - reactionSkills.dodge.FMR;
+      const damageMultiplier = damage > 0 ? result.damage / damage : result.success ? 1 - reactionSkills.dodge.SMR : 1 - reactionSkills.dodge.FMR;
       return {
         type: 'dodge',
         success: result.success,
@@ -182,10 +191,11 @@ export function resolveDefense(
       const result = resolveParry(
         damage,
         reactionSkills.parry.SR,
+        reactionSkills.parry.SMR,
         reactionSkills.parry.FMR,
         roll,
       );
-      const damageMultiplier = damage > 0 ? result.damage / damage : result.success ? 0 : 1 - reactionSkills.parry.FMR;
+      const damageMultiplier = damage > 0 ? result.damage / damage : result.success ? 1 - reactionSkills.parry.SMR : 1 - reactionSkills.parry.FMR;
       return {
         type: 'parry',
         success: result.success,
@@ -209,4 +219,54 @@ export function resolveDefense(
       throw new Error(`Unhandled defense type: ${String(_exhaustive)}`);
     }
   }
+}
+
+// ============================================================================
+// Effective Reaction Skills (buff/debuff folding)
+// ============================================================================
+
+/** Clamps a rate to the valid [0, 1] probability/mitigation range. */
+function _clamp01(v: number): number {
+  return Math.min(1, Math.max(0, v));
+}
+
+/**
+ * Computes a combatant's *effective* reaction skills by folding its accumulated
+ * activeBuffs/debuffs (elemental-path self-buffs and attacker-applied debuffs)
+ * into its base reactionSkills via applyDynamicModifiers.
+ *
+ * Defense resolution reads these effective rates so that path buffs/debuffs have
+ * a real mechanical effect. Crushing Blow is intentionally NOT folded here — it
+ * is written directly to base reactionSkills.block (pipeline's
+ * _applyCrushingBlowDebuff) and would double-count if it also rode through
+ * activeBuffs.
+ *
+ * Shared by the per-attack pipeline and the counter chain so both resolve against
+ * the same folded rates (ADR-053). Each rate is clamped to [0, 1].
+ *
+ * @param combatant - The defender whose effective reaction skills to compute
+ * @returns ReactionSkills with all active buffs/debuffs folded and clamped
+ */
+export function effectiveReactionSkills(combatant: Combatant): ReactionSkills {
+  const base: ModifiedStats = {
+    power: combatant.power,
+    speed: combatant.speed,
+    blockSR: combatant.reactionSkills.block.SR,
+    blockSMR: combatant.reactionSkills.block.SMR,
+    blockFMR: combatant.reactionSkills.block.FMR,
+    dodgeSR: combatant.reactionSkills.dodge.SR,
+    dodgeSMR: combatant.reactionSkills.dodge.SMR,
+    dodgeFMR: combatant.reactionSkills.dodge.FMR,
+    parrySR: combatant.reactionSkills.parry.SR,
+    parrySMR: combatant.reactionSkills.parry.SMR,
+    parryFMR: combatant.reactionSkills.parry.FMR,
+  };
+  // Path debuffs are stored as buffs with negative modifiers, so the dedicated
+  // debuffs array is empty here; both fold through the buffs argument.
+  const m = applyDynamicModifiers(base, combatant.activeBuffs, []);
+  return {
+    block: { SR: _clamp01(m.blockSR), SMR: _clamp01(m.blockSMR), FMR: _clamp01(m.blockFMR) },
+    dodge: { SR: _clamp01(m.dodgeSR), SMR: _clamp01(m.dodgeSMR), FMR: _clamp01(m.dodgeFMR) },
+    parry: { SR: _clamp01(m.parrySR), SMR: _clamp01(m.parrySMR), FMR: _clamp01(m.parryFMR) },
+  };
 }

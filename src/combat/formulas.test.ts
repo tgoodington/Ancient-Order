@@ -257,27 +257,29 @@ describe('calculateBlockDamage', () => {
 // ============================================================================
 
 describe('calculateDodgeDamage', () => {
-  it('returns 0 on dodge success — from spec', () => {
-    expect(calculateDodgeDamage(100, 0.2, true)).toBe(0);
+  it('returns damage * (1 - SMR) on dodge success — ADR-054', () => {
+    // 100 * (1 - 0.8) = 20
+    expect(calculateDodgeDamage(100, 0.8, 0.2, true)).toBeCloseTo(20, 10);
   });
 
   it('returns damage * (1 - FMR) on dodge failure', () => {
-    // 100 * (1 - 0.2) = 80
-    expect(calculateDodgeDamage(100, 0.2, false)).toBeCloseTo(80, 10);
+    // 100 * (1 - 0.2) = 80 (SMR irrelevant on failure)
+    expect(calculateDodgeDamage(100, 0.8, 0.2, false)).toBeCloseTo(80, 10);
   });
 
-  it('returns 0 on success regardless of damage value', () => {
-    expect(calculateDodgeDamage(999, 0.5, true)).toBe(0);
+  it('scales success damage with SMR regardless of damage value', () => {
+    // 999 * (1 - 0.5) = 499.5
+    expect(calculateDodgeDamage(999, 0.5, 0.5, true)).toBeCloseTo(499.5, 10);
   });
 
   it('returns full damage on failure with FMR=0', () => {
     // 100 * (1 - 0) = 100
-    expect(calculateDodgeDamage(100, 0, false)).toBeCloseTo(100, 10);
+    expect(calculateDodgeDamage(100, 0.8, 0, false)).toBeCloseTo(100, 10);
   });
 
   it('scales correctly with non-round damage values', () => {
     // damage=60, FMR=0.3 → 60 * 0.7 = 42
-    expect(calculateDodgeDamage(60, 0.3, false)).toBeCloseTo(42, 10);
+    expect(calculateDodgeDamage(60, 0.8, 0.3, false)).toBeCloseTo(42, 10);
   });
 });
 
@@ -286,21 +288,23 @@ describe('calculateDodgeDamage', () => {
 // ============================================================================
 
 describe('calculateParryDamage', () => {
-  it('returns 0 on parry success (counter triggered)', () => {
-    expect(calculateParryDamage(100, 0.2, true)).toBe(0);
+  it('returns damage * (1 - SMR) on parry success (counter still triggered) — ADR-054', () => {
+    // 100 * (1 - 0.9) = 10
+    expect(calculateParryDamage(100, 0.9, 0.2, true)).toBeCloseTo(10, 10);
   });
 
   it('returns damage * (1 - FMR) on parry failure', () => {
-    // 100 * (1 - 0.2) = 80
-    expect(calculateParryDamage(100, 0.2, false)).toBeCloseTo(80, 10);
+    // 100 * (1 - 0.2) = 80 (SMR irrelevant on failure)
+    expect(calculateParryDamage(100, 0.9, 0.2, false)).toBeCloseTo(80, 10);
   });
 
-  it('returns 0 on success regardless of damage value', () => {
-    expect(calculateParryDamage(500, 0.8, true)).toBe(0);
+  it('scales success damage with SMR regardless of damage value', () => {
+    // 500 * (1 - 0.8) = 100
+    expect(calculateParryDamage(500, 0.8, 0.3, true)).toBeCloseTo(100, 10);
   });
 
   it('returns full damage on failure with FMR=0', () => {
-    expect(calculateParryDamage(100, 0, false)).toBeCloseTo(100, 10);
+    expect(calculateParryDamage(100, 0.9, 0, false)).toBeCloseTo(100, 10);
   });
 });
 
@@ -544,8 +548,10 @@ describe('applyDynamicModifiers', () => {
     blockSMR: 0.4,
     blockFMR: 0.2,
     dodgeSR: 0.4,
+    dodgeSMR: 0.8,
     dodgeFMR: 0.2,
     parrySR: 0.3,
+    parrySMR: 0.9,
     parryFMR: 0.15,
   };
 

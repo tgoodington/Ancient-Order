@@ -20,8 +20,8 @@ function makeCombatant(overrides: Partial<Combatant> & { id: string }): Combatan
     elementalPath: overrides.elementalPath ?? 'Fire',
     reactionSkills: overrides.reactionSkills ?? {
       block: { SR: 0.5, SMR: 0.3, FMR: 0.1 },
-      dodge: { SR: 0.4, FMR: 0.15 },
-      parry: { SR: 0.3, FMR: 0.1 },
+      dodge: { SR: 0.4, SMR: 0.8, FMR: 0.15 },
+      parry: { SR: 0.3, SMR: 0.9, FMR: 0.1 },
     },
     isKO: overrides.isKO ?? false,
   };

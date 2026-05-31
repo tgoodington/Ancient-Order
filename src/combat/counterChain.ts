@@ -1,16 +1,25 @@
 /**
  * Ancient Order - Counter Chain Resolution
  *
- * Resolves the Parry counter chain: a successful Parry triggers a counter attack,
- * and the counter target may Parry in turn, extending the chain.
+ * Resolves the counter chain: a successful Parry triggers a counter attack, and
+ * each counter is a *new attack* the target reacts to with its own preferred
+ * defense (ADR-053/054). The chain extends only while reactions keep landing
+ * Parries.
  *
  * Chain logic:
  *   1. Parrier performs a counter attack on the original attacker.
- *   2. The original attacker may Parry the counter; if successful, they counter back.
- *   3. Chain continues until a termination condition is met.
+ *   2. The target reacts with its path's preferred defense (getPreferredDefense)
+ *      resolved through the normal resolveDefense path against effective skills.
+ *   3. The counter continues (roles swap) ONLY if that reaction was a successful
+ *      Parry. A Block, a Dodge, or a failed Parry mitigates the counter and ends
+ *      the chain. This composes with ADR-053: a Fire defender re-counters; a
+ *      Light/Air defender blocks/dodges and stops the chain.
+ *
+ * Every exchange now applies (mitigated) damage — successful Parry/Dodge deal
+ * (1 − SMR) × ActionPower rather than zero (ADR-054 Layer A).
  *
  * Termination conditions:
- *   - Parry fails (defense roll misses)
+ *   - The target's reaction was not a successful Parry
  *   - Combatant is KO'd (stamina reaches 0)
  *   - Combatant has insufficient stamina to continue
  *
@@ -20,9 +29,10 @@
  * All state transitions use spread-operator immutability per the project convention.
  */
 
-import { resolveParry } from './defense.js';
+import { resolveDefense, effectiveReactionSkills } from './defense.js';
+import { getPreferredDefense } from './elementalPaths.js';
 import { calculateBaseDamage } from './formulas.js';
-import type { CombatState, Combatant, AttackResult, DefenseResult } from '../types/combat.js';
+import type { CombatState, Combatant, AttackResult } from '../types/combat.js';
 
 // ============================================================================
 // Constants
@@ -101,11 +111,12 @@ function _applyDamage(state: CombatState, targetId: string, damage: number): Com
  *
  * Each iteration:
  *   1. The current attacker (starts as parrier) deals base damage to the current target.
- *   2. The current target attempts a Parry using their Parry SR.
- *   3. If Parry fails → chain ends, full damage applied.
- *   4. If Parry succeeds → 0 damage, target becomes the next attacker, roles swap.
- *   5. If target is already KO'd → chain ends immediately.
- *   6. If target stamina is insufficient (≤ 0) → chain ends immediately.
+ *   2. The current target reacts with its preferred defense (getPreferredDefense),
+ *      resolved via resolveDefense against its effective (buff-folded) skills.
+ *   3. Mitigated damage is applied to the target every exchange.
+ *   4. If the reaction was a successful Parry → roles swap, chain continues.
+ *   5. Otherwise (Block, Dodge, or failed Parry) → chain ends after damage.
+ *   6. If target is already KO'd or out of stamina → chain ends immediately.
  *
  * Stamina depletion check: after damage application, if target stamina ≤ 0, the
  * chain terminates because the KO'd combatant can no longer respond.
@@ -149,33 +160,30 @@ export function resolveCounterChain(
       break;
     }
 
-    // Calculate damage for this counter-attack
+    // Calculate damage for this counter-attack (a new attack from the parrier)
     const rawDamage = calculateBaseDamage(attacker.power, target.power);
 
-    // Target attempts a Parry
-    const parryRoll = rollFn();
-    const parryResult = resolveParry(
+    // The target reacts with its path's preferred defense, resolved through the
+    // normal defense path against its effective (buff-folded) reaction skills.
+    const selectedDefense = getPreferredDefense(target.elementalPath);
+    const defenseRoll = rollFn();
+    const defenseOutcome = resolveDefense(
+      selectedDefense,
       rawDamage,
-      target.reactionSkills.parry.SR,
-      target.reactionSkills.parry.FMR,
-      parryRoll,
+      effectiveReactionSkills(target),
+      defenseRoll,
     );
 
-    chainLength += 1;
+    const finalDamage = rawDamage * defenseOutcome.damageMultiplier;
 
-    // Build DefenseResult for AttackResult record
-    const defenseOutcome: DefenseResult = {
-      type: 'parry',
-      success: parryResult.success,
-      damageMultiplier: rawDamage > 0 ? parryResult.damage / rawDamage : parryResult.success ? 0 : 1 - target.reactionSkills.parry.FMR,
-    };
+    chainLength += 1;
 
     // Build AttackResult record for this exchange
     const attackResult: AttackResult = {
       attackerId,
       targetId,
-      damage: parryResult.damage,
-      defenseType: 'parry',
+      damage: finalDamage,
+      defenseType: selectedDefense,
       defenseOutcome,
       rankKO: false,
       blindside: false,
@@ -185,16 +193,23 @@ export function resolveCounterChain(
 
     actions.push(attackResult);
 
-    if (parryResult.success) {
-      // Parry succeeded: 0 damage, chain continues with roles swapped
-      // (The target becomes the new attacker for the next iteration)
+    // Mitigated damage applies on every exchange (successful Parry/Dodge no longer
+    // negate fully — see ADR-054).
+    currentState = _applyDamage(currentState, targetId, finalDamage);
+
+    // The chain continues only on a successful Parry: the target becomes the new
+    // attacker and counters back. A Block, Dodge, or failed Parry ends it.
+    if (selectedDefense === 'parry' && defenseOutcome.success) {
+      const updatedTarget = _findCombatant(currentState, targetId);
+      // A KO'd parrier cannot counter back — terminate even on a successful parry.
+      if (!updatedTarget || updatedTarget.isKO) {
+        break;
+      }
       const nextAttackerId = targetId;
       const nextTargetId = attackerId;
       attackerId = nextAttackerId;
       targetId = nextTargetId;
     } else {
-      // Parry failed: apply damage, chain terminates
-      currentState = _applyDamage(currentState, targetId, parryResult.damage);
       break;
     }
   }

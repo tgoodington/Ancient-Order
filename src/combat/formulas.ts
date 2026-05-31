@@ -36,8 +36,10 @@ export interface ModifiedStats {
   blockSMR: number;
   blockFMR: number;
   dodgeSR: number;
+  dodgeSMR: number;
   dodgeFMR: number;
   parrySR: number;
+  parrySMR: number;
   parryFMR: number;
 }
 
@@ -55,8 +57,10 @@ const BUFF_STAT_MAP: Partial<Record<string, keyof ModifiedStats>> = {
   blockSMR_boost: 'blockSMR',
   blockFMR_boost: 'blockFMR',
   dodgeSR_boost: 'dodgeSR',
+  dodgeSMR_boost: 'dodgeSMR',
   dodgeFMR_boost: 'dodgeFMR',
   parrySR_boost: 'parrySR',
+  parrySMR_boost: 'parrySMR',
   parryFMR_boost: 'parryFMR',
   // Debuff variants. Action-path debuffs (applyPathDebuff) are stored as buffs
   // with a `${stat}_debuff` type and a negative modifier, so they fold through
@@ -67,8 +71,10 @@ const BUFF_STAT_MAP: Partial<Record<string, keyof ModifiedStats>> = {
   blockSMR_debuff: 'blockSMR',
   blockFMR_debuff: 'blockFMR',
   dodgeSR_debuff: 'dodgeSR',
+  dodgeSMR_debuff: 'dodgeSMR',
   dodgeFMR_debuff: 'dodgeFMR',
   parrySR_debuff: 'parrySR',
+  parrySMR_debuff: 'parrySMR',
   parryFMR_debuff: 'parryFMR',
 };
 
@@ -206,17 +212,28 @@ export function calculateBlockDamage(
 /**
  * Calculates damage taken when the defender uses Dodge.
  *
- * Success: 0 (full evasion — no damage)
+ * Success: damage * (1 - SMR)  — partial mitigation via Success Mitigation Rate
  * Failure: damage * (1 - FMR)
  *
- * @param damage  - Raw incoming damage
+ * Source of truth: GM Combat Tracker, Math!T40. The intended success branch
+ * mirrors Parry: (1 − SMR) × ActionPower. The sheet's T40 cell multiplies by the
+ * actor's "Order Speed" column instead — a confirmed spreadsheet bug (ADR-054) —
+ * so we follow the intended Parry-parallel formula here, not the cell literal.
+ *
+ * @param damage  - Raw incoming damage (Action Power)
+ * @param SMR     - Success Mitigation Rate (0.0–1.0)
  * @param FMR     - Fail Mitigation Rate (0.0–1.0)
  * @param success - true if the Dodge roll succeeded
  * @returns Final damage applied to the defender's stamina
  */
-export function calculateDodgeDamage(damage: number, FMR: number, success: boolean): number {
+export function calculateDodgeDamage(
+  damage: number,
+  SMR: number,
+  FMR: number,
+  success: boolean,
+): number {
   if (success) {
-    return 0;
+    return damage * (1 - SMR);
   }
   return damage * (1 - FMR);
 }
@@ -224,17 +241,27 @@ export function calculateDodgeDamage(damage: number, FMR: number, success: boole
 /**
  * Calculates damage taken when the defender uses Parry.
  *
- * Success: 0 (counter-attack triggered — caller inserts counter into queue)
+ * Success: damage * (1 - SMR)  — partial mitigation via Success Mitigation Rate.
+ *          A counter-attack is also triggered (the caller queues it); mitigation
+ *          and the counter are independent effects.
  * Failure: damage * (1 - FMR)
  *
- * @param damage  - Raw incoming damage
+ * Source of truth: GM Combat Tracker, Math!V40 (parry success → (1 − SMR) × ActionPower).
+ *
+ * @param damage  - Raw incoming damage (Action Power)
+ * @param SMR     - Success Mitigation Rate (0.0–1.0)
  * @param FMR     - Fail Mitigation Rate (0.0–1.0)
  * @param success - true if the Parry roll succeeded
  * @returns Final damage applied to the defender's stamina
  */
-export function calculateParryDamage(damage: number, FMR: number, success: boolean): number {
+export function calculateParryDamage(
+  damage: number,
+  SMR: number,
+  FMR: number,
+  success: boolean,
+): number {
   if (success) {
-    return 0;
+    return damage * (1 - SMR);
   }
   return damage * (1 - FMR);
 }

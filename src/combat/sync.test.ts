@@ -42,8 +42,8 @@ function makeCombatantConfig(overrides: Partial<CombatantConfig> = {}): Combatan
     elementalPath: 'Fire',
     reactionSkills: {
       block: { SR: 0.6, SMR: 0.3, FMR: 0.1 },
-      dodge: { SR: 0.5, FMR: 0.1 },
-      parry: { SR: 0.4, FMR: 0.1 },
+      dodge: { SR: 0.5, SMR: 0.8, FMR: 0.1 },
+      parry: { SR: 0.4, SMR: 0.9, FMR: 0.1 },
     },
     ascensionLevel: 0,
     ...overrides,
@@ -107,8 +107,8 @@ function makeCombatState(overrides: Partial<CombatState> = {}): CombatState {
     elementalPath: 'Fire',
     reactionSkills: {
       block: { SR: 0.6, SMR: 0.3, FMR: 0.1 },
-      dodge: { SR: 0.5, FMR: 0.1 },
-      parry: { SR: 0.4, FMR: 0.1 },
+      dodge: { SR: 0.5, SMR: 0.8, FMR: 0.1 },
+      parry: { SR: 0.4, SMR: 0.9, FMR: 0.1 },
     },
     isKO: false,
   };
@@ -129,8 +129,8 @@ function makeCombatState(overrides: Partial<CombatState> = {}): CombatState {
     elementalPath: 'Water',
     reactionSkills: {
       block: { SR: 0.5, SMR: 0.25, FMR: 0.1 },
-      dodge: { SR: 0.4, FMR: 0.1 },
-      parry: { SR: 0.3, FMR: 0.1 },
+      dodge: { SR: 0.4, SMR: 0.8, FMR: 0.1 },
+      parry: { SR: 0.3, SMR: 0.9, FMR: 0.1 },
     },
     isKO: false,
   };
