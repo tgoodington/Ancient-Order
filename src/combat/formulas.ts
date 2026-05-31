@@ -58,6 +58,18 @@ const BUFF_STAT_MAP: Partial<Record<string, keyof ModifiedStats>> = {
   dodgeFMR_boost: 'dodgeFMR',
   parrySR_boost: 'parrySR',
   parryFMR_boost: 'parryFMR',
+  // Debuff variants. Action-path debuffs (applyPathDebuff) are stored as buffs
+  // with a `${stat}_debuff` type and a negative modifier, so they fold through
+  // the same additive path. Maps to the same stat keys as the boost variants.
+  power_debuff: 'power',
+  speed_debuff: 'speed',
+  blockSR_debuff: 'blockSR',
+  blockSMR_debuff: 'blockSMR',
+  blockFMR_debuff: 'blockFMR',
+  dodgeSR_debuff: 'dodgeSR',
+  dodgeFMR_debuff: 'dodgeFMR',
+  parrySR_debuff: 'parrySR',
+  parryFMR_debuff: 'parryFMR',
 };
 
 // ============================================================================

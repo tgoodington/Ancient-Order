@@ -436,6 +436,7 @@ describe('resolvePerAttack — ATTACK full resolution', () => {
       stamina: 100,
       maxStamina: 100,
       power: 50,
+      elementalPath: 'Earth', // action path → reacts with Block (scenario tests Block)
       reactionSkills: {
         block: { SR: 0.6, SMR: 0.5, FMR: 0.2 },
         dodge: { SR: 0.5, FMR: 0.15 },
@@ -477,6 +478,7 @@ describe('resolvePerAttack — ATTACK full resolution', () => {
       stamina: 100,
       maxStamina: 100,
       power: 50,
+      elementalPath: 'Earth', // action path → reacts with Block (scenario tests Block)
       reactionSkills: STANDARD_REACTION_SKILLS,
     });
     const state = makeState([attacker], [target]);
@@ -900,7 +902,8 @@ describe('resolveAction — Crushing Blow effect', () => {
     // Equal rank + equal speed → no Rank KO and no Blindside rolls are consumed,
     // so the rolls are [defenseRoll, crushingBlowRoll].
     const attacker = makeCombatant('p1', { power: 80, speed: 10, rank: 1.0 });
-    const target = makeCombatant('e1', { power: 40, speed: 10, rank: 1.0 });
+    // Earth target reacts with Block, the only Crushing-Blow-eligible defense.
+    const target = makeCombatant('e1', { power: 40, speed: 10, rank: 1.0, elementalPath: 'Earth' });
     const state = makeState([attacker], [target]);
     const action: CombatAction = { combatantId: 'p1', type: 'ATTACK', targetId: 'e1' };
 
@@ -940,6 +943,7 @@ describe('resolveAction — Crushing Blow effect', () => {
       power: 40,
       speed: 10,
       rank: 1.0,
+      elementalPath: 'Earth', // action path → reacts with Block (Crushing-Blow eligible)
       reactionSkills: {
         block: { SR: 0.05, SMR: 0.05, FMR: 0.0 },
         dodge: { SR: 0.1, FMR: 0.05 },

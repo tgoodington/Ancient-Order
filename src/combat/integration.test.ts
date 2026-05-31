@@ -465,14 +465,17 @@ describe('Integration Scenario 4: Counter chain via Parry', () => {
     expect(result.round).toBe(2);
     expect(['active', 'victory', 'defeat']).toContain(result.status);
 
-    // Stamina changes should have occurred (the counter chain deals damage)
-    // At minimum, the original attack's parry-fail damage and counter damage
-    const p1After = result.playerParty.find((c) => c.id === 'p1')!;
-    const e1After = result.enemyParty.find((c) => c.id === 'e1')!;
-
-    // At least one of them should have taken damage through the round
-    const totalDamage = (200 - p1After.stamina) + (200 - e1After.stamina);
-    expect(totalDamage).toBeGreaterThan(0);
+    // e1 is on the Fire path (reaction → Parry), so it reacts to p1's normal
+    // attack with a Parry. At ROLL_LOW its 90% Parry SR succeeds, triggering the
+    // counter chain. With accurate round history (no longer reverse-engineered)
+    // we assert the chain actually fired — rather than inferring it from damage.
+    // At ROLL_LOW every parry in the chain succeeds, so it fully mitigates and
+    // deals 0 net damage, which is itself a valid (perfect-parry) outcome.
+    const roundActions = result.roundHistory[0].actions;
+    const parriedWithCounter = roundActions.some(
+      (a) => a.attackResult?.defenseType === 'parry' && a.attackResult?.counterChain === true,
+    );
+    expect(parriedWithCounter).toBe(true);
   });
 
   it('counter chain terminates and does not cause infinite loops', () => {

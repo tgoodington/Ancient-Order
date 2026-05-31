@@ -1336,3 +1336,25 @@ User <-> Waldo (Haiku)             User <-> Architect (Opus)
 - Types could drift if backend changes, but backend is locked for Sprint 5
 - Simple, zero-coupling frontend build
 - Can be migrated to shared package if project grows
+
+### ADR-053: Normal-Attack Defense Selection & Dynamic Modifier Folding (2026-05-30)
+
+**Context:**
+- The per-attack pipeline hardcoded `'block'` as the reaction for every normal ATTACK (`pipeline.ts` Step 4). Dodge/Parry never occurred for normal attacks, so counter chains (Parry-only) effectively fired only when a Fire/Shadow SPECIAL force-set Parry.
+- `applyPathBuff`/`applyPathDebuff` accumulate `Buff` entries in `activeBuffs`, and `applyDynamicModifiers` exists to fold them into stats — but defense resolution read `target.reactionSkills` base rates directly and never called it. Every elemental-path buff/debuff was mechanically inert (logged in bugs.md).
+- The GM Combat Tracker has **no formula** for the normal-attack reaction; the resolution flow explicitly says "Defender Chooses Reaction (or forced)". The choice policy is a design decision, not a port. (SPECIAL forced-defense and Blindside→Defenseless remain as-is and take precedence.)
+
+**Decision:**
+- **Reaction selection (normal ATTACK):** the defender reacts with its own path's signature defense — `getPreferredDefense(defenderPath)`: reaction paths use the defense their path buffs (Fire→Parry, Air→Dodge, Light→Block); action paths (Water/Earth/Shadow) have no defensive identity and default to Block (always available, Crushing-Blow eligible).
+- **Dynamic modifier folding:** defense resolves against *effective* reaction skills = base `reactionSkills` folded with `activeBuffs` via `applyDynamicModifiers` (`_effectiveReactionSkills` in pipeline.ts). Each rate clamped to [0, 1]. `BUFF_STAT_MAP` extended with `_debuff` variants so action-path debuffs (stored as negative-modifier buffs) fold through the same additive path.
+- Crushing Blow stays applied **directly** to base `reactionSkills.block` (not folded) to avoid double-counting.
+
+**Alternatives Considered:**
+- Highest-effective-SR selection (pure optimization) → Rejected: less readable, less lore-aligned, and makes path identity irrelevant to defense.
+- Behavior-tree/archetype-driven reaction choice → Deferred: more faithful but out of scope for the review; revisit if combat AI deepens.
+- Document as an explicit POC cut (no behavior change) → Rejected by user; full pass chosen so paths are mechanically real for the pitch demo.
+
+**Consequences:**
+- Counters, Dodge, and Parry now occur for normal attacks; reaction-path self-buffs and action-path debuffs are mechanically live (clears the bugs.md elemental-path active issue).
+- Balance shifted; re-baselined combat tests (pipeline, integration, and the Block-intent scenarios now pin the defender to an action path).
+- **Known follow-up (balance):** path buffs have `duration: -1` and accumulate every qualifying exchange; effective rates are clamped at 1.0, so a reaction-path defender trends toward near-unhittable on its signature defense over a long fight. Acceptable for short demo encounters; a per-combat cap or decay is a future balance task.

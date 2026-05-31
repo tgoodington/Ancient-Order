@@ -31,6 +31,7 @@ import type {
   ActionResult,
   AttackResult,
   DefenseType,
+  ReactionSkills,
 } from '../types/combat.js';
 import { ACTION_PRIORITY } from '../types/combat.js';
 import {
@@ -43,10 +44,17 @@ import {
   calculateBaseDamage,
   calculateSpecialDamageBonus,
   calculateEvadeRegen,
+  applyDynamicModifiers,
+  type ModifiedStats,
 } from './formulas.js';
 import { resolveDefense } from './defense.js';
 import { resolveCounterChain } from './counterChain.js';
-import { applyPathBuff, applyPathDebuff, getSpecialForceDefense } from './elementalPaths.js';
+import {
+  applyPathBuff,
+  applyPathDebuff,
+  getSpecialForceDefense,
+  getPreferredDefense,
+} from './elementalPaths.js';
 import { addEnergySegments, checkAscensionAdvance } from './energy.js';
 import { resolveGroupAction, GROUP_ACTION_CONFIG } from './groupAction.js';
 
@@ -120,6 +128,45 @@ function _getOwnParty(state: CombatState, combatantId: string): readonly Combata
   return _isPlayerCombatant(state, combatantId)
     ? state.playerParty
     : state.enemyParty;
+}
+
+/** Clamps a rate to the valid [0, 1] probability/mitigation range. */
+function _clamp01(v: number): number {
+  return Math.min(1, Math.max(0, v));
+}
+
+/**
+ * Computes a combatant's *effective* reaction skills by folding its accumulated
+ * activeBuffs/debuffs (elemental-path self-buffs and attacker-applied debuffs)
+ * into its base reactionSkills via applyDynamicModifiers.
+ *
+ * Defense resolution reads these effective rates so that path buffs/debuffs have
+ * a real mechanical effect. Crushing Blow is intentionally NOT folded here — it
+ * is written directly to base reactionSkills.block (see _applyCrushingBlowDebuff)
+ * and would double-count if it also rode through activeBuffs.
+ *
+ * Each rate is clamped to [0, 1].
+ */
+function _effectiveReactionSkills(combatant: Combatant): ReactionSkills {
+  const base: ModifiedStats = {
+    power: combatant.power,
+    speed: combatant.speed,
+    blockSR: combatant.reactionSkills.block.SR,
+    blockSMR: combatant.reactionSkills.block.SMR,
+    blockFMR: combatant.reactionSkills.block.FMR,
+    dodgeSR: combatant.reactionSkills.dodge.SR,
+    dodgeFMR: combatant.reactionSkills.dodge.FMR,
+    parrySR: combatant.reactionSkills.parry.SR,
+    parryFMR: combatant.reactionSkills.parry.FMR,
+  };
+  // Path debuffs are stored as buffs with negative modifiers, so the dedicated
+  // debuffs array is empty here; both fold through the buffs argument.
+  const m = applyDynamicModifiers(base, combatant.activeBuffs, []);
+  return {
+    block: { SR: _clamp01(m.blockSR), SMR: _clamp01(m.blockSMR), FMR: _clamp01(m.blockFMR) },
+    dodge: { SR: _clamp01(m.dodgeSR), FMR: _clamp01(m.dodgeFMR) },
+    parry: { SR: _clamp01(m.parrySR), FMR: _clamp01(m.parryFMR) },
+  };
 }
 
 // ============================================================================
@@ -391,15 +438,13 @@ function _resolveAttack(
 
   if (blindside) {
     selectedDefense = 'defenseless';
+  } else if (action.type === 'SPECIAL') {
+    // SPECIAL: the attacker's elemental path forces the target's defense type.
+    selectedDefense = getSpecialForceDefense(attacker.elementalPath);
   } else {
-    // Default: pick the target's best available defense (block as primary default)
-    // For SPECIAL: the attacker's elemental path may force a specific defense
-    if (action.type === 'SPECIAL') {
-      selectedDefense = getSpecialForceDefense(attacker.elementalPath);
-    } else {
-      // Default to block for ATTACK
-      selectedDefense = 'block';
-    }
+    // Normal ATTACK: the defender reacts with its own path's preferred defense
+    // (reaction paths use their signature defense; action paths default to block).
+    selectedDefense = getPreferredDefense(target.elementalPath);
   }
 
   // ------------------------------------------------------------------
@@ -413,8 +458,12 @@ function _resolveAttack(
     rawDamage = calculateSpecialDamageBonus(rawDamage, segments);
   }
 
+  // Resolve against the target's *effective* reaction skills: base rates folded
+  // with accumulated elemental-path buffs/debuffs (Crushing Blow excluded — it is
+  // already baked into base block rates).
+  const effectiveSkills = _effectiveReactionSkills(target);
   const defenseRoll = rollFn();
-  const defenseResult = resolveDefense(selectedDefense, rawDamage, target.reactionSkills, defenseRoll);
+  const defenseResult = resolveDefense(selectedDefense, rawDamage, effectiveSkills, defenseRoll);
 
   // Crushing Blow check: only applies when Block was used AND attacker power > target power
   let crushingBlow = false;

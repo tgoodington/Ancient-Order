@@ -193,3 +193,26 @@ export function applyPathDebuff(target: Combatant, attackerPath: ElementalPath):
 export function getSpecialForceDefense(attackerPath: ElementalPath): DefenseType {
   return ELEMENTAL_PATH_CONFIG[attackerPath].specialForces;
 }
+
+/**
+ * Returns the defense type a combatant prefers to react with against a normal
+ * (non-Special) attack, based on its own elemental path.
+ *
+ * The GM resolution flow leaves the normal-attack reaction to the defender's
+ * choice; there is no Excel formula for it. Policy (POC, ADR-053): a combatant
+ * on a reaction path defends with its signature defense — the same defense its
+ * path buffs — so the self-buff actually applies to the defense it uses:
+ *   Fire → parry, Air → dodge, Light → block.
+ * Action-path combatants (Water/Earth/Shadow) have no defensive identity and
+ * default to Block (always available, Crushing-Blow eligible).
+ *
+ * Blindside (→ defenseless) and Special (→ getSpecialForceDefense) are handled
+ * separately and take precedence over this preference.
+ *
+ * @param defenderPath - The elemental path of the defending combatant
+ * @returns The DefenseType the defender reacts with against a normal attack
+ */
+export function getPreferredDefense(defenderPath: ElementalPath): DefenseType {
+  const config = ELEMENTAL_PATH_CONFIG[defenderPath];
+  return config.type === 'reaction' ? config.defenseBoost : 'block';
+}
