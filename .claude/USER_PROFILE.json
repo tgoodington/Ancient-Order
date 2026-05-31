@@ -1,0 +1,70 @@
+{
+  "_comment": "This file is created in .claude/USER_PROFILE.json and persists across all projects for this user. It captures personal/professional context that follows the user, not project-specific information. Agents naturally discover and update this through conversation. This is NOT project memory—it's user memory.",
+
+  "user": {
+    "name": null,
+    "role": null,
+    "seniority_level": null,
+    "years_experience": null,
+    "organization": {
+      "name": null,
+      "type": null,
+      "industry": null,
+      "location": null
+    },
+    "reports_to": null,
+    "discovery_notes": []
+  },
+
+  "expertise": {
+    "primary_skills": [],
+    "expertise_areas": [],
+    "learning_style": null,
+    "learning_goals": []
+  },
+
+  "communication": {
+    "style": null,
+    "pace": null,
+    "detail_level": null,
+    "decision_making": null
+  },
+
+  "constraints": {
+    "authority_level": null,
+    "typical_availability": null,
+    "team_size": null,
+    "time_zone": null,
+    "technical_environment": {
+      "cloud_providers": [],
+      "preferred_databases": [],
+      "deployment_patterns": []
+    }
+  },
+
+  "motivation": {
+    "primary_drives": [],
+    "cares_about": [],
+    "professional_goals": []
+  },
+
+  "preferences": {
+    "tools_and_frameworks": [],
+    "methodologies": [],
+    "collaboration_tools": []
+  },
+
+  "metadata": {
+    "created_at": "2025-02-04T00:00:00Z",
+    "last_updated": null,
+    "profile_completeness": 0,
+    "source": "Discovered through agent conversations",
+    "projects_contributed_to": [],
+    "confidence_scores": {
+      "role": 0.0,
+      "expertise_areas": 0.0,
+      "communication_style": 0.0,
+      "motivation": 0.0
+    }
+  }
+}
