@@ -8,7 +8,7 @@
  *     multi-step traversal, flag setting, visited scene tracking
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 import {
   createInitialNarrativeState,
@@ -19,7 +19,6 @@ import { TEST_SCENE_GRAPH, PREREQUISITE_SCENE_GRAPH } from './fixtures.js';
 import { createNewGameState } from '../state/gameState.js';
 import { initializeNarrative } from '../state/stateUpdaters.js';
 import type { GameState, Personality } from '../types/index.js';
-import type { NarrativeState } from '../types/narrative.js';
 
 // ============================================================================
 // Helpers

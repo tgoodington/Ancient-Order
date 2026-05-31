@@ -199,7 +199,6 @@ describe('GROUP with KO\'d ally — reduced participant count', () => {
     const newState = resolveGroup(state, GROUP_DECLARATION, GROUP_ACTION_CONFIG, failRoll);
 
     // KO'd ally (ally2) should NOT have energy consumed (already KO'd, not a participant)
-    const ally2After = newState.enemyParty.find(() => false); // ally2 is in playerParty
     const ally2InPlayer = newState.playerParty.find((c) => c.id === 'ally2');
     // ally2 was already KO'd, isKO should still be true
     expect(ally2InPlayer?.isKO).toBe(true);

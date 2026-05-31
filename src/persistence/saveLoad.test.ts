@@ -801,7 +801,7 @@ describe('validateGameState — team validation (Phase 4)', () => {
   });
 
   it('accepts missing team field (backward compat)', () => {
-    const { team: _t, ...stateWithoutTeam } = makeGameState() as Record<string, unknown>;
+    const { team: _t, ...stateWithoutTeam } = makeGameState() as unknown as Record<string, unknown>;
     expect(validateGameState(stateWithoutTeam).valid).toBe(true);
   });
 });

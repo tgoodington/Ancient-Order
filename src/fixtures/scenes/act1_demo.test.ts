@@ -13,8 +13,12 @@
 
 import { describe, it, expect } from 'vitest';
 
-import act1SceneGraph from './act1_demo.json' with { type: 'json' };
+import act1SceneGraphData from './act1_demo.json' with { type: 'json' };
 import { validateSceneGraph } from '../../narrative/sceneEngine.js';
+import type { SceneGraph } from '../../types/narrative.js';
+
+// The JSON import is inferred as a narrow literal type; treat it as a SceneGraph.
+const act1SceneGraph = act1SceneGraphData as unknown as SceneGraph;
 
 // ============================================================================
 // Act 1 Scene Graph Validation

@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-package-lock.json
 yarn.lock
 
 # Build output
@@ -9,6 +8,9 @@ build/
 *.js
 !*.config.js
 *.d.ts
+*.tsbuildinfo
+# Hand-written ambient declarations are source, not build output — keep tracked.
+!client/src/vite-env.d.ts
 
 # Environment
 .env

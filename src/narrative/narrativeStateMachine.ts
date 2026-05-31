@@ -12,7 +12,6 @@
 
 import type { GameState } from '../types/index.js';
 import type {
-  Scene,
   SceneGraph,
   NarrativeState,
   NarrativeTransitionResult,

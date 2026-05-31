@@ -10,7 +10,7 @@
  * - PREREQUISITE_SCENE_GRAPH: scenes with flag/trait/visited_scene prerequisites
  */
 
-import type { Scene, SceneGraph } from '../types/narrative.js';
+import type { SceneGraph } from '../types/narrative.js';
 
 // ============================================================================
 // TEST_SCENE_GRAPH: 3 valid scenes

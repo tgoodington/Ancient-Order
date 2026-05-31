@@ -25,7 +25,9 @@ This file stores project constants, configuration, and frequently-needed **non-s
 - **API Style:** REST endpoints (Fastify plugins with JSON Schema validation)
 - **Testing Framework:** Vitest (native ESM, Jest-compatible API)
 - **Linting:** ESLint flat config + Prettier
-- **Build:** TypeScript compiler (tsc), no bundler, source maps + declarations enabled
+- **Build:** TypeScript compiler (tsc), no bundler, source maps + declarations enabled. Production build uses `tsconfig.build.json` which **excludes test files** from `dist/`.
+- **Quality gate:** `npm run verify` (root) runs the full chain: backend `tsc --noEmit` + `eslint` + `vitest`, then client `tsc -b` + `vitest`. **Run this before committing.** NOTE: Vitest uses esbuild and does NOT type-check — a green test run does not imply a clean `tsc`. Always rely on `verify`, not `npm test` alone.
+- **Lockfiles:** `package-lock.json` (root) and `client/package-lock.json` are committed (removed from `.gitignore` 2026-05-30) for reproducible installs.
 
 **NOTE (2026-02-21):** Full backend rebuild of Sprint 1+2 completed with Fastify+ESM+Vitest. All imports use `.js` extensions (NodeNext convention).
 
