@@ -298,19 +298,23 @@ export function calculateBaseDamage(
 // ============================================================================
 
 /**
- * Applies the Special Technique damage bonus.
+ * Applies the Special Technique damage multiplier (Excel Math!M = "Special Power").
  *
- * Formula: baseDamage * (1 + 0.10 * energySegments)
+ * Formula: power * (1 + 0.10 * energySegments)
  *
- * Each energy segment spent boosts damage by 10%.
- * Range: 1–5 segments (1.10x–1.50x multiplier).
+ * Each energy segment spent boosts power by 10%. Range: 1–5 segments
+ * (1.10x–1.50x multiplier).
  *
- * @param baseDamage     - Base damage before Special bonus
+ * IMPORTANT: this returns the *raw* (un-rounded) Special power. Per Math!O the
+ * rounding to 0.25 happens once, after this multiplier, via calculateBaseDamage —
+ * callers must not round the input first (that diverges from the sheet).
+ *
+ * @param power          - The attacker's raw Power stat (pre-round action power)
  * @param energySegments - Number of energy segments spent (typically 1–5)
- * @returns Boosted damage after applying the Special multiplier
+ * @returns Raw boosted Special power, to be rounded once by calculateBaseDamage
  */
-export function calculateSpecialDamageBonus(baseDamage: number, energySegments: number): number {
-  return baseDamage * (1 + 0.1 * energySegments);
+export function calculateSpecialDamageBonus(power: number, energySegments: number): number {
+  return power * (1 + 0.1 * energySegments);
 }
 
 // ============================================================================

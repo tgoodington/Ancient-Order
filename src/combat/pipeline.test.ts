@@ -726,6 +726,37 @@ describe('resolvePerAttack — SPECIAL resolution', () => {
     // Initial: 3; consumed: 3 → 0; gained: ~1.0 → ~1.0
     expect(attackerAfter.energy).toBeLessThan(3); // Net reduced from initial 3
   });
+
+  it('SPECIAL rounds Action Power once (MROUND of boosted power), per Math!O', () => {
+    // power 53, 1 segment → Excel O = MROUND(53*1.1, 0.25) = MROUND(58.3, 0.25) = 58.25.
+    // The old order (round base 53 first, then *1.1) would give 58.3 — this pins the
+    // single-rounding behavior. Earth attacker forces Block; FMR 0 + block-fail roll
+    // applies full Action Power; target power 200 keeps it Crushing-Blow ineligible.
+    const attacker = makeCombatant('attacker', { power: 53, energy: 1, elementalPath: 'Earth' });
+    const target = makeCombatant('target', {
+      power: 200,
+      stamina: 200,
+      maxStamina: 200,
+      reactionSkills: {
+        block: { SR: 0.6, SMR: 0.5, FMR: 0 },
+        dodge: { SR: 0.5, FMR: 0.15 },
+        parry: { SR: 0.4, FMR: 0.1 },
+      },
+    });
+    const state = makeState([attacker], [target]);
+
+    const specialAction: CombatAction = {
+      combatantId: 'attacker',
+      type: 'SPECIAL',
+      targetId: 'target',
+      energySegments: 1,
+    };
+
+    // roll = 20 → Block fail → FMR 0 → full Action Power applied.
+    const result = resolvePerAttack(state, specialAction, () => 20);
+    const targetAfter = result.enemyParty.find((c) => c.id === 'target')!;
+    expect(targetAfter.stamina).toBeCloseTo(141.75); // 200 - 58.25, not 200 - 58.3
+  });
 });
 
 // ============================================================================

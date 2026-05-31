@@ -15,9 +15,26 @@ Each bug entry includes:
 
 ## Active Issues
 
-_(none)_
+### 2026-05-31 — Dodge/Parry success is full-negation in code but SMR-mitigated in Excel
+- **Description:** `Math` sheet `T40` (Dodge) and `V40` (Parry) resolve a *successful* defense as `(1 − SMR) × ActionPower` — exactly parallel to Block's `R40`. Every defense in the sheet has SR/SMR/FMR (stats cols: block 10/12/14, dodge 16/18/20, parry 22/24/26). Our `calculateDodgeDamage`/`calculateParryDamage` hardcode success → `0` (full evade / counter), and `ReactionSkills` omits `dodge.SMR` and `parry.SMR` entirely. So the implementation follows the *documentation's* simplification, not the raw Excel.
+- **Status:** Design divergence, not a clear bug — pending a design decision (keep full-negation + the intentional Parry→counter-chain layer, vs. add dodge/parry SMR to the data model and re-baseline). **Caveat:** the Excel Dodge-success base is `VLOOKUP(…$A$31:$D$36,4)` = the actor's *"Order Speed"* column, which looks like a spreadsheet error rather than a sane damage base — so this cannot be blindly replicated; it needs designer intent. Parry-success uses ActionPower cleanly.
+
+### 2026-05-31 — Natural-20 defense roll → 0 damage rule not implemented
+- **Description:** All three Excel defense formulas wrap with `IF(defenseRoll = 20, 0, …)` — a defense roll of exactly 20 fully negates damage regardless of SR. Our `resolveDefense` has no such rule.
+- **Status:** Deferred by decision (2026-05-31). Documented as a known, intentional omission; revisit if combat fidelity becomes a priority. Note our defense roll convention is also inverted vs Excel (we use low-roll-success `roll ≤ SR·20`; Excel uses high-roll-success `roll/20 ≥ 1−SR`) — statistically identical (`P=SR`) and internally consistent, so no action, but a literal natural-20 port would need the convention reconciled first.
 
 ## Resolved Issues
+
+### 2026-05-31 — Special damage rounded twice (diverged from Math!O single MROUND)
+- **Description:** The pipeline computed SPECIAL damage as `MROUND(Power, 0.25)` (via `calculateBaseDamage`) and *then* `× (1 + 0.1·segments)` with no final rounding. Excel `Math!O` is a single `MROUND(L + M + N, 0.25)` where the Special term `M = Power × (1 + segments/10)` is already boosted before the one rounding step. The two agree for 0.25-aligned products but diverge by ≤ ~0.13 otherwise (e.g. Power 53, 1 seg: Excel 58.25 vs old 58.3).
+- **Root cause:** Base-damage rounding was applied before the Special multiplier instead of after.
+- **Solution:** Reordered Step 5 in `pipeline.ts` to compute the raw (un-rounded) action power first (`calculateSpecialDamageBonus` now documented as returning raw Special power), then round once via `calculateBaseDamage`. Added a pipeline test pinning `MROUND(53×1.1, 0.25) = 58.25`. 1028 backend tests pass.
+- **Prevention:** When a spreadsheet formula rounds a *sum/product* once at the end, port the rounding as the final step — never round an intermediate term that is then scaled.
+
+### 2026-05-31 — Combat formula audit (spot-check vs Excel Math sheet)
+- **Verified exact matches** (extracted from `Math!` Phase 4/5 block, rows 39–41; ADR-007 satisfied): Rank KO threshold `((aR−tR)·3)/10` + eligibility `≥0.5` + check `roll/20≥1−thr` (`D40`/`E40`); Blindside threshold `(aS−tS)/tS` + check (`H40`/`I40`); Crushing Blow threshold `(O−targetPow)/targetPow` + Block-only eligibility + check (`AF40`/`AG40`); Base/Action Power `MROUND(L+M+N,0.25)` with `L`=attacker Power (`O40`/`L40`); Block damage `(1−SMR)`/`(1−FMR)` (`R40`). These confirm the 2026-05-30 base-damage and Rank-KO-eligibility fixes against the source of truth.
+- **Not traced in this pass:** energy segment gains (Excel chains `AA/AD` → `A22:E27` + `AA57/AD57`, capped at 6) and ascension thresholds/bonuses — implemented from the documentation table (1.0/0.5/0.5/0.25; 35/95/180), not re-derived from the Excel energy block. Evade regen base (0.30) is a per-combatant data value in Excel, consistent with the doc.
+- **Method:** `GM Combat Tracker.xlsx` is a zip; `Math` = `xl/worksheets/sheet7.xml` (rId7). Parsed cells + shared strings to resolve labels/formulas. Repeat this method for any further formula audits.
 
 ### 2026-05-30 — Elemental path buffs/debuffs accumulated but never applied; normal attacks hardcoded to Block
 - **Description:** `applyPathBuff`/`applyPathDebuff` appended `Buff` entries to `activeBuffs`, and `applyDynamicModifiers` (formulas.ts) existed to fold buffs/debuffs into stats — but the per-attack pipeline resolved defense against `target.reactionSkills` *directly* and never called it, so every elemental-path buff/debuff was mechanically inert. Compounding this, Step 4 hardcoded `'block'` as the reaction for every normal ATTACK, so Dodge/Parry (and therefore Parry-only counter chains) never occurred outside of SPECIAL forced-defense.

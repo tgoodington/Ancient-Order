@@ -450,13 +450,17 @@ function _resolveAttack(
   // ------------------------------------------------------------------
   // Step 5: Defense roll and damage calculation
   // ------------------------------------------------------------------
-  let rawDamage = calculateBaseDamage(attacker.power, target.power);
-
-  // Apply Special damage bonus if SPECIAL
+  // Action Power — Excel Math!O = MROUND(L + M + N, 0.25), a SINGLE rounding step.
+  // For a SPECIAL, M = Power × (1 + 0.1·segments); compute the raw boosted power
+  // first, then round once via calculateBaseDamage. Rounding the base power before
+  // applying the Special multiplier (the old order) diverges from the sheet for
+  // any power whose boosted product is not already 0.25-aligned.
+  let actionPower = attacker.power;
   if (action.type === 'SPECIAL') {
     const segments = action.energySegments ?? attacker.energy;
-    rawDamage = calculateSpecialDamageBonus(rawDamage, segments);
+    actionPower = calculateSpecialDamageBonus(actionPower, segments);
   }
+  const rawDamage = calculateBaseDamage(actionPower, target.power);
 
   // Resolve against the target's *effective* reaction skills: base rates folded
   // with accumulated elemental-path buffs/debuffs (Crushing Blow excluded — it is
