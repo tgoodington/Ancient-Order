@@ -21,7 +21,6 @@ import type {
   Combatant,
   GroupActionDeclaration,
   GroupActionConfig,
-  GroupResolutionResult,
   BlockDefenseResult,
   ActionResult,
 } from '../types/combat.js';
@@ -134,21 +133,22 @@ function _replaceCombatant(state: CombatState, updated: Combatant): CombatState 
  * @param declaration - GROUP leader's declaration (leaderId + targetId)
  * @param config      - GroupActionConfig (damageMultiplier, energyRequirement)
  * @param rollFn      - Roll injection function (default: random 0–20)
- * @returns New CombatState after GROUP resolves
+ * @returns The new CombatState plus the GROUP ActionResult for the round history.
+ *          (Use the `resolveGroup` wrapper below if only the state is needed.)
  */
-export function resolveGroup(
+export function resolveGroupAction(
   state: CombatState,
   declaration: GroupActionDeclaration,
   config: GroupActionConfig,
   rollFn: () => number = () => Math.random() * 20,
-): CombatState {
+): { state: CombatState; result: ActionResult } {
   const { leaderId, targetId } = declaration;
 
   // Locate the leader
   const leader = _findCombatant(state, leaderId);
   if (!leader || leader.isKO) {
     // Leader is gone — GROUP cannot fire
-    return state;
+    return { state, result: { combatantId: leaderId, type: 'GROUP' } };
   }
 
   // Locate the target
@@ -156,7 +156,10 @@ export function resolveGroup(
   if (!target || target.isKO) {
     // Target already KO'd — GROUP no-ops (energy still consumed below)
     const stateWithEnergyDrained = _drainParticipantEnergy(state, leaderId);
-    return stateWithEnergyDrained;
+    return {
+      state: stateWithEnergyDrained,
+      result: { combatantId: leaderId, type: 'GROUP' },
+    };
   }
 
   // ------------------------------------------------------------------
@@ -224,17 +227,8 @@ export function resolveGroup(
   }
 
   // ------------------------------------------------------------------
-  // Step 7: Build GroupResolutionResult and record in roundHistory
+  // Step 7: Build the GROUP ActionResult for the round history
   // ------------------------------------------------------------------
-  const groupResult: GroupResolutionResult = {
-    participantIds: participants.map((p) => p.id),
-    targetId,
-    individualDamages,
-    totalDamage: groupDamage,
-    defenseResult: blockDefenseResult,
-    finalDamage,
-  };
-
   const actionResult: ActionResult = {
     combatantId: leaderId,
     type: 'GROUP',
@@ -255,12 +249,20 @@ export function resolveGroup(
     },
   };
 
-  // Attach the full GroupResolutionResult to the state via the actionQueue
-  // snapshot approach used by roundManager (same as pipeline _appendActionResult
-  // — Round Manager collects results). Store it as a transient property.
-  void groupResult; // GroupResolutionResult is available for callers that need it
+  return { state: currentState, result: actionResult };
+}
 
-  return _appendGroupActionResult(currentState, actionResult);
+/**
+ * Thin wrapper returning only the CombatState after GROUP resolution.
+ * Retained for callers/tests that do not need the ActionResult.
+ */
+export function resolveGroup(
+  state: CombatState,
+  declaration: GroupActionDeclaration,
+  config: GroupActionConfig,
+  rollFn: () => number = () => Math.random() * 20,
+): CombatState {
+  return resolveGroupAction(state, declaration, config, rollFn).state;
 }
 
 // ============================================================================
@@ -286,21 +288,3 @@ function _drainParticipantEnergy(state: CombatState, leaderId: string): CombatSt
   return currentState;
 }
 
-// ============================================================================
-// Internal: append action result (mirrors pipeline._appendActionResult)
-// ============================================================================
-
-/**
- * Appends a GROUP ActionResult to the CombatState.
- * The Round Manager collects results across the full action queue.
- * This function is a hook consistent with the pipeline's _appendActionResult.
- */
-function _appendGroupActionResult(
-  state: CombatState,
-  actionResult: ActionResult,
-): CombatState {
-  // Round Manager (Task 16) is responsible for consolidating round results.
-  // For now, return state as-is — consistent with pipeline._appendActionResult.
-  void actionResult;
-  return state;
-}

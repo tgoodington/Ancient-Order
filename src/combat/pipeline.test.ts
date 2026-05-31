@@ -21,7 +21,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { sortByPriority, resolvePerAttack } from './pipeline.js';
+import { sortByPriority, resolvePerAttack, resolveAction } from './pipeline.js';
 import type { CombatAction, CombatState, Combatant, ReactionSkills } from '../types/combat.js';
 
 // ============================================================================
@@ -858,5 +858,105 @@ describe('sortByPriority — immutability', () => {
     expect(sorted).not.toBe(actions);
     // Original array order unchanged
     expect(actions[0]).toBe(originalFirst);
+  });
+});
+
+// ============================================================================
+// resolveAction — accurate ActionResult + Crushing Blow effect
+// ============================================================================
+
+describe('resolveAction — accurate ActionResult', () => {
+  it('reports the real (non-block) defense type for a SPECIAL forced defense', () => {
+    // Water path forces Dodge on the target. Proves the result carries the true
+    // defense type (the old round manager always reverse-engineered 'block').
+    const attacker = makeCombatant('p1', { power: 50, speed: 10, elementalPath: 'Water', energy: 3 });
+    const target = makeCombatant('e1', { power: 50, speed: 10 });
+    const state = makeState([attacker], [target]);
+    const action: CombatAction = {
+      combatantId: 'p1',
+      type: 'SPECIAL',
+      targetId: 'e1',
+      energySegments: 2,
+    };
+
+    const { result } = resolveAction(state, action, () => 10);
+    expect(result.type).toBe('SPECIAL');
+    expect(result.attackResult?.defenseType).toBe('dodge');
+  });
+
+  it('reports EVADE as a non-attack action result', () => {
+    const p1 = makeCombatant('p1', { stamina: 50 });
+    const e1 = makeCombatant('e1');
+    const state = makeState([p1], [e1]);
+    const { result } = resolveAction(state, { combatantId: 'p1', type: 'EVADE', targetId: null });
+    expect(result.type).toBe('EVADE');
+    expect(result.attackResult).toBeUndefined();
+  });
+});
+
+describe('resolveAction — Crushing Blow effect', () => {
+  it('degrades the target Block SR/SMR/FMR by 0.1 when Crushing Blow lands', () => {
+    // attacker power 80 vs target power 40 → CB threshold = (80-40)/40 = 1.0 → always lands.
+    // Equal rank + equal speed → no Rank KO and no Blindside rolls are consumed,
+    // so the rolls are [defenseRoll, crushingBlowRoll].
+    const attacker = makeCombatant('p1', { power: 80, speed: 10, rank: 1.0 });
+    const target = makeCombatant('e1', { power: 40, speed: 10, rank: 1.0 });
+    const state = makeState([attacker], [target]);
+    const action: CombatAction = { combatantId: 'p1', type: 'ATTACK', targetId: 'e1' };
+
+    let i = 0;
+    const rolls = [10, 10];
+    const roll = (): number => rolls[i++] ?? 10;
+
+    const { state: after, result } = resolveAction(state, action, roll);
+    const newTarget = after.enemyParty.find((c) => c.id === 'e1')!;
+
+    expect(result.attackResult?.crushingBlow).toBe(true);
+    // STANDARD_REACTION_SKILLS.block = { SR: 0.6, SMR: 0.5, FMR: 0.2 }
+    expect(newTarget.reactionSkills.block.SR).toBeCloseTo(0.5);
+    expect(newTarget.reactionSkills.block.SMR).toBeCloseTo(0.4);
+    expect(newTarget.reactionSkills.block.FMR).toBeCloseTo(0.1);
+  });
+
+  it('does not change Block rates when powers are equal (no Crushing Blow)', () => {
+    const attacker = makeCombatant('p1', { power: 50, speed: 10, rank: 1.0 });
+    const target = makeCombatant('e1', { power: 50, speed: 10, rank: 1.0 });
+    const state = makeState([attacker], [target]);
+    const action: CombatAction = { combatantId: 'p1', type: 'ATTACK', targetId: 'e1' };
+
+    const { state: after, result } = resolveAction(state, action, () => 10);
+    const newTarget = after.enemyParty.find((c) => c.id === 'e1')!;
+
+    expect(result.attackResult?.crushingBlow).toBe(false);
+    expect(newTarget.reactionSkills.block.SR).toBeCloseTo(0.6);
+    expect(newTarget.reactionSkills.block.SMR).toBeCloseTo(0.5);
+    expect(newTarget.reactionSkills.block.FMR).toBeCloseTo(0.2);
+  });
+
+  it('clamps debuffed Block rates at 0 (never negative)', () => {
+    // Target already has very low block rates; CB reduction must not go below 0.
+    const attacker = makeCombatant('p1', { power: 80, speed: 10, rank: 1.0 });
+    const target = makeCombatant('e1', {
+      power: 40,
+      speed: 10,
+      rank: 1.0,
+      reactionSkills: {
+        block: { SR: 0.05, SMR: 0.05, FMR: 0.0 },
+        dodge: { SR: 0.1, FMR: 0.05 },
+        parry: { SR: 0.1, FMR: 0.05 },
+      },
+    });
+    const state = makeState([attacker], [target]);
+    const action: CombatAction = { combatantId: 'p1', type: 'ATTACK', targetId: 'e1' };
+
+    let i = 0;
+    const rolls = [10, 10];
+    const roll = (): number => rolls[i++] ?? 10;
+
+    const { state: after } = resolveAction(state, action, roll);
+    const newTarget = after.enemyParty.find((c) => c.id === 'e1')!;
+    expect(newTarget.reactionSkills.block.SR).toBe(0);
+    expect(newTarget.reactionSkills.block.SMR).toBe(0);
+    expect(newTarget.reactionSkills.block.FMR).toBe(0);
   });
 });

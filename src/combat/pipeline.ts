@@ -48,7 +48,7 @@ import { resolveDefense } from './defense.js';
 import { resolveCounterChain } from './counterChain.js';
 import { applyPathBuff, applyPathDebuff, getSpecialForceDefense } from './elementalPaths.js';
 import { addEnergySegments, checkAscensionAdvance } from './energy.js';
-import { resolveGroup, GROUP_ACTION_CONFIG } from './groupAction.js';
+import { resolveGroupAction, GROUP_ACTION_CONFIG } from './groupAction.js';
 
 // ============================================================================
 // Internal Helpers
@@ -202,13 +202,56 @@ function _getEffectiveSpeed(action: CombatAction, state: CombatState): number {
 // ============================================================================
 
 /**
- * Resolves a single combat action through the full 7-step pipeline.
+ * Resolves a single combat action, returning both the new CombatState and the
+ * ActionResult describing what happened (for the round history).
  *
- * For GROUP actions, delegates to resolveGroup() (Task 18 implementation).
- * For EVADE actions, applies stamina regen and returns updated state.
- * For DEFEND actions, the action is a marker that was already used in Step 1
- * (DEFEND intercept); resolvePerAttack itself is a no-op for DEFEND.
+ * This is the single source of truth for per-action resolution. The Round
+ * Manager calls it directly to collect accurate ActionResults; `resolvePerAttack`
+ * is a thin wrapper that returns only the state for callers/tests that don't
+ * need the result.
+ *
+ * For GROUP actions, delegates to resolveGroupAction() (Task 18 implementation).
+ * For EVADE actions, applies stamina regen.
+ * For DEFEND actions, the action is a marker used in Step 1 (DEFEND intercept);
+ * resolution itself is a no-op for DEFEND.
  * For ATTACK and SPECIAL, runs the full 7-step resolution.
+ *
+ * @param state   - Current CombatState
+ * @param action  - The action being resolved
+ * @param rollFn  - Roll injection function (default: random 0–20)
+ * @returns { state, result } — new CombatState and the action's ActionResult
+ */
+export function resolveAction(
+  state: CombatState,
+  action: CombatAction,
+  rollFn: () => number = () => Math.random() * 20,
+): { state: CombatState; result: ActionResult } {
+  // GROUP — delegate to resolveGroupAction (Task 18 implementation)
+  if (action.type === 'GROUP') {
+    const declaration = {
+      leaderId: action.combatantId,
+      targetId: action.targetId ?? '',
+    };
+    return resolveGroupAction(state, declaration, GROUP_ACTION_CONFIG, rollFn);
+  }
+
+  // DEFEND — marker only; used in Step 1 intercept logic. No active effect here.
+  if (action.type === 'DEFEND') {
+    return { state, result: { combatantId: action.combatantId, type: 'DEFEND' } };
+  }
+
+  // EVADE — stamina regen, energy gain, no attack resolves
+  if (action.type === 'EVADE') {
+    return _resolveEvade(state, action, rollFn);
+  }
+
+  // ATTACK or SPECIAL — full 7-step pipeline
+  return _resolveAttack(state, action, rollFn);
+}
+
+/**
+ * Thin wrapper returning only the CombatState after an action resolves.
+ * Retained for callers/tests that do not need the ActionResult.
  *
  * @param state   - Current CombatState
  * @param action  - The action being resolved
@@ -220,27 +263,7 @@ export function resolvePerAttack(
   action: CombatAction,
   rollFn: () => number = () => Math.random() * 20,
 ): CombatState {
-  // GROUP — delegate to resolveGroup (Task 18 implementation)
-  if (action.type === 'GROUP') {
-    const declaration = {
-      leaderId: action.combatantId,
-      targetId: action.targetId ?? '',
-    };
-    return resolveGroup(state, declaration, GROUP_ACTION_CONFIG, rollFn);
-  }
-
-  // DEFEND — marker only; used in Step 1 intercept logic. No active effect here.
-  if (action.type === 'DEFEND') {
-    return state;
-  }
-
-  // EVADE — stamina regen, energy gain, no attack resolves
-  if (action.type === 'EVADE') {
-    return _resolveEvade(state, action, rollFn);
-  }
-
-  // ATTACK or SPECIAL — full 7-step pipeline
-  return _resolveAttack(state, action, rollFn);
+  return resolveAction(state, action, rollFn).state;
 }
 
 // ============================================================================
@@ -254,10 +277,12 @@ function _resolveEvade(
   state: CombatState,
   action: CombatAction,
   rollFn: () => number,
-): CombatState {
+): { state: CombatState; result: ActionResult } {
   void rollFn; // not used for evade, but kept for consistent signature
   const combatant = _findCombatant(state, action.combatantId);
-  if (!combatant || combatant.isKO) return state;
+  if (!combatant || combatant.isKO) {
+    return { state, result: { combatantId: action.combatantId, type: 'EVADE' } };
+  }
 
   const regen = calculateEvadeRegen(combatant.maxStamina);
   let currentState = _applyStaminaDelta(state, combatant.id, regen);
@@ -273,7 +298,7 @@ function _resolveEvade(
     combatantId: action.combatantId,
     type: 'EVADE',
   };
-  return _appendActionResult(currentState, actionResult);
+  return { state: currentState, result: actionResult };
 }
 
 // ============================================================================
@@ -317,31 +342,32 @@ function _resolveAttack(
   state: CombatState,
   action: CombatAction,
   rollFn: () => number,
-): CombatState {
-  if (action.targetId === null) return state; // Malformed action — no target
+): { state: CombatState; result: ActionResult } {
+  const minimalResult: ActionResult = { combatantId: action.combatantId, type: action.type };
+
+  if (action.targetId === null) return { state, result: minimalResult }; // Malformed — no target
 
   const attacker = _findCombatant(state, action.combatantId);
-  if (!attacker || attacker.isKO) return state;
+  if (!attacker || attacker.isKO) return { state, result: minimalResult };
 
   // ------------------------------------------------------------------
   // Step 1: Identify true target (DEFEND intercept)
   // ------------------------------------------------------------------
   const trueTargetId = _resolveDefendIntercept(state, action);
   const target = _findCombatant(state, trueTargetId);
-  if (!target) return state;
+  if (!target) return { state, result: minimalResult };
 
   // If the true target is already KO'd, skip damage resolution entirely
   if (target.isKO) {
-    const actionResult: ActionResult = { combatantId: action.combatantId, type: action.type };
-    return _appendActionResult(state, actionResult);
+    return { state, result: minimalResult };
   }
 
   // ------------------------------------------------------------------
   // Step 2: Rank KO roll
   // ------------------------------------------------------------------
   let rankKO = false;
-  if (attacker.rank > target.rank + 0.49) {
-    // Eligibility: attacker rank strictly greater by at least 0.5
+  if (attacker.rank - target.rank >= 0.5) {
+    // Eligibility: attacker rank exceeds target rank by at least 0.5 (Excel Math!D).
     const rankKOThreshold = calculateRankKOThreshold(attacker.rank, target.rank);
     rankKO = checkRankKO(rankKOThreshold, rollFn());
   }
@@ -490,13 +516,19 @@ function _resolveAttack(
     currentState = _replaceCombatant(currentState, updatedAttacker);
   }
 
+  // Crushing Blow effect: degrade the target's Block rates (SR/SMR/FMR) for the
+  // remainder of combat (GM doc: "Applies debuffs to target's Block SR, SMR, and FMR").
+  if (crushingBlow) {
+    currentState = _applyCrushingBlowDebuff(currentState, trueTargetId);
+  }
+
   // Rank KO effect: force target to KO if the Rank KO roll succeeded
   if (rankKO) {
     currentState = _applyStaminaDelta(currentState, trueTargetId, -Infinity);
   }
 
   // ------------------------------------------------------------------
-  // Build AttackResult and append to action log
+  // Build AttackResult and ActionResult for the round history
   // ------------------------------------------------------------------
   const attackResult: AttackResult = {
     attackerId: action.combatantId,
@@ -516,38 +548,47 @@ function _resolveAttack(
     attackResult,
   };
 
-  return _appendActionResult(currentState, actionResult);
+  return { state: currentState, result: actionResult };
 }
 
 // ============================================================================
-// Utility: append an ActionResult to the current round's history
+// Crushing Blow effect
 // ============================================================================
 
 /**
- * Appends an ActionResult to the CombatState's action log.
- *
- * Per the pipeline spec, individual action results are tracked for the
- * round manager to assemble into a RoundResult. We store them in the
- * actionQueue slot that roundManager drains — but since actionQueue is
- * the unresolved queue, we need a separate in-flight log.
- *
- * Design decision: we store in-flight results in the last RoundResult
- * entry's actions array if a round is in progress, or append a transient
- * record. The Round Manager (Task 16) is responsible for consolidating
- * round results. Here we return state unchanged from a logging perspective
- * and let the Round Manager collect results.
- *
- * For Task 15 standalone use: we append a sentinel marker by adding to
- * roundHistory as a partial round snapshot. The Round Manager will replace
- * this with the final consolidated entry.
+ * Standard Crushing Blow debuff magnitude applied to each Block rate.
+ * Matches the 0.10 per-effect modifier used by elemental path debuffs.
  */
-function _appendActionResult(state: CombatState, actionResult: ActionResult): CombatState {
-  // We do not modify roundHistory here — that is the Round Manager's job.
-  // This function is a hook for future use; for now it returns state as-is.
-  // The action result is accessible via the AttackResult returned by the pipeline,
-  // and the Round Manager collects results across the full action queue.
-  void actionResult;
-  return state;
+const CRUSHING_BLOW_DEBUFF = 0.1;
+
+/**
+ * Applies the Crushing Blow effect: reduces the target's Block SR, SMR, and FMR
+ * by CRUSHING_BLOW_DEBUFF (clamped to >= 0), persisting for the rest of combat.
+ *
+ * Applied directly to reactionSkills because defense resolution reads those
+ * rates directly. (Elemental-path buffs/debuffs are accumulated in activeBuffs
+ * but are not yet folded into resolution — a separate known gap. Crushing Blow
+ * is applied here so it has a real, observable effect today.)
+ *
+ * Returns a new CombatState — input is never mutated.
+ */
+function _applyCrushingBlowDebuff(state: CombatState, targetId: string): CombatState {
+  const reduce = (v: number): number => Math.max(0, v - CRUSHING_BLOW_DEBUFF);
+  const target = _findCombatant(state, targetId);
+  if (!target) return state;
+
+  const debuffed: Combatant = {
+    ...target,
+    reactionSkills: {
+      ...target.reactionSkills,
+      block: {
+        SR: reduce(target.reactionSkills.block.SR),
+        SMR: reduce(target.reactionSkills.block.SMR),
+        FMR: reduce(target.reactionSkills.block.FMR),
+      },
+    },
+  };
+  return _replaceCombatant(state, debuffed);
 }
 
 // ============================================================================

@@ -29,7 +29,7 @@ import type {
   ActionResult,
   EvaluatorConfig,
 } from '../types/combat.js';
-import { sortByPriority, resolvePerAttack } from './pipeline.js';
+import { sortByPriority, resolveAction } from './pipeline.js';
 import { validateDeclaration } from './declaration.js';
 import { evaluate } from './behaviorTree/evaluator.js';
 
@@ -232,14 +232,14 @@ function _runPhase3PCDeclaration(
  * Phase 5: Iterate the sorted action queue, resolve each action through the
  * pipeline, and accumulate state changes.
  *
- * Each call to resolvePerAttack() produces a new CombatState. Actions against
- * already-KO'd targets are passed through (pipeline handles gracefully).
- *
- * Also collects ActionResults to build the round's RoundResult entry.
+ * Each call to resolveAction() produces a new CombatState and the accurate
+ * ActionResult describing what happened (defense type, blindside, crushing blow,
+ * counter chain, damage). Actions against already-KO'd targets are passed through
+ * (the pipeline handles them gracefully).
  *
  * @param state      - CombatState after Phase 4 (with actionQueue populated)
  * @param rollFn     - Roll injection function
- * @returns Updated CombatState after all actions resolve
+ * @returns Updated CombatState plus the collected ActionResults for the round
  */
 function _runPhase5PerAttack(
   state: CombatState,
@@ -249,54 +249,9 @@ function _runPhase5PerAttack(
   let currentState = state;
 
   for (const action of state.actionQueue) {
-    const previousState = currentState;
-    currentState = resolvePerAttack(currentState, action, rollFn);
-
-    // Record a minimal ActionResult for each action processed
-    // (pipeline's _appendActionResult is a stub; we collect here)
-    const actionResult: ActionResult = {
-      combatantId: action.combatantId,
-      type: action.type,
-    };
-
-    // Detect if an attack produced an AttackResult by checking stamina deltas
-    // The pipeline builds AttackResult internally but doesn't return it separately.
-    // We capture what we can observe from state changes.
-    if (action.type === 'ATTACK' || action.type === 'SPECIAL') {
-      const targetId = action.targetId;
-      if (targetId !== null) {
-        const targetBefore = _findCombatantInState(previousState, targetId);
-        const targetAfter = _findCombatantInState(currentState, targetId);
-        if (targetBefore && targetAfter) {
-          const damage = Math.max(0, targetBefore.stamina - targetAfter.stamina);
-          const rankKO = !targetBefore.isKO && targetAfter.isKO && targetBefore.stamina > 0;
-
-          // We don't have full AttackResult data from the pipeline stub,
-          // but we record what we can observe for the round history.
-          actionResults.push({
-            ...actionResult,
-            attackResult: {
-              attackerId: action.combatantId,
-              targetId,
-              damage,
-              defenseType: 'block', // best-effort; pipeline resolves the real type
-              defenseOutcome: {
-                type: 'block',
-                success: damage < targetBefore.stamina,
-                damageMultiplier: 1,
-              },
-              rankKO,
-              blindside: false,
-              crushingBlow: false,
-              counterChain: false,
-            },
-          });
-          continue;
-        }
-      }
-    }
-
-    actionResults.push(actionResult);
+    const { state: nextState, result } = resolveAction(currentState, action, rollFn);
+    currentState = nextState;
+    actionResults.push(result);
   }
 
   return { finalState: currentState, actionResults };
@@ -321,20 +276,6 @@ function _checkVictoryDefeat(
   if (allPlayersKO) return 'defeat';
   if (allEnemiesKO) return 'victory';
   return 'active';
-}
-
-// ============================================================================
-// Utility
-// ============================================================================
-
-/**
- * Finds a combatant by ID across both parties.
- */
-function _findCombatantInState(state: CombatState, id: string): Combatant | undefined {
-  return (
-    state.playerParty.find((c) => c.id === id) ??
-    state.enemyParty.find((c) => c.id === id)
-  );
 }
 
 // ============================================================================
