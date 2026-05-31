@@ -1385,5 +1385,15 @@ User <-> Waldo (Haiku)             User <-> Architect (Opus)
 
 **Implementation note — Layer A (2026-05-31):**
 - **Delivered:** `dodge.SMR`/`parry.SMR` added to `ReactionSkills`; `calculateDodgeDamage`/`calculateParryDamage` apply `(1 − SMR) × ActionPower` on success (counter triggers independently of mitigation); the dodge "Order Speed" base bug is moot since the code already used Action Power. `ModifiedStats`/`BUFF_STAT_MAP` extended with `dodgeSMR`/`parrySMR` (+ `_debuff` variants). Counter chain reworked: each counter is a new attack resolved via `getPreferredDefense` + `resolveDefense`, continuing only on a successful Parry (Block/Dodge ends it). The buff-folding helper was lifted to `defense.ts#effectiveReactionSkills` and is now shared by `pipeline.ts` and `counterChain.ts` (avoids the pipeline→counterChain circular import). All 12 combatant fixtures migrated; 7 combat test files re-baselined; 1030 tests pass, tsc + eslint clean.
-- **Balance caveat:** fixture dodge/parry SMR are uniform placeholders (dodge 0.80, parry 0.90), not yet tuned per archetype the way Block SMR is. A balance pass is owed before the pitch demo.
-- **Deferred to Layer B:** per-reaction rank/XP progression and the rank→rates table from the Excel `Defense Simulations` sheet. `Buff.duration` remains unticked (cf. ADR-053).
+- **Balance pass (2026-05-31, done):** fixture dodge/parry SMR were de-uniformed — each combatant's SMR is linearly mapped from its own dodge/parry SR onto the sheet's SMR bands (dodge 0.80–0.90, parry 0.90–1.00), scaled per-file across that file's SR min→max. This honors the sheet's SR↔SMR rank coupling (better defenders mitigate more). Top parriers reach SMR 1.0 (full negation), accepted as the band ceiling. These remain interim values — Layer B replaces them with rank-derived rates.
+- **Deferred to Layer B:** per-reaction rank/XP progression. `Buff.duration` remains unticked (cf. ADR-053).
+
+**Layer B source — decoded `Defense Simulations` rank→rates table (sheet16):** each reaction's SR/SMR/FMR is a base + per-rank increment over ranks 1–11 (so all three rates rise together with reaction rank). Captured here so Layer B need not re-extract the Excel:
+
+| Reaction | SR base / step | SMR base / step | FMR base / step | Rank 1 → 11 SMR |
+|----------|----------------|-----------------|-----------------|-----------------|
+| Block    | 0.40 / +0.05   | 0.55 / +0.025   | 0.40 / +0.025   | 0.55 → 0.80     |
+| Dodge    | 0.30 / +0.025  | 0.80 / +0.01    | 0.10 / +0.025   | 0.80 → 0.90     |
+| Parry    | 0.10 / +0.025  | 0.90 / +0.01    | 0.00 / +0.025   | 0.90 → 1.00     |
+
+Rate at rank R = base + step·(R−1). Confirmed against `Defense Simulations` rows 3–13, base/increment block rows 16–18. Note the current hand-authored fixtures (block SMR 0.35–0.55) sit *below* the sheet's block band — fixtures were never table-derived, so Layer B is a re-baseline, not a tweak.
