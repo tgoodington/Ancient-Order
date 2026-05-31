@@ -147,5 +147,13 @@ This file logs work completed on tickets. Keep it simple - just enough to rememb
 - **Description**: Implemented Layer A of the corrected reaction model — SMR-mitigated dodge/parry success and a reworked counter chain that routes through reaction selection.
 - **Scope**: `types/combat.ts`, `formulas.ts`, `defense.ts` (+ new shared `effectiveReactionSkills`), `pipeline.ts`, `counterChain.ts`, `encounter.json`, `api/combat.ts`; 7 combat test files re-baselined.
 - **Verification**: 1030/1030 tests pass; `tsc --noEmit` clean; eslint clean.
-- **Follow-ups**: Layer B (reaction rank/XP progression) pending; fixture dodge/parry SMR are placeholders (0.80/0.90) awaiting a balance pass.
+- **Follow-ups**: Layer B (reaction rank/XP progression) pending.
 - **Refs**: ADR-054; bugs.md "Dodge/Parry success" (now resolved).
+
+### 2026-05-31 - COMBAT-002: Dodge/Parry SMR balance pass (ADR-054 Layer A)
+- **Status**: Completed
+- **Description**: Replaced uniform placeholder dodge/parry SMR with values SR-scaled onto the Excel `Defense Simulations` SMR bands (dodge 0.80–0.90, parry 0.90–1.00), per-file min→max. Better defenders mitigate more; top parriers reach SMR 1.0.
+- **Scope**: `src/fixtures/encounter.json`, `src/api/combat.ts`. Decoded the full `Defense Simulations` rank→rates table into ADR-054 as Layer B's source data.
+- **Verification**: 1030/1030 tests pass.
+- **Note**: Interim values — Layer B will derive all reaction rates from per-reaction rank via the same table.
+- **Refs**: ADR-054 (decoded table); commits cc96cba (Layer A), 7c71e60 (balance pass).
