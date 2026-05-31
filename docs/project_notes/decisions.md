@@ -1358,3 +1358,27 @@ User <-> Waldo (Haiku)             User <-> Architect (Opus)
 - Counters, Dodge, and Parry now occur for normal attacks; reaction-path self-buffs and action-path debuffs are mechanically live (clears the bugs.md elemental-path active issue).
 - Balance shifted; re-baselined combat tests (pipeline, integration, and the Block-intent scenarios now pin the defender to an action path).
 - **Buff stacking (resolved 2026-05-31):** path buffs/debuffs are now applied **once per (type, source)** — `applyPathBuff`/`applyPathDebuff` no-op if the combatant already carries that path's effect. A path bonus is therefore a flat, stable trait (max ±0.10 per path) for the whole combat rather than accumulating per-hit toward the 1.0 clamp. Chosen over capped-stacking and `duration`-decay (the latter would require round-boundary tick infrastructure not present in the engine). The unused `Buff.duration` field is retained for a future timed-effect system but is still not ticked.
+
+### ADR-054: Reaction Skill Model — SMR for All Defenses, Reaction Progression, and Counter-as-New-Attack (2026-05-31)
+
+**Status:** Records the *corrected* intended model and the divergences in the current implementation. No code change in this ADR — implementation is scoped as a future combat pass (Layers A + B below), to be planned via `/intuition-plan`. Source confirmed against `GM Combat Tracker.xlsx` (`Math` sheet rows 39–41, `Defense Simulations` table, `Reaction Progression & Log` sheet) and clarified with the designer.
+
+**Context — the intended model:**
+- **All three reactions have SR/SMR/FMR.** Block, Dodge, and Parry each carry a Success Rate, Success Mitigation Rate, and Fail Mitigation Rate. A *successful* defense of any type applies `(1 − SMR) × ActionPower` damage (not necessarily zero); a failed one applies `(1 − FMR) × ActionPower`. Excel `Math!R40/T40/V40` confirm this. (Sample combatant: dodge SMR 0.80 → 20% damage on a successful dodge; parry SMR 0.90 → 10% on a successful parry.)
+- **Reaction skills progress by rank.** Each combatant has a per-reaction rank (block/dodge/parry), separate from combatant rank. The SR/SMR/FMR are *derived from that rank* via a progression table (Excel `Defense Simulations`, looked up by `Input!H3/I3/J3`); higher rank raises all three rates. Player-controlled combatants gain reaction **experience by using a reaction**, which raises its rank over time (Excel `Reaction Progression & Log`).
+- **A counter is a new attack subject to a new reaction.** A successful Parry spawns a fresh counter-attack against the original attacker, who then **chooses a new reaction** (per ADR-053 path-preferred selection) and resolves it normally. The chain continues **only if** that new reaction is a Parry that succeeds; a Block or Dodge mitigates the counter and ends the chain. This composes with ADR-053 (a Fire defender re-counters; a Light defender blocks and stops the chain).
+
+**Divergences in the current implementation (2026-05-31):**
+- `ReactionSkills` has SMR for **Block only**; `dodge`/`parry` carry just `{ SR, FMR }`. `calculateDodgeDamage`/`calculateParryDamage` hardcode success → `0` (full evade / counter). So the SMR axis is missing for dodge/parry, and successful dodges/parries are strictly stronger than the sheet intends.
+- The Excel Dodge-success branch (`T40`) multiplies by the actor's *"Order Speed"* column rather than Action Power — a confirmed **spreadsheet bug**. The intended formula mirrors Parry: `(1 − dodgeSMR) × ActionPower`.
+- **No reaction progression exists.** Rates are flat literals on each `Combatant`, static within and across combats. No reaction rank, no XP, no rank→rates table, and no persistence home (combat-local `Combatant`, not `GameState`).
+- `counterChain.ts` forces the defender to **Parry** every counter (parry-only loop), ignoring reaction selection and the block/dodge options — so chains are "stickier" than the new-attack model and don't route through ADR-053.
+
+**Decision (scope for implementation, to be planned):**
+- **Layer A — in-combat defense fidelity:** add `dodge.SMR`/`parry.SMR` to `ReactionSkills`; dodge/parry success = `(1 − SMR) × ActionPower` (fix the dodge base bug); rework the counter chain so each counter is resolved through the normal reaction-selection + `resolveDefense` path, continuing only on a successful Parry. Populate fixtures/`sync.ts`; re-baseline combat tests.
+- **Layer B — reaction progression:** per-reaction ranks + XP-on-use + a rank→rates progression table sourced from `Defense Simulations`; decide where reaction ranks live and persist (likely the player character in `GameState`, since NPCs use fixed archetypes — cf. only-player-changes constraint).
+
+**Consequences:**
+- The current full-negation dodge/parry model and parry-only counter loop are now documented as **known simplifications**, superseded by this target model (not accepted long-term).
+- Layer A is balance-affecting (re-baseline); Layer B introduces new persistent state and an XP loop — sized as its own combat sprint.
+- Until implemented, the bugs.md "Dodge/Parry success" item stays open and references this ADR.
