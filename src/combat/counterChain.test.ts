@@ -135,9 +135,10 @@ describe('resolveCounterChain — chain length 1', () => {
     const rollFn = makeRollSequence([19]);
     const result = resolveCounterChain(state, originalAttacker, parrier, rollFn);
 
-    // calculateBaseDamage(50, 60) = 50 * (50/60) ≈ 41.67
-    // Parry failure: damage * (1 - FMR) = 41.67 * (1 - 0.2) ≈ 33.33
-    const expectedBase = 50 * (50 / 60);
+    // Action Power (Math!O) for a counter = counter-attacker's Power, MROUND to 0.25.
+    // calculateBaseDamage(50, 60) = 50 (target power does not affect base damage).
+    // Parry failure: damage * (1 - FMR) = 50 * (1 - 0.2) = 40
+    const expectedBase = 50;
     const expectedDamage = expectedBase * (1 - LOW_PARRY_SKILLS.parry.FMR);
     expect(result.actions[0].damage).toBeCloseTo(expectedDamage, 5);
   });
@@ -153,7 +154,7 @@ describe('resolveCounterChain — chain length 2', () => {
     // originalAttacker (enemy) has LOW parry skills → fails on second roll
     const parrier = makeCombatant('player_1', 200, HIGH_PARRY_SKILLS, 50);
     const originalAttacker = makeCombatant('enemy_1', 200, LOW_PARRY_SKILLS, 50);
-    const state = makeState(parrier, originalAttacker);
+    const _state = makeState(parrier, originalAttacker);
 
     // Exchange 1: player counter-attacks enemy, enemy tries to Parry
     //   enemy SR = 0.1 → threshold = 2 → roll = 19 → FAIL → damage applied, chain ends
@@ -167,7 +168,7 @@ describe('resolveCounterChain — chain length 2', () => {
 
     const playerHighParry = makeCombatant('player_1', 200, HIGH_PARRY_SKILLS, 50);
     const enemyLowParry = makeCombatant('enemy_1', 200, LOW_PARRY_SKILLS, 50);
-    const state2 = makeState(playerHighParry, enemyLowParry);
+    const _state2 = makeState(playerHighParry, enemyLowParry);
 
     // But wait: in exchange 1, player attacks enemy (playerHighParry attacks enemyLowParry).
     // enemy (LOW parry) tries to Parry: roll = 19 → fail → chain ends at length 1.
@@ -335,7 +336,7 @@ describe('resolveCounterChain — termination: stamina depletion', () => {
   it('terminates when target stamina reaches 0 and KO is set', () => {
     // Setup: enemy has just enough stamina to be KO'd in one hit.
     // Player (parrier) is strong; enemy (originalAttacker) has minimal stamina.
-    // calculateBaseDamage(100, 10) = 100 * (100/10) = 1000 >> 5 stamina
+    // calculateBaseDamage(100, 10) = 100 (Action Power = attacker Power) >> 5 stamina
     const parrier = makeCombatant('player_sd', 500, LOW_PARRY_SKILLS, 100);
     const originalAttacker = makeCombatant('enemy_sd', 5, LOW_PARRY_SKILLS, 10); // 5 stamina
     const state = makeState(parrier, originalAttacker);

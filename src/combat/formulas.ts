@@ -245,33 +245,40 @@ export function calculateDefenselessDamage(damage: number): number {
 // ============================================================================
 
 /**
- * Calculates the base damage for any attack action.
+ * Calculates the base ("Action Power") damage for an attack action, before
+ * defense mitigation.
  *
  * This is the shared damage utility used by both the per-attack pipeline
  * (Task 15) and GROUP resolution (Task 18), preventing duplication.
  *
- * Formula (power differential model):
- *   baseDamage = attackerPower * (attackerPower / targetPower) + modifier
+ * Source of truth: GM Combat Tracker, Math!O ("Action Power"):
+ *   O = MROUND(L + M + N, 0.25)
+ * where L = attacker Power (Attack/Counter), M = Special Power, N = Group term.
+ * For a plain ATTACK or Counter this reduces to the attacker's Power stat,
+ * rounded to the nearest 0.25.
  *
- * Rationale:
- *   - When powers are equal: result = attackerPower (1:1 ratio, no change)
- *   - When attacker is stronger: result > attackerPower (amplified by ratio)
- *   - When attacker is weaker: result < attackerPower (reduced by ratio)
+ * There is NO target-power term in base damage. The target's Power only affects
+ * the Crushing Blow threshold (Math!AF: `(O - targetPower) / targetPower`) and
+ * the per-defense mitigation rates (SMR/FMR) — both applied separately downstream.
  *
- * This matches the Excel "power dominance" model visible in Math!A40:AM54 where
- * the effective damage scales with the ratio of attacker power to defender power.
+ * NOTE (2026-05-30): The previous implementation used an invented
+ * `attackerPower * (attackerPower / targetPower)` ratio. That model does not
+ * exist anywhere in the Excel and was corrected to match Math!O after extracting
+ * the sheet formulas directly. See bugs.md.
  *
- * @param attackerPower - The attacker's effective power for this action
- * @param targetPower   - The target's power stat (used as resistance denominator)
- * @param modifier      - Optional flat modifier (default 0); used for buff/debuff adjustments
- * @returns Base damage value before defense mitigation
+ * @param attackerPower - The attacker's effective Power for this action
+ * @param _targetPower  - Vestigial. Retained for call-site/signature compatibility
+ *                        (ADR-024). Base damage does NOT depend on target Power.
+ * @param modifier      - Optional flat modifier (default 0); e.g. the Group `N` term
+ * @returns Base ("Action Power") damage, rounded to the nearest 0.25
  */
 export function calculateBaseDamage(
   attackerPower: number,
-  targetPower: number,
+  _targetPower?: number,
   modifier: number = 0,
 ): number {
-  return attackerPower * (attackerPower / targetPower) + modifier;
+  // Math!O: MROUND(L + M + N, 0.25)
+  return Math.round((attackerPower + modifier) / 0.25) * 0.25;
 }
 
 // ============================================================================

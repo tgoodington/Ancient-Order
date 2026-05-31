@@ -325,32 +325,39 @@ describe('calculateDefenselessDamage', () => {
 // ============================================================================
 
 describe('calculateBaseDamage', () => {
-  // NOTE: Formula pending Excel verification against Math!A40:AM54. Values computed from current power-ratio model. If Excel shows a different formula, update these test values.
+  // Source of truth: GM Combat Tracker, Math!O ("Action Power") = MROUND(L+M+N, 0.25).
+  // For a plain attack this is the attacker's Power stat rounded to 0.25.
+  // Target Power is NOT a base-damage input (it only drives Crushing Blow + mitigation).
 
-  it('returns exact 100 when equal power (targetPower=attackerPower)', () => {
-    // Formula: attackerPower * (attackerPower / targetPower) + modifier
-    // 100 * (100 / 100) + 0 = 100 * 1.0 = 100
+  it('returns the attacker Power when powers are equal (100)', () => {
+    // Math!O = MROUND(100, 0.25) = 100; target power is irrelevant.
     expect(calculateBaseDamage(100, 100)).toBe(100);
   });
 
-  it('returns exact 225 when stronger attacker (150 vs 100)', () => {
-    // 150 * (150 / 100) + 0 = 150 * 1.5 = 225
-    expect(calculateBaseDamage(150, 100)).toBe(225);
+  it('returns the attacker Power regardless of a weaker target (150)', () => {
+    // Base damage does not amplify against weaker targets: MROUND(150, 0.25) = 150.
+    expect(calculateBaseDamage(150, 100)).toBe(150);
   });
 
-  it('returns exact 64 when weaker attacker (80 vs 100)', () => {
-    // 80 * (80 / 100) + 0 = 80 * 0.8 = 64
-    expect(calculateBaseDamage(80, 100)).toBe(64);
+  it('returns the attacker Power regardless of a stronger target (80)', () => {
+    // Base damage does not shrink against stronger targets: MROUND(80, 0.25) = 80.
+    expect(calculateBaseDamage(80, 100)).toBe(80);
   });
 
-  it('returns exact 110 with modifier of 10 (equal power + flat boost)', () => {
-    // 100 * (100 / 100) + 10 = 100 + 10 = 110
+  it('adds a flat modifier (the Group N term): 100 + 10 = 110', () => {
     expect(calculateBaseDamage(100, 100, 10)).toBe(110);
   });
 
-  it('returns exact 400 for high power ratio (200 vs 100)', () => {
-    // 200 * (200 / 100) + 0 = 200 * 2.0 = 400
-    expect(calculateBaseDamage(200, 100)).toBe(400);
+  it('rounds to the nearest 0.25 per Math!O MROUND', () => {
+    // 10.1 → MROUND(10.1, 0.25) = 10.0; 10.2 → 10.25.
+    expect(calculateBaseDamage(10.1)).toBe(10.0);
+    expect(calculateBaseDamage(10.2)).toBe(10.25);
+  });
+
+  it('ignores target power entirely (same result with any target)', () => {
+    expect(calculateBaseDamage(200, 100)).toBe(200);
+    expect(calculateBaseDamage(200, 9999)).toBe(200);
+    expect(calculateBaseDamage(200)).toBe(200);
   });
 });
 
