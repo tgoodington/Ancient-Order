@@ -130,11 +130,20 @@ function _debuffStatForAction(defenseType: DefenseType): string {
  */
 export function applyPathBuff(combatant: Combatant, path: ElementalPath): Combatant {
   const config = ELEMENTAL_PATH_CONFIG[path];
+  const type = _buffTypeForReaction(config.defenseBoost);
+
+  // Flat path trait (ADR-053): a path buff applies once per (type, source).
+  // Re-triggering on a later successful defense is a no-op, so the bonus is a
+  // stable +modifier for the whole combat rather than stacking unbounded toward
+  // the 1.0 clamp.
+  if (combatant.activeBuffs.some((b) => b.type === type && b.source === path)) {
+    return combatant;
+  }
 
   const newBuff: Buff = {
-    type: _buffTypeForReaction(config.defenseBoost),
+    type,
     source: path,
-    duration: -1, // active for the duration of this combat round context
+    duration: -1, // permanent for this combat
     modifier: config.buffModifier,
   };
 
@@ -157,11 +166,19 @@ export function applyPathBuff(combatant: Combatant, path: ElementalPath): Combat
  */
 export function applyPathDebuff(target: Combatant, attackerPath: ElementalPath): Combatant {
   const config = ELEMENTAL_PATH_CONFIG[attackerPath];
-
   // Debuff is stored as a Buff with a negative modifier on the relevant SR stat.
   // The type string matches the debuff pattern so applyDynamicModifiers can read it.
+  const type = `${_debuffStatForAction(config.defenseBoost)}_debuff`;
+
+  // Flat path trait (ADR-053): a path debuff applies once per (type, source), so
+  // repeated successful attacks from the same path do not stack the SR reduction
+  // unbounded on the target.
+  if (target.activeBuffs.some((b) => b.type === type && b.source === attackerPath)) {
+    return target;
+  }
+
   const debuffBuff: Buff = {
-    type: `${_debuffStatForAction(config.defenseBoost)}_debuff`,
+    type,
     source: attackerPath,
     duration: -1,
     modifier: -config.debuffModifier,

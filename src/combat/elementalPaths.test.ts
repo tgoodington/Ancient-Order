@@ -165,6 +165,18 @@ describe('applyPathBuff', () => {
     expect(result.activeBuffs).toHaveLength(2);
     expect(result.activeBuffs[0]).toBe(existingBuff);
   });
+
+  it('is idempotent — re-applying the same path buff does not stack (ADR-053)', () => {
+    const once = applyPathBuff(makeCombatant(), 'Fire');
+    const twice = applyPathBuff(once, 'Fire');
+    const thrice = applyPathBuff(twice, 'Fire');
+
+    // Buff applies a single time; the bonus stays a flat +0.10, not +0.30.
+    expect(thrice.activeBuffs).toHaveLength(1);
+    expect(thrice.activeBuffs[0].modifier).toBe(0.1);
+    // Re-application is a no-op and returns the same reference.
+    expect(twice).toBe(once);
+  });
 });
 
 // ============================================================================
@@ -237,6 +249,17 @@ describe('applyPathDebuff', () => {
 
     expect(result.activeBuffs).toHaveLength(2);
     expect(result.activeBuffs[0]).toBe(existingBuff);
+  });
+
+  it('is idempotent — re-applying the same path debuff does not stack (ADR-053)', () => {
+    const once = applyPathDebuff(makeCombatant(), 'Earth');
+    const twice = applyPathDebuff(once, 'Earth');
+    const thrice = applyPathDebuff(twice, 'Earth');
+
+    // Debuff applies a single time; the reduction stays a flat -0.10.
+    expect(thrice.activeBuffs).toHaveLength(1);
+    expect(thrice.activeBuffs[0].modifier).toBe(-0.1);
+    expect(twice).toBe(once);
   });
 });
 
