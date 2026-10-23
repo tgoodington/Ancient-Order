@@ -16,7 +16,12 @@
     "format": "prettier --write src/",
     "verify": "npm run typecheck && npm run lint && npm test && npm run verify --prefix client"
   },
-  "keywords": ["rpg", "game", "backend", "typescript"],
+  "keywords": [
+    "rpg",
+    "game",
+    "backend",
+    "typescript"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -25,14 +30,14 @@
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
-    "concurrently": "^9.0.0",
     "@types/uuid": "^9.0.7",
     "@typescript-eslint/eslint-plugin": "^8.26.0",
     "@typescript-eslint/parser": "^8.26.0",
+    "concurrently": "^9.0.0",
     "eslint": "^9.21.0",
     "prettier": "^3.5.2",
     "tsx": "^4.19.3",
     "typescript": "^5.3.0",
-    "vitest": "^3.0.8"
+    "vitest": "^4.1.12"
   }
 }

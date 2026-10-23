@@ -1420,3 +1420,31 @@ Per-rank step grows by +15 (100, 115, … 235). Rank 11 (1675 XP) is the cap; co
 - **Known edge:** a *block* rank-up mid-fight rederives base block rates and would overwrite an outstanding Crushing Blow degradation (which also writes base block). Rare (requires a block rank-up in the same fight after a Crushing Blow); the rederive deliberately touches only the leveled reaction to minimize this.
 - **Tests/checks:** new `reactionProgression.test.ts`; sync seed/harvest + persistence round-trip/back-compat + pipeline XP-flow tests added. 1060 tests pass, tsc + eslint clean. No existing combat test re-baselined — those build `Combatant`s directly and bypass the init-time seeding.
 - **Still open:** demo-encounter starting-XP seeding (cosmetic balance); `Buff.duration` ticking (cf. ADR-053).
+
+### ADR-055: Ancient Order Becomes the Shipping Game — PC-First, Stay in TypeScript (2026-10-23)
+
+**Status:** Direction, platform, and language decided by the designer. Renderer and desktop-packaging choices to be settled in design.
+
+**Context:**
+- Docs framed the project as an "Act 1 backend for investor/publisher pitch" deployed to Vercel (Handoff Document, Sprint 9). The designer now wants this codebase to grow into the real game.
+- A tech re-eval found the current runtime can't serve that goal or the Vercel plan: the Fastify server holds **one shared in-memory game** for all visitors (`src/api/index.ts` decorate container), and saves are files on the server's disk (`src/persistence/saveLoad.ts`), which serverless hosting doesn't keep.
+- The engine (`src/combat`, `narrative`, `personality`, `dialogue`, `state`; ~9,600 lines, 1060 tests) has **no Node-only imports** outside `api/` and `persistence/`, so it can run anywhere TypeScript runs.
+
+**Decision:**
+- **Platform:** PC (Steam) first; consoles later, only if the game does well. A web build remains available for pitching.
+- **Language:** stay in TypeScript. The engine and its tests carry forward unchanged.
+- **Runtime:** the game runs on the player's machine. The client calls the engine directly; the Fastify server is retired from the game's runtime. Saves move to local storage (files in the desktop build, browser storage in the web build). Each player automatically gets their own game.
+- **Presentation:** add a game-rendering framework (Phaser or PixiJS, chosen in design) for town and combat scenes. React keeps the HUD, dialogue, and menus layered over it.
+- **Packaging:** desktop wrapper for Steam (Electron or Tauri), chosen closer to ship.
+
+**Alternatives Considered:**
+- Godot: strong 2D/editor tooling and built-in multi-platform export. Rejected for now: requires porting the engine, and its advantage is mostly consoles, which aren't a launch target.
+- Unity: industry standard with official console support, and the designer is already familiar with its editor. Seriously considered. Rejected because the designer prefers to direct rather than do hands-on editor work, so Unity's main advantage (designer-driven scene/animation/UI layout) wouldn't be used. It would also require porting the engine to C# up front, and Unity's visual work happens in an editor that Claude can't drive directly.
+- Unreal: built for high-end 3D; overkill for a turn-based RPG.
+- Keep the server and host it on a persistent platform: least rework, but adds hosting cost and failure points with no player-facing benefit for a single-player game.
+
+**Consequences:**
+- Supersedes the runtime parts of ADR-006/ADR-016 (HTTP API as the game's interface) and ADR-005 (server-side JSON file saves), plus the Handoff Document's Vercel deployment plan.
+- The sprint-6 discovery brief ("React frontend consuming the existing Fastify API, no backend changes") is out of date and needs replanning around the in-client engine.
+- ADR-052 (duplicated frontend types) can be retired once the client imports engine types directly.
+- A console release would require a port later (precedent: Vampire Survivors moved from Phaser to Unity for consoles). The 1060 tests become that port's spec.
