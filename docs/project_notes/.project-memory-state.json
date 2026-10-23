@@ -300,17 +300,18 @@
       "created_from": "sprint-5",
       "created_at": "2026-04-19T00:00:00Z",
       "purpose": "Sprint 6: Frontend React Phase 2 — Town scene navigation, dialogue UI, and NPC interaction components",
-      "status": "discovery",
+      "status": "compose",
       "pipeline": "enuncia",
+      "track": "full",
       "workflow": {
-        "discovery": { "started": false, "completed": false, "completed_at": null },
-        "compose": { "started": false, "completed": false, "completed_at": null },
+        "discovery": { "started": true, "completed": true, "completed_at": "2026-05-31T00:00:00Z" },
+        "compose": { "started": true, "completed": false, "completed_at": null },
         "design": { "started": false, "completed": false, "completed_at": null },
         "execute": { "started": false, "completed": false, "completed_at": null },
         "verify": { "started": false, "completed": false, "completed_at": null }
       }
     }
   },
-  "last_handoff": "2026-04-19T00:00:00Z",
-  "last_handoff_transition": "enuncia_branch_created"
+  "last_handoff": "2026-05-31T00:00:00Z",
+  "last_handoff_transition": "discovery_to_compose"
 }

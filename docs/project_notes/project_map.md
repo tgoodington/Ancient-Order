@@ -1,12 +1,7 @@
 # Project Map
 
 ## Project North Star
-[Populated by trunk discovery. The outcome this project is held to — specific about what "good" looks like, flexible about the how. Every Enuncia skill, on every branch, loads this at activation and checks its output against it before presenting.
-
-Altitude rules for this section:
-- Frame outcomes, not features. Don't name mechanisms, UI surfaces, or prescribed behaviors.
-- Specific but flexible. Name the outcome, users, and constraints concretely; leave the how open.
-- Must be authored once during trunk discovery. Branches revisit and may propose amendment but do not rewrite per-branch.]
+Ancient Order delivers a turn-based combat RPG prototype where a player's personality genuinely shapes how the story unfolds and how combat resolves — polished enough that an investor or publisher experiences a real game world, not a developer prototype.
 
 ## Branch Goals
 [Populated by branch discovery. Each branch adds a subsection at the same altitude as the Project North Star, scoped to what that branch delivers. Does not replace the Project North Star.]
@@ -15,6 +10,9 @@ Altitude rules for this section:
 ### [branch-name]
 [Branch-specific goal at the same altitude as the Project North Star.]
 -->
+
+### sprint-6
+The player can walk into town, approach the people in it, and have conversations that feel authored to who their character is — where their personality shifts the texture of an exchange without ever being announced.
 
 ## Overview
 [Filled by compose — 2–3 sentences: what this project is, who it's for, how it's delivered. No tech here; that lives in Operational Foundation.]

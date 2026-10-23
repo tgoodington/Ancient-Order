@@ -6,3 +6,5 @@ Append one row per phase completion (discovery, compose, design, execute, verify
 
 | Date | Phase | Branch | Change | Reason |
 |------|-------|--------|--------|--------|
+| 2026-05-31 | Discovery | trunk | Backfilled Project North Star | Section was blank scaffold; authored and confirmed by user during sprint-6 discovery |
+| 2026-05-31 | Discovery (branch) | sprint-6 | Authored Branch Goal | Branch discovery complete |
