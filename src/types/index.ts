@@ -169,26 +169,11 @@ export interface ConversationEntry {
 }
 
 // ============================================================================
-// API Response Types
-// ============================================================================
-
-export interface ApiResponse<T = unknown> {
-  success: boolean;
-  data?: T;
-  error?: ApiError;
-}
-
-export interface ApiError {
-  code: string;
-  message: string;
-}
-
-// ============================================================================
 // Error Codes
 // ============================================================================
 
 /**
- * Application-level error codes used in ApiError.code.
+ * Application-level error codes used as session error codes.
  * Defined as a const object (not enum) for ESM compatibility.
  */
 export const ErrorCodes = {
@@ -197,11 +182,13 @@ export const ErrorCodes = {
   SAVE_NOT_FOUND: 'SAVE_NOT_FOUND',
   NPC_NOT_FOUND: 'NPC_NOT_FOUND',
   DIALOGUE_NODE_NOT_FOUND: 'DIALOGUE_NODE_NOT_FOUND',
+  DIALOGUE_NOT_ACTIVE: 'DIALOGUE_NOT_ACTIVE',
   DIALOGUE_OPTION_NOT_AVAILABLE: 'DIALOGUE_OPTION_NOT_AVAILABLE',
   DIALOGUE_OPTION_NOT_FOUND: 'DIALOGUE_OPTION_NOT_FOUND',
   INVALID_PERSONALITY_ADJUSTMENT: 'INVALID_PERSONALITY_ADJUSTMENT',
   TEAM_COMPOSITION_INVALID: 'TEAM_COMPOSITION_INVALID',
   VALIDATION_ERROR: 'VALIDATION_ERROR',
+  INTERNAL_ERROR: 'INTERNAL_ERROR',
   // Narrative error codes (Sprint 3)
   SCENE_NOT_FOUND: 'SCENE_NOT_FOUND',
   CHOICE_NOT_AVAILABLE: 'CHOICE_NOT_AVAILABLE',
@@ -209,6 +196,12 @@ export const ErrorCodes = {
   NARRATIVE_NOT_STARTED: 'NARRATIVE_NOT_STARTED',
   INVALID_TRANSITION: 'INVALID_TRANSITION',
   PREREQUISITE_NOT_MET: 'PREREQUISITE_NOT_MET',
+  // Combat error codes (COMBAT_ALREADY_ACTIVE is new)
+  NO_ACTIVE_COMBAT: 'NO_ACTIVE_COMBAT',
+  COMBAT_INVALID_DECLARATION: 'COMBAT_INVALID_DECLARATION',
+  ENCOUNTER_NOT_FOUND: 'ENCOUNTER_NOT_FOUND',
+  COMBAT_ALREADY_ACTIVE: 'COMBAT_ALREADY_ACTIVE',
+  STORAGE_ERROR: 'STORAGE_ERROR',
 } as const;
 
 export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];

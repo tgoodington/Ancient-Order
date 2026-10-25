@@ -1,0 +1,35 @@
+.app {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background-color: var(--color-bg-deep);
+}
+
+.stageLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.hudLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: var(--space-lg);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  pointer-events: none;
+}
+
+.hudLayer::-webkit-scrollbar {
+  display: none;
+}
+
+.hudLayer > * {
+  pointer-events: auto;
+}

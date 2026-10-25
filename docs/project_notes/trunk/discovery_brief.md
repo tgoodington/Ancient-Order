@@ -1,5 +1,10 @@
 # Discovery Brief: Ancient Order Sprint 1 + Sprint 2 Rebuild
 
+## Why — Project North Star
+Ancient Order is a turn-based combat RPG where who the player is genuinely shapes how the story unfolds and how combat resolves — a world players want to spend time in, not a showcase of systems.
+
+_Amended 2026-10-23 during sprint-6 discovery: the project is now the shipping game, not a pitch prototype (ADR-055)._
+
 ## Problem Statement
 The Ancient Order backend prototype needs a complete rebuild from an empty codebase. Sprint 1 (personality-driven narrative systems) and Sprint 2 (combat engine) must be implemented with fresh technical decisions while preserving the established game design specifications. A prior prototype existed but has been archived — the game design is validated, but all technical and architectural choices are open for re-evaluation with new tooling.
 

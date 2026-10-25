@@ -20,7 +20,7 @@ export const MAX_TRAIT_VALUE = 35;
 export const TOTAL_PERCENTAGE = 100;
 export const FLOAT_TOLERANCE = 0.01;
 
-const PERSONALITY_TRAITS: PersonalityTrait[] = [
+export const PERSONALITY_TRAITS: readonly PersonalityTrait[] = [
   'patience',
   'empathy',
   'cunning',

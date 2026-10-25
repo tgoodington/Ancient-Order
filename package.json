@@ -1,43 +1,45 @@
 {
-  "name": "ancient-order-backend",
+  "name": "ancient-order",
+  "private": true,
   "version": "0.1.0",
-  "description": "Ancient Order Act 1 prototype backend - personality-driven RPG",
+  "description": "Ancient Order - personality-driven turn-based RPG",
   "type": "module",
-  "main": "dist/api/index.js",
+  "engines": {
+    "node": ">=22.12"
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "start": "node dist/api/index.js",
-    "dev": "tsx watch src/api/index.ts",
-    "dev:all": "concurrently \"npm run dev\" \"npm run dev --prefix client\"",
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b",
+    "lint": "eslint src tests",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint src/",
-    "format": "prettier --write src/",
-    "verify": "npm run typecheck && npm run lint && npm test && npm run verify --prefix client"
+    "format": "prettier --write src tests",
+    "verify": "npm run typecheck && npm run lint && npm test"
   },
-  "keywords": [
-    "rpg",
-    "game",
-    "backend",
-    "typescript"
-  ],
-  "author": "",
   "license": "ISC",
   "dependencies": {
-    "fastify": "^5.3.2",
-    "uuid": "^9.0.0"
+    "phaser": "^4.2.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "uuid": "^14.0.0"
   },
   "devDependencies": {
-    "@types/node": "^20.10.0",
-    "@types/uuid": "^9.0.7",
-    "@typescript-eslint/eslint-plugin": "^8.26.0",
-    "@typescript-eslint/parser": "^8.26.0",
-    "concurrently": "^9.0.0",
-    "eslint": "^9.21.0",
-    "prettier": "^3.5.2",
-    "tsx": "^4.19.3",
-    "typescript": "^5.3.0",
-    "vitest": "^4.1.12"
+    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^6.1.0",
+    "eslint": "^10.0.0",
+    "eslint-plugin-react-hooks": "^7.1.0",
+    "jsdom": "^30.0.0",
+    "prettier": "^3.9.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.0",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.0"
   }
 }

@@ -1448,3 +1448,114 @@ Per-rank step grows by +15 (100, 115, … 235). Rank 11 (1675 XP) is the cap; co
 - The sprint-6 discovery brief ("React frontend consuming the existing Fastify API, no backend changes") is out of date and needs replanning around the in-client engine.
 - ADR-052 (duplicated frontend types) can be retired once the client imports engine types directly.
 - A console release would require a port later (precedent: Vampire Survivors moved from Phaser to Unity for consoles). The 1060 tests become that port's spec.
+
+### ADR-056: One Package at the Repo Root; Engine Stays Platform-Neutral (2026-10-23)
+
+**Context:**
+- ADR-055 retires the Fastify server; the engine now runs in the client.
+- The repo had two packages (root backend, `client/` Vite app) with incompatible module resolution, which forced duplicated frontend types (ADR-052).
+
+**Decision:**
+- Collapse into one package at the root: Vite 8 + React 19 app, engine folders left in place under `src/`, React code in `src/ui/`, renderer in `src/render/`, game session in `src/session/`.
+- Engine, session, and persistence type-check with no DOM or Node globals (`tsconfig.engine.json`) and are lint-barred from importing React, Phaser, UI, or render code.
+- The UI imports engine types directly; ADR-052 is retired.
+- Toolchain moved to current majors: Vite 8, plugin-react 6, Vitest 5, ESLint 10, TypeScript 6.0 (7.x waits on typescript-eslint support), jsdom 30.
+
+**Alternatives Considered:**
+- Keep `client/` as its own package importing `../src` → Rejected: two installs and toolchains to keep in sync; the type-config mismatch remains.
+- npm workspaces (`packages/engine`, `packages/game`) → Rejected: ceremony with one consumer; the desktop wrapper will wrap the single app.
+
+**Consequences:**
+- Supersedes ADR-046's separate `client/` folder (its reason, a backend beside it, is gone) and retires ADR-052.
+- One `npm run dev` and one `npm run verify`.
+- Platform-neutral engine keeps the desktop build and a possible console port clean (ADR-055).
+
+### ADR-057: Game Session — Result Values, Immutable Snapshots, Route Bugs Fixed (2026-10-23)
+
+**Context:**
+- The Fastify routes held the active game (ADR-022), pending combat declarations, request-schema validation, and several rules that existed only in route code.
+- The route inventory found latent bugs: a fully refused declaration wiped earlier orders; new game/load kept stale orders; the fight result was unreadable after combat ended; unknown scenes were accepted at start; a fight could start over a running fight; dialogue start returned a synthetic empty node and dialogue choice took the tree from the caller.
+
+**Decision:**
+- `src/session/` replaces the routes. One mutable slot holds immutable `SessionState` snapshots (game, pending declarations, last fight outcome) with `subscribe`/`getSnapshot` for React.
+- Every operation returns `{ ok: true, data } | { ok: false, error: { code, message } }` with today's codes and messages; unexpected engine errors become `INTERNAL_ERROR` with state unchanged (precedent: ADR-033).
+- Former request-schema rules become explicit session validation (`VALIDATION_ERROR`).
+- Designer chose to fix every bug found: refused declarations change nothing, new game/load start clean, the last fight outcome stays readable, unknown scenes and already-active fights are refused, and dialogue is session-owned (trees from content, position tracked in `GameState.currentDialogueNode`). Elena, Lars, and Kade get placeholder greetings with a single Farewell until Sprint 7.
+- Scenes, encounters, and dialogue trees are injectable content with game data as the default.
+
+**Alternatives Considered:**
+- Throwing coded errors from the session → Rejected: refusals are normal gameplay outcomes the UI must show.
+- Port the route bugs exactly → Rejected by the designer.
+
+**Consequences:**
+- Supersedes ADR-022 (Fastify decorate session state).
+- New error codes: INTERNAL_ERROR, NO_ACTIVE_COMBAT, COMBAT_INVALID_DECLARATION, ENCOUNTER_NOT_FOUND, COMBAT_ALREADY_ACTIVE, DIALOGUE_NOT_ACTIVE, STORAGE_ERROR.
+- Ported tests assert the fixed behavior where behavior changed.
+
+### ADR-058: Local Save Storage — Versioned Envelope over a Swappable Backend (2026-10-23)
+
+**Context:**
+- Saves were raw GameState files on server disk (ADR-005), with no version and several quirks (uncaught invalid JSON, mismatched timestamps, damaged slots listed as empty, no validation on save).
+- Long-term saving mixes autosaves and manual slots; the desktop build will store files.
+
+**Decision:**
+- Save store (`src/persistence/`) over an async `SaveBackend` (read/write/remove). Backends: browser `localStorage` (injected by the app) and in-memory (tests, default). A file backend comes with the desktop build.
+- Envelope `{ format, version: 1, kind: 'manual', slot, savedAt, playerName, game }`, keys `ancient-order/saves/<kind>/<slot>` so autosaves can sit beside the 10 manual slots.
+- Today's validation and older-save defaults carry over; invalid JSON is reported as corrupted (ADR-043), timestamps agree, damaged slots list as `corrupted`, invalid games are refused at save time, storage failures return STORAGE_ERROR. Loading clears pending combat orders and the last fight result.
+
+**Alternatives Considered:**
+- IndexedDB → Rejected for now: more complexity and a test dependency for capacity ten 10–100 KB slots don't need; the desktop build uses files anyway.
+- Requesting persistent storage (`navigator.storage.persist()`) → Deferred: Firefox prompts the player; durable saves arrive with desktop files.
+
+**Consequences:**
+- Supersedes ADR-005's server-disk saves.
+- Browser saves vanish if the player clears site data (web-build limitation).
+
+### ADR-059: Phaser 4 for Scene Rendering (2026-10-23)
+
+**Context:**
+- ADR-055 left Phaser vs PixiJS to design. Sprint 7 needs a walkable town, Sprint 8 a combat scene; React keeps the HUD, dialogue, and menus layered over the canvas.
+
+**Decision:**
+- Phaser 4 (4.2.1), loaded lazily as its own chunk behind a small `StageRenderer` contract (`src/render/`). A React bridge creates and destroys it; scenes are registered by key and switched on request.
+- Stage fills the window behind the HUD with the deep-brown page background (`--color-bg-deep`); the HUD layer passes clicks through except on the HUD.
+
+**Alternatives Considered:**
+- PixiJS 8 → Rejected by the designer: a renderer only; tilemaps, camera, audio, tweens, and loading would each be add-ons to choose and maintain. Its smaller bundle (~150 KB vs ~360 KB gzip, measured) doesn't matter for a desktop download.
+
+**Consequences:**
+- Tiled tilemaps, cameras, input, animation, tweens, audio, and scenes are available for Sprints 7–8.
+- Phaser 4 is recent; prefer Phaser 4 docs over Phaser 3 examples.
+- Amended 2026-10-24 (designer): the HUD layer scrolls when the window is shorter than the HUD (scrollbar hidden; wheel, touch and keyboard focus scroll it) so every control stays reachable. The page itself never scrolls.
+
+### ADR-060: Combat Orders Limited to the Player's Party with Bounded Energy (2026-10-24)
+
+**Context:**
+- Sprint 6's security review of the in-client combat session found two holes carried over from the old `/declare` route: a SPECIAL could claim any number of energy segments (1e308 gave an instant KO; negatives healed the target and raised the attacker's energy), and orders were accepted for enemy combatants.
+- The Sprint 6 brief said "no gameplay changes", so the designer decided.
+
+**Decision:**
+- The session's `declareActions` rejects, per action, an order for a combatant not in the player's party; `energySegments` on any non-SPECIAL action; and a SPECIAL whose `energySegments` is not an integer from 1 to the combatant's current energy. Omitting `energySegments` on a SPECIAL still spends all energy.
+- Rejected orders flow through the existing path: if every action is rejected, the declaration is refused with COMBAT_INVALID_DECLARATION and the previous orders stand.
+
+**Alternatives Considered:**
+- Defer to Sprint 8's combat UI → Rejected: legitimate play doesn't change, and the rule belongs with the session rather than each UI.
+- Bound energy only → Rejected: no current need for the player to command enemy units.
+
+**Consequences:**
+- Legitimate play is unchanged; malformed or cheating orders are refused.
+- Enemy actions come only from the engine's AI. A future debug or AI-driving tool would need its own path.
+
+### ADR-061: Team Buttons Show Companion Names Only (2026-10-25)
+
+**Context:**
+- Sprint 5's team selector showed each companion's archetype ("Loyal Scout", "Scheming Merchant", "Rogue Outlaw") beside the name. During Sprint 6 verify the designer said they don't want those labels on the buttons.
+
+**Decision:**
+- Team buttons show only the companion's name (Elena, Lars, Kade). The archetype stays on the NPC data; the engine uses it.
+
+**Alternatives Considered:**
+- Keep the labels to hold Sprint 6's "HUD unchanged" line → Rejected by the designer.
+
+**Consequences:**
+- A UI test guards the names-only buttons (`TeamSelector.test.tsx`).

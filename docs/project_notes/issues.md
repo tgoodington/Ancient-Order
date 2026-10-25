@@ -166,3 +166,25 @@ This file logs work completed on tickets. Keep it simple - just enough to rememb
 - **Verification**: 1060/1060 tests pass; tsc + eslint clean. No existing combat test re-baselined (they build Combatants directly, bypassing init-time seeding).
 - **Known edge**: a mid-fight *block* rank-up rederives base block rates and would overwrite an outstanding Crushing Blow degradation (rare; documented in ADR-054).
 - **Refs**: ADR-054 (Layer B implementation note, decoded XP curve).
+
+### 2026-10-24 - BUILD-006: Sprint 6 Self-Contained Game Foundation (ADR-055–061)
+- **Status**: Completed (verified 2026-10-25)
+- **Description**: The game now runs entirely in the browser. The client merged into one root package (Vite 8, React 19, TypeScript 6, Vitest 5, ESLint 10). An in-client game session (`src/session/`) replaced the Fastify routes. Saves are local and versioned (`src/persistence/`, localStorage behind an async backend). A Phaser 4 stage sits behind the unchanged Equinox HUD. The server is deleted.
+- **Fixes beyond the routes (designer-approved)**:
+  - A refused declaration keeps the previous orders.
+  - Starting a fight while one runs is refused.
+  - The last fight result stays readable after the fight.
+  - An unknown scene is refused.
+  - Dialogue is owned by the session.
+  - New game and load clear stale combat orders.
+  - The save quirks are fixed.
+  - Combat orders are limited to the player's party with bounded energy (ADR-060).
+  - The HUD scrolls on short windows.
+  - Team buttons show companion names only, without archetype labels (ADR-061, decided in verify).
+- **Security fixes from review**:
+  - Prototype-key id lookups (getNpc, setTeam, startDialogue, startEncounter).
+  - Shared mutable content is now frozen per session.
+  - A crafted save could break the save list; parseSave now never throws and has size and reason caps.
+- **Verification**: `npm run verify`: 59 files, 1328 tests, tsc and eslint clean; `npm run build` passes with Phaser as its own chunk; npm audit 0.
+- **Live verification (2026-10-25)**: A real headless Chrome, driven by Puppeteer, walked the dev and production builds. Results: 44 HUD and stage checks passed. These covered names-only buttons, personality, team selection, keyboard use, and one canvas under StrictMode, reload, and hot reload. They also covered the canvas painting #1a1410, clicks passing through to the stage, resizing, short-window HUD scrolling, and zero outside requests. Another 45 engine and save checks passed in-page, with saves surviving a full browser restart. After the label change, `npm run verify` reports 59 files and 1329 tests. Unreachable without UI: the error banner, the combat bars, and the disabled-in-combat team state; tests cover them. Pre-existing: the favicon.ico 404 (the page has never had an icon).
+- **Refs**: docs/project_notes/branches/sprint-6/build_output.json; ADR-055–061.

@@ -1,0 +1,269 @@
+{
+  "title": "Sprint 6 — Self-Contained Game Foundation",
+  "date": "2026-10-24",
+  "status": "success",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Client builds against the engine",
+      "domain": "code/build",
+      "producer": "intuition-code-writer",
+      "output_files": ["package.json", "package-lock.json", "index.html", "vite.config.ts", "vitest.config.ts", "tsconfig.json", "tsconfig.engine.json", "tsconfig.app.json", "tsconfig.node.json", "eslint.config.js", ".gitignore", "src/main.tsx", "src/vite-env.d.ts", "src/ui/**", "src/personality/personalitySystem.ts", "src/state/stateUpdaters.ts"],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Engine boundary verified by hand: fs/process/document fail tsc in engine folders; importing react from src/session fails lint. npm audit 0."
+      },
+      "deviations": [
+        "Combatant imported from src/types/combat (not exported from src/types/index)",
+        "stateUpdaters.ts casts changed from NodeJS.ErrnoException to Error (type-only; engine tsconfig has no Node types)"
+      ],
+      "unanticipated_decisions": [
+        "eslint-disable for react-hooks/set-state-in-effect on TeamSelector's existing resync effect (rewriting it would change UI behavior)",
+        "tsconfig.node.json lib ES2023",
+        "Lint fixes in files the old setup never linted (unused helper removed, let→const)"
+      ]
+    },
+    {
+      "id": "T2",
+      "title": "Game session core",
+      "domain": "code/engine",
+      "producer": "intuition-code-writer",
+      "output_files": ["src/session/index.ts", "src/session/gameSession.ts", "src/session/sessionState.ts", "src/session/result.ts", "src/session/content.ts", "src/session/validation.ts", "src/session/operations/outcome.ts", "src/session/operations/game.ts", "src/session/operations/player.ts", "src/session/operations/npc.ts", "src/types/index.ts"],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Security review FAIL on first pass: getNpc('constructor') returned Object and setTeam accepted prototype keys (both inherited from the old routes). Fixed with own-property checks in the session layer; tests in src/session/operations/protoKeys.test.ts."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "Validation messages worded in the old schema validator's style (code is always VALIDATION_ERROR)",
+        "getNpc refuses a non-string id with VALIDATION_ERROR",
+        "operations/outcome.ts helper module added"
+      ]
+    },
+    {
+      "id": "T3",
+      "title": "Narrative and dialogue in the session",
+      "domain": "code/engine",
+      "producer": "intuition-code-writer",
+      "output_files": ["src/session/operations/narrative.ts", "src/session/operations/dialogue.ts", "src/session/content.ts", "src/session/freeze.ts", "src/fixtures/dialogues/placeholders.json", "src/state/stateUpdaters.ts", "src/types/index.ts", "src/session/gameSession.ts"],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Builder check caught the prototype-key lookup in startDialogue; fixed. Security review FAIL: session returned shared mutable content objects (scenes, nodes, encounters) across sessions. Fixed by deep-cloning and freezing content per session (src/session/freeze.ts)."
+      },
+      "deviations": [
+        "Dialogue node owner found by scanning content per call instead of a prebuilt index (same behavior; node ids must be unique across NPCs)"
+      ],
+      "unanticipated_decisions": [
+        "placeholders.json wraps trees in { _note, dialogues } so the placeholder label lives in the file",
+        "Starting a dialogue mid-conversation overwrites currentDialogueNode"
+      ]
+    },
+    {
+      "id": "T4",
+      "title": "Combat in the session",
+      "domain": "code/engine",
+      "producer": "intuition-code-writer",
+      "output_files": ["src/session/operations/combat.ts", "src/session/encounters.ts", "src/session/content.ts", "src/session/validation.ts", "src/session/gameSession.ts", "src/types/index.ts", "src/session/combat.test.ts"],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Security review FAIL: unbounded energySegments (1e308 instant KO, negatives heal) and orders accepted for enemy combatants, both inherited from the old route. Escalated; designer chose to fix both (ADR-060)."
+      },
+      "deviations": [
+        "Designer-approved rule change (ADR-060): declarations limited to the player's party; energySegments only on SPECIAL, integer 1..current energy"
+      ],
+      "unanticipated_decisions": [
+        "COMBAT_ALREADY_ACTIVE message: 'A combat encounter is already active'",
+        "Unknown encounter id reports ENCOUNTER_NOT_FOUND even during a fight (spec check order)"
+      ]
+    },
+    {
+      "id": "T5",
+      "title": "Port the server-based tests to the session",
+      "domain": "test/engine",
+      "producer": "intuition-code-writer",
+      "output_files": ["tests/session.sprint1.test.ts", "tests/session.sprint4.test.ts", "tests/session.combat-e2e.test.ts", "tests/helpers/quickFight.ts", "src/session/gameSession.test.ts", "src/session/validation.test.ts", "src/session/operations/player.test.ts", "src/session/operations/narrative.test.ts", "src/session/operations/dialogue.test.ts", "src/session/operations/combat.test.ts"],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Suites run and pass with real assertions, no skips. One-to-one describe mapping; dropped tests listed in each file header (HTTP-only or moved to T9). No session bugs found."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "Shared tests/helpers/quickFight.ts builds lopsided encounter copies to reach victory/defeat through the session",
+        "e2e determinism scenario runs two sessions sequentially (originals used Promise.all over servers)"
+      ]
+    },
+    {
+      "id": "T6",
+      "title": "HUD runs on the in-client game",
+      "domain": "code/frontend",
+      "producer": "intuition-code-writer",
+      "output_files": ["src/ui/appSession.ts", "src/main.tsx", "src/ui/App.tsx", "src/ui/context/GameStateContext.tsx", "src/ui/context/GameStateContext.test.tsx", "src/ui/components/EquinoxHUD.test.tsx"],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Provider behavior matches the pre-change HTTP provider (refusal message to banner; success leaves the banner). No fetch or /api references remain under src/ui."
+      },
+      "deviations": [],
+      "unanticipated_decisions": []
+    },
+    {
+      "id": "T7",
+      "title": "Client tests on the in-client game",
+      "domain": "test/frontend",
+      "producer": "intuition-code-writer",
+      "output_files": ["src/ui/context/GameStateContext.test.tsx", "src/ui/components/EquinoxHUD.test.tsx", "src/ui/App.test.tsx"],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "UI project runs 61 tests, all passing. No network mocks; fetch spy proves zero calls."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "Refused team change tested at provider level only (the HUD disables the controls in combat/scenes, so the UI can't trigger a refusal)"
+      ]
+    },
+    {
+      "id": "T8",
+      "title": "Local save storage",
+      "domain": "code/persistence",
+      "producer": "intuition-code-writer",
+      "output_files": ["src/persistence/backends.ts", "src/persistence/saveFormat.ts", "src/persistence/validation.ts", "src/persistence/saveStore.ts", "src/persistence/errors.ts", "src/persistence/index.ts", "src/persistence/saveStore.smoke.test.ts", "src/session/operations/saves.ts", "src/session/gameSession.ts", "src/ui/appSession.ts", "src/types/index.ts"],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "validateGameState confirmed a verbatim port. Security review FAIL: a crafted save made validateGameState throw, breaking list() for all slots. Fixed: parseSave never throws, 2,000,000-char cap, reasons capped at 10 x 200 chars. Re-review PASS."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "parseSave also treats a bad kind/slot/savedAt/playerName as corrupted",
+        "Deleting a corrupted slot is allowed; deleting an empty slot gives SAVE_NOT_FOUND",
+        "list() fails whole on a backend STORAGE_ERROR",
+        "Async commit is decided against the snapshot the operation started from; load always wins"
+      ]
+    },
+    {
+      "id": "T9",
+      "title": "Save storage tests",
+      "domain": "test/persistence",
+      "producer": "intuition-code-writer",
+      "output_files": ["src/persistence/validation.test.ts", "src/persistence/saveStore.test.ts", "src/persistence/backends.test.ts", "src/ui/webStorageBackend.test.ts", "src/session/operations/saves.test.ts", "tests/session.saves.test.ts", "src/combat/sync.test.ts", "src/narrative/integration.test.ts"],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Suites run and pass; no fs/os/path imports; only the jsdom test touches localStorage and clears its own keys. Includes a prototype-pollution save test."
+      },
+      "deviations": [
+        "validateGameState port is 39 tests, not 74: the other tests in saveLoad.test.ts were disk-based and are replaced by saveStore.test.ts"
+      ],
+      "unanticipated_decisions": [
+        "saveStore.smoke.test.ts kept alongside saveStore.test.ts (overlapping cases; can be folded later)"
+      ]
+    },
+    {
+      "id": "T10",
+      "title": "Scene renderer",
+      "domain": "code/frontend",
+      "producer": "intuition-code-writer",
+      "output_files": ["package.json", "src/render/renderer.ts", "src/render/sceneKeys.ts", "src/render/phaserRenderer.ts", "src/render/phaserRenderer.test.ts", "src/render/phaserGame.ts", "src/render/scenes/index.ts", "src/render/scenes/StageScene.ts", "src/ui/components/SceneStage.tsx", "src/ui/components/SceneStage.module.css", "src/ui/components/SceneStage.test.tsx", "vite.config.ts"],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Robustness fixes after review: .catch on the lazy Phaser import, and no restart of the scene already showing. Phaser builds as its own 1.37 MB chunk. Not run in a browser: the one-canvas check under StrictMode/Fast Refresh is reasoned, not observed."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "createPhaserGame export name",
+        "Scenes added via game.scene.add with autoStart only for the initial scene"
+      ]
+    },
+    {
+      "id": "T11",
+      "title": "Stage behind the HUD",
+      "domain": "ui/layout",
+      "producer": "ui-writer (profile injected into intuition-code-writer)",
+      "output_files": ["src/ui/App.tsx", "src/ui/App.module.css", "src/ui/App.test.tsx"],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Today's layout carried into the HUD layer unchanged; stage layer aria-hidden. Not checked in a browser: visual before/after and resize are reasoned from the CSS."
+      },
+      "deviations": [
+        "Designer decision 2026-10-24: the HUD layer scrolls when the window is shorter than the HUD, instead of clipping. The scrollbar is hidden because a pointer-events:none layer can't host a draggable one; wheel, touch and keyboard focus scroll it."
+      ],
+      "unanticipated_decisions": [
+        "overscroll-behavior: contain on the HUD layer"
+      ]
+    },
+    {
+      "id": "T12",
+      "title": "Retire the server and consolidate to one command",
+      "domain": "code/build",
+      "producer": "intuition-code-writer",
+      "output_files": ["package.json", "package-lock.json", "tsconfig.json", "tsconfig.engine.json", ".gitignore", "src/types/index.ts", "CLAUDE.md", "docs/project_notes/key_facts.md"],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Greps for fastify, src/api, saveLoad, buildApp, inject(, 3000 and /api/ are clean outside docs/, dist/ and gitignored tooling. npm run verify: 59 files, 1328 tests. npm audit 0."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "Fixed stale server mentions in key_facts.md beyond the listed sections",
+        "Renamed /api/... describe titles in tests/session.* to session wording"
+      ]
+    }
+  ],
+  "files_created": [
+    "index.html (moved)", "vite.config.ts (moved)", "tsconfig.engine.json", "tsconfig.app.json", "tsconfig.node.json",
+    "src/main.tsx (moved)", "src/vite-env.d.ts (moved)", "src/ui/** (moved from client/src)", "src/ui/appSession.ts", "src/ui/App.test.tsx", "src/ui/webStorageBackend.test.ts",
+    "src/ui/components/SceneStage.tsx", "src/ui/components/SceneStage.module.css", "src/ui/components/SceneStage.test.tsx",
+    "src/session/** (index, gameSession, sessionState, result, content, validation, freeze, encounters, operations/*, tests)",
+    "src/persistence/backends.ts", "src/persistence/saveFormat.ts", "src/persistence/validation.ts", "src/persistence/saveStore.ts", "src/persistence/errors.ts", "src/persistence/index.ts", "src/persistence/*.test.ts",
+    "src/render/** (renderer, sceneKeys, phaserRenderer, phaserGame, scenes/index, scenes/StageScene, phaserRenderer.test)",
+    "src/fixtures/dialogues/placeholders.json",
+    "tests/session.sprint1.test.ts", "tests/session.sprint4.test.ts", "tests/session.combat-e2e.test.ts", "tests/session.saves.test.ts", "tests/helpers/quickFight.ts"
+  ],
+  "files_modified": [
+    "package.json", "package-lock.json", "tsconfig.json", "vitest.config.ts", "eslint.config.js", ".gitignore",
+    "src/types/index.ts", "src/personality/personalitySystem.ts", "src/state/stateUpdaters.ts",
+    "src/combat/sync.test.ts", "src/narrative/integration.test.ts", "src/ui/components/TeamSelector.tsx (lint comment, import path)",
+    "CLAUDE.md", "docs/project_notes/key_facts.md"
+  ],
+  "files_deleted": [
+    "client/ (entire folder)", "tsconfig.build.json", "tsconfig.server.json (interim)", "src/api/", "src/ui/api/",
+    "src/persistence/saveLoad.ts", "src/persistence/saveLoad.test.ts", "tests/sprint1.integration.test.ts", "tests/sprint4.integration.test.ts", "src/combat/e2e.test.ts", "saves/ (empty)", "dist/ (rebuilt)"
+  ],
+  "escalated_issues": [
+    "Combat orders: unbounded energySegments and orders for enemy units → designer chose to fix both (ADR-060)",
+    "Short windows clipped the HUD under the no-scroll layout → designer chose a HUD layer that scrolls when needed"
+  ],
+  "known_limitations": [
+    "validateGameState checks are shallow (combat array elements, NPC numeric ranges, extra keys); ported byte-for-byte per spec. Hand-edited saves can carry odd but well-typed data.",
+    "Engine updateTeamComposition still uses `id in state.npcs`; the session guards every in-game path.",
+    "Dialogue and combat ids have no length cap (parity with the old routes); dialogue node ids must be unique across NPCs.",
+    "Round history, last fight outcome and game state are returned unfrozen (immutable by convention); freeze helper doesn't handle cycles, Maps or Dates (none in current content).",
+    ".gitignore doesn't cover mode-specific env files such as .env.production (pre-existing; no env files exist).",
+    "Nothing was run in a real browser: one canvas under StrictMode/Fast Refresh, HUD pixel parity, resize behavior and HUD scrolling are for the verify phase."
+  ],
+  "brief_alignment": {
+    "north_star": "met",
+    "constraints_respected": true,
+    "stakeholders_served": ["Players", "Designer/director"]
+  }
+}

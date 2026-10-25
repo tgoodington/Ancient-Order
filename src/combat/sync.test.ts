@@ -8,12 +8,10 @@
  *   4. Save/load round-trip during combat preserves CombatState
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import * as fs from 'fs/promises';
-import * as os from 'os';
-import * as path from 'path';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { initCombatState, syncToGameState, endCombat } from './sync.js';
-import { saveGame, loadGame } from '../persistence/saveLoad.js';
+import { createMemoryBackend, createSaveStore } from '../persistence/index.js';
+import type { SaveStore } from '../persistence/index.js';
 import { createNewGameState } from '../state/gameState.js';
 import {
   reactionSkillsFromProgress,
@@ -540,14 +538,10 @@ describe('endCombat', () => {
 // ============================================================================
 
 describe('save/load round-trip during active combat', () => {
-  let tempDir: string;
+  let store: SaveStore;
 
-  beforeEach(async () => {
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ancient-order-sync-test-'));
-  });
-
-  afterEach(async () => {
-    await fs.rm(tempDir, { recursive: true, force: true });
+  beforeEach(() => {
+    store = createSaveStore(createMemoryBackend());
   });
 
   it('preserves CombatState across a save/load cycle', async () => {
@@ -560,10 +554,10 @@ describe('save/load round-trip during active combat', () => {
     const gameWithCombat = syncToGameState(gameState, combatState);
 
     // 3. Save to slot 1
-    await saveGame(gameWithCombat, 1, tempDir);
+    await store.save(1, gameWithCombat);
 
     // 4. Load from slot 1
-    const loaded = await loadGame(1, tempDir);
+    const loaded = await store.load(1);
 
     // 5. Verify combatState is preserved
     expect(loaded.combatState).not.toBeNull();
@@ -578,8 +572,8 @@ describe('save/load round-trip during active combat', () => {
     const combatState = initCombatState(gameState, encounter);
     const gameWithCombat = syncToGameState(gameState, combatState);
 
-    await saveGame(gameWithCombat, 2, tempDir);
-    const loaded = await loadGame(2, tempDir);
+    await store.save(2, gameWithCombat);
+    const loaded = await store.load(2);
 
     expect(loaded.combatState?.playerParty).toHaveLength(3);
     expect(loaded.combatState?.enemyParty).toHaveLength(3);
@@ -600,8 +594,8 @@ describe('save/load round-trip during active combat', () => {
     const combatState = initCombatState(gameState, encounter);
     const gameWithCombat = syncToGameState(gameState, combatState);
 
-    await saveGame(gameWithCombat, 3, tempDir);
-    const loaded = await loadGame(3, tempDir);
+    await store.save(3, gameWithCombat);
+    const loaded = await store.load(3);
 
     // Personality should be unchanged
     expect(loaded.player.personality).toEqual(gameState.player.personality);
@@ -615,8 +609,8 @@ describe('save/load round-trip during active combat', () => {
     const combatState = initCombatState(gameState, encounter);
     const gameWithCombat = syncToGameState(gameState, combatState);
 
-    await saveGame(gameWithCombat, 4, tempDir);
-    const loaded = await loadGame(4, tempDir);
+    await store.save(4, gameWithCombat);
+    const loaded = await store.load(4);
 
     // End combat on the loaded state
     const ended = endCombat(loaded, 'victory');

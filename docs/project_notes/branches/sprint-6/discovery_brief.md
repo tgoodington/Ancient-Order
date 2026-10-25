@@ -1,46 +1,53 @@
-# Discovery Brief: Sprint 6 — Frontend React Phase 2 (Town Scene & Dialogue)
+# Discovery Brief: Sprint 6 — Self-Contained Game Foundation
 
 ## Parent Context
 - **Parent**: sprint-5 (Frontend React Phase 1 — HUD)
-- **Inherited dimensions**: Who, Where
-- **Changed dimensions**: What (new town scene + dialogue surface), Why (branch-scoped goal)
-- **Project North Star**: Holds as-is (authored to map this session — section was previously blank scaffold)
+- **Inherited dimensions**: None unchanged. ADR-055 (2026-10-23) reframed the project from pitch prototype to shipping game.
+- **Changed dimensions**:
+  - Who: players are now the primary audience. Investors and publishers are no longer the target.
+  - Where: the game runs on the player's machine with no server, instead of a React app calling Fastify on port 3000 and deploying to Vercel.
+  - What: this sprint is the platform move. The town and dialogue were rescoped to Sprint 7, and combat UI moved to Sprint 8.
+  - Why: new Branch Goal.
+- **Project North Star**: Amended this session
 
 ## Who — Stakeholders
-- The single player (primary).
-- Indirectly, the investor/publisher pitch audience, who must experience the prototype as a real game world.
+- Players (primary): should notice nothing different. Everything they can do today works the same way.
+- Designer/director: a simpler setup to run, with one dev server instead of two.
 
 ## Where — Delivery
-- React frontend, consuming the existing Fastify backend on port 3000.
-- No backend modifications — frontend surface only.
+- Runs entirely in the browser on the developer's machine, with no server.
+- No hosted or shareable link this sprint. The desktop (Steam) build comes in a later sprint.
 
 ## What — The Idea
 **Goals:**
-- Deliver a visual town scene: a rendered location where NPCs appear as clickable figures.
-- Let the player click an NPC to open a dialogue UI driven by the backend's existing dialogue engine.
-- Continue the minimal armor/leather design language established by the Equinox HUD.
+- Run the game engine (combat, narrative, personality, dialogue, state) inside the client.
+- Retire the Fastify server from the game's runtime.
+- Move saves from server disk files to local storage.
+- Keep the Equinox HUD working exactly as it does now.
+- Set up the scene renderer with an empty scene, ready for the Sprint 7 town.
 
 **Requirements:**
-- Town scene renders as a visual location, not a menu or list.
-- NPCs are clickable figures within the scene.
-- Dialogue UI presents available choices and plays out conversations from the backend dialogue engine.
-- Personality-gated choices are handled invisibly — no "locked" markers, no visible gate indicators. Gating surfaces only through context clues and subtlety; the player should never perceive a mechanical lock.
+- No gameplay changes.
+- The engine's tests keep passing.
+- Save and load still work.
 
 **Constraints:**
-- Consume existing REST API without backend changes.
-- Immutable state pattern (ADR-005); ESM modules with .js extensions (ADR-016).
-- Aesthetic must match the armor/leather HUD design language from Sprint 5.
+- Follows ADR-055.
+- Immutable state is preserved.
+- The renderer choice (Phaser vs PixiJS) is made in the design phase.
 
 **Out of scope:**
-- Combat UI / action declaration (Sprint 7).
-- Backend code changes (dialogue engine and narrative systems already exist from Sprints 1 and 3).
-- Deployment / CI-CD.
+- Town scene and dialogue UI (Sprint 7).
+- Combat UI (Sprint 8).
+- Art.
+- Desktop/Steam packaging.
+- A hosted web link.
 
 ## Why — Branch Goal
-The player can walk into town, approach the people in it, and have conversations that feel authored to who their character is — where their personality shifts the texture of an exchange without ever being announced.
+Ancient Order runs as a self-contained game on the player's own machine. Each player owns their world and their saves, everything that worked before still works the same, and the game stands on a foundation built to ship.
 
 ## Decision Posture
-Creative choices — the user weighs in on how it looks, feels, and reads (town scene visuals, NPC presentation, dialogue UX, the subtlety of personality cues). Technical choices delegated unless they affect the creative experience.
+Both: the designer wants to see all major creative and technical decisions.
 
 ## Open Questions
-- NPC roster for the town and how the town scene connects to Act 1 scene progression (Sprint 3 narrative state machine) — to be settled in compose/design.
+- None

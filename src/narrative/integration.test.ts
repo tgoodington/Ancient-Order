@@ -11,10 +11,7 @@
  *   5. No unhandled rejections: all error paths return structured responses
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import * as fs from 'fs/promises';
-import * as os from 'os';
-import * as path from 'path';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 import { createNewGameState } from '../state/gameState.js';
 import {
@@ -28,7 +25,8 @@ import { applyConsequence } from './choiceEngine.js';
 import { calculateSynergy } from './synergyCalculator.js';
 import { DEFAULT_PARADIGMS } from '../fixtures/synergyConfig.js';
 import { initCombatState } from '../combat/sync.js';
-import { saveGame, loadGame } from '../persistence/saveLoad.js';
+import { createMemoryBackend, createSaveStore } from '../persistence/index.js';
+import type { SaveStore } from '../persistence/index.js';
 import {
   TEST_SCENE_GRAPH,
   PREREQUISITE_SCENE_GRAPH,
@@ -102,7 +100,7 @@ describe('Integration: complete narrative flow', () => {
   it('start -> choose -> flag set -> advance to second scene', () => {
     // Step 1: create game state and initialize narrative
     const base = createNewGameState();
-    let state = initializeNarrative(base, 'scene_opening');
+    const state = initializeNarrative(base, 'scene_opening');
 
     expect(state.narrativeState?.currentSceneId).toBe('scene_opening');
 
@@ -243,14 +241,10 @@ describe('Integration: synergy in combat init', () => {
 // ============================================================================
 
 describe('Integration: save/load mid-narrative', () => {
-  let tempDir: string;
+  let store: SaveStore;
 
-  beforeEach(async () => {
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ao-narrative-test-'));
-  });
-
-  afterEach(async () => {
-    await fs.rm(tempDir, { recursive: true, force: true });
+  beforeEach(() => {
+    store = createSaveStore(createMemoryBackend());
   });
 
   it('saves and loads narrative state preserving currentSceneId', async () => {
@@ -264,10 +258,10 @@ describe('Integration: save/load mid-narrative', () => {
     expect(state.narrativeState?.currentSceneId).toBe('scene_two');
 
     // Save
-    await saveGame(state, 1, tempDir);
+    await store.save(1, state);
 
     // Load and verify
-    const loaded = await loadGame(1, tempDir);
+    const loaded = await store.load(1);
     expect(loaded.narrativeState?.currentSceneId).toBe('scene_two');
     expect(loaded.narrativeState?.visitedSceneIds).toContain('scene_opening');
     expect(loaded.narrativeState?.visitedSceneIds).toContain('scene_two');
@@ -282,8 +276,8 @@ describe('Integration: save/load mid-narrative', () => {
     state = updateNarrativeState(state, result.state);
     expect(state.narrativeState?.choiceFlags['cautious_opening']).toBe(true);
 
-    await saveGame(state, 2, tempDir);
-    const loaded = await loadGame(2, tempDir);
+    await store.save(2, state);
+    const loaded = await store.load(2);
     expect(loaded.narrativeState?.choiceFlags['cautious_opening']).toBe(true);
   });
 
@@ -297,8 +291,8 @@ describe('Integration: save/load mid-narrative', () => {
     state = updateNarrativeState(state, result.state);
 
     // Save and load
-    await saveGame(state, 3, tempDir);
-    const loaded = await loadGame(3, tempDir);
+    await store.save(3, state);
+    const loaded = await store.load(3);
 
     // Continue from loaded state
     result = advanceNarrative(loaded, 'choice_proceed', TEST_SCENE_GRAPH);

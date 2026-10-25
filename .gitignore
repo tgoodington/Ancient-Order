@@ -10,7 +10,7 @@ build/
 *.d.ts
 *.tsbuildinfo
 # Hand-written ambient declarations are source, not build output — keep tracked.
-!client/src/vite-env.d.ts
+!src/vite-env.d.ts
 
 # Environment
 .env
@@ -34,9 +34,6 @@ npm-debug.log*
 pids/
 *.pid
 *.seed
-
-# Save files (local testing)
-saves/*.json
 
 # System
 .claude/skills/

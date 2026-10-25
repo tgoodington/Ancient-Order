@@ -11,23 +11,23 @@ This file stores project constants, configuration, and frequently-needed **non-s
 ## Project Information
 
 - **Project Name:** Ancient Order - Act 1 Prototype
-- **Purpose:** Turn-based combat RPG prototype for investor pitches / publisher support
-- **Current Sprint:** Sprint 5 (Frontend React Phase 1) — BUILDING
-- **Target Deployment:** Vercel (stateless backend)
+- **Purpose:** Turn-based combat RPG, growing from the investor/publisher pitch prototype into the shipping game (ADR-055)
+- **Current Sprint:** Sprint 6 (in-browser game session, local saves, Phaser renderer)
+- **Target Platform:** PC first (Steam), consoles later. The game runs entirely in the browser today; desktop packaging (Electron or Tauri) is a later sprint.
 
 ## Technical Stack
 
-- **Runtime:** Node.js with **ESM** (`"type": "module"`, NodeNext resolution)
-- **Framework:** Fastify (plugin-based architecture, TypeScript-native)
-- **Language:** TypeScript 5.x (strict mode, ES2022 target)
+- **Runtime:** Runs entirely in the browser; no server. One package at the repo root (ESM, `"type": "module"`).
+- **Language:** TypeScript ~6.0 (strict mode, ES2022 target)
+- **Client:** Vite 8, React 19 (Equinox HUD), Phaser 4 (renderer, lazy-loaded)
+- **Game interface:** `src/session/` is the single interface the UI and tests call; it calls the engine.
 - **State Management:** Spread operator + `Readonly<T>` type annotations (no Immer)
-- **Persistence:** JSON file-based (saves/ directory, 10 slots, slot_N.json)
-- **API Style:** REST endpoints (Fastify plugins with JSON Schema validation)
-- **Testing Framework:** Vitest (native ESM, Jest-compatible API)
-- **Linting:** ESLint flat config + Prettier
-- **Build:** TypeScript compiler (tsc), no bundler, source maps + declarations enabled. Production build uses `tsconfig.build.json` which **excludes test files** from `dist/`.
-- **Quality gate:** `npm run verify` (root) runs the full chain: backend `tsc --noEmit` + `eslint` + `vitest`, then client `tsc -b` + `vitest`. **Run this before committing.** NOTE: Vitest uses esbuild and does NOT type-check — a green test run does not imply a clean `tsc`. Always rely on `verify`, not `npm test` alone.
-- **Lockfiles:** `package-lock.json` (root) and `client/package-lock.json` are committed (removed from `.gitignore` 2026-05-30) for reproducible installs.
+- **Persistence:** Versioned save envelopes in browser `localStorage` behind an async backend interface (`src/persistence/`), 10 slots; a file backend replaces it in the desktop build.
+- **Testing Framework:** Vitest 5 (Node + jsdom projects)
+- **Linting:** ESLint 10 flat config (typescript-eslint) + Prettier
+- **Build:** `npm run build` runs `tsc -b` then `vite build`, producing a static web build in `dist/` (gitignored).
+- **Quality gate:** `npm run verify` runs `tsc -b`, `eslint src tests`, and `vitest run` across both projects. **Run this before committing.** NOTE: Vitest uses esbuild and does NOT type-check — a green test run does not imply a clean `tsc`. Always rely on `verify`, not `npm test` alone.
+- **Lockfile:** `package-lock.json` (root) is committed for reproducible installs.
 
 **NOTE (2026-02-21):** Full backend rebuild of Sprint 1+2 completed with Fastify+ESM+Vitest. All imports use `.js` extensions (NodeNext convention).
 
@@ -35,26 +35,11 @@ This file stores project constants, configuration, and frequently-needed **non-s
 
 **Sprint 2 Status (2026-02-23):** **COMPLETE** — 793 tests passing across 25 files, zero TypeScript errors, security review PASS. Ready for user verification of Excel formulas and encounter fixture stats before pitch demo.
 
-**Sprint 3 Status (2026-03-03):** **COMPLETE** — 969 tests passing across 31 files. Narrative progression layer fully implemented: scene graph engine, choice/consequence system, team synergy bonuses, narrative REST API, Act 1 demo content (4 scenes). Security review PASS (2 medium issues remediated).
+**Sprint 3 Status (2026-03-03):** **COMPLETE** — 969 tests passing across 31 files. Narrative progression layer fully implemented: scene graph engine, choice/consequence system, team synergy bonuses, narrative layer, Act 1 demo content (4 scenes). Security review PASS (2 medium issues remediated).
 
-**Sprint 5 Status (2026-03-22):** **COMPLETE** — React frontend bootstrapped. 27 client files produced, 54 frontend tests passing across 8 test files. `npm install` in `client/` required. Vite dev server at localhost:5173 (proxy to backend at 3000). Run `npm run dev:all` from root to start both.
+**Sprint 5 Status (2026-03-22):** **COMPLETE** — React frontend bootstrapped (originally a separate `client/` package talking to a server; since folded into the root package and onto the in-browser session in Sprint 6).
 
 **Sprint 4 Status (2026-03-08):** **COMPLETE** — 1019 tests passing (969 existing + 50 new), zero regressions. Persistence & API Completion: saves management (GET/DELETE), player personality/team endpoints, NPC live-state fallback, deep ValidationResult type. All 50 tests passed on first run. Test files: `src/state/stateUpdaters.test.ts` (appended, 11 tests), `src/persistence/saveLoad.test.ts` (appended, 22 tests), `tests/sprint4.integration.test.ts` (new, 17 tests).
-
-## Fastify State Pattern (CRITICAL)
-
-Cross-plugin state uses a **container object**, NOT direct decoration assignment:
-```typescript
-fastify.decorate('gameStateContainer', { state: null as GameState | null });
-// Read/write via: fastify.gameStateContainer.state
-```
-Direct `fastify.gameState = value` inside a plugin is NOT visible to sibling plugins (plugin encapsulation).
-
-Error handler MUST be registered before plugins:
-```typescript
-fastify.setErrorHandler(handler);  // FIRST
-fastify.register(plugin);          // THEN
-```
 
 ## Core Game Systems
 
@@ -73,8 +58,8 @@ fastify.register(plugin);          // THEN
 - **NPC Behavior:** NPCs stay true to archetype regardless of player choices
 
 ### Save/Load System
-- **Format:** JSON files in `saves/` directory
-- **Slots:** 10 slots (slot_1.json through slot_10.json)
+- **Format:** Versioned save envelopes in browser `localStorage` (`src/persistence/`)
+- **Slots:** 10 slots
 - **Metadata:** id, timestamp, version, playerName, location
 
 ## Player Character
@@ -141,7 +126,7 @@ The investor/publisher demo uses a **purpose-built mid-journey scene set**, not 
 - `src/narrative/choiceEngine.ts` — Choice validation, consequence application
 - `src/narrative/narrativeStateMachine.ts` — State machine orchestrator
 - `src/narrative/synergyCalculator.ts` — Well Rounded + Bond paradigm calculators
-- `src/api/narrative.ts` — 6-endpoint Fastify plugin (prefix: /api/narrative)
+- `src/session/` — game session wrapping the narrative engine
 
 ## Project Structure
 
@@ -152,55 +137,26 @@ The investor/publisher demo uses a **purpose-built mid-journey scene set**, not 
 │   ├── state/           # Game state management
 │   ├── dialogue/        # Dialogue trees and engine
 │   ├── personality/     # Personality adjustment logic
-│   ├── persistence/     # Save/load functions
+│   ├── combat/          # Combat engine, behavior-tree AI
 │   ├── narrative/       # Scene engine, choice engine, state machine, synergy calculator
-│   ├── fixtures/        # Synergy config, scenes/ (act1_demo.json)
-│   └── api/             # Fastify REST endpoints
-├── saves/               # Save files (JSON)
+│   ├── fixtures/        # Synergy config, encounters, scenes/ (act1_demo.json)
+│   ├── session/         # Game session: the game's single interface
+│   ├── persistence/     # Save storage, backends, validation
+│   ├── ui/              # React app and Equinox HUD
+│   └── render/          # Phaser renderer
+├── tests/               # Session-level integration tests
 ├── docs/
-│   ├── From Claude Browser Chat/
-│   │   ├── INDEX.md
-│   │   ├── Claude_Code_Handoff_Document.md
-│   │   ├── GM_Combat_Tracker_Documentation.md
-│   │   ├── GM Combat Tracker.xlsx
-│   │   ├── Sprint1_*.md (5 files)
+│   ├── Reference Documents/   # Historical specs
 │   └── project_notes/
-│       ├── bugs.md
-│       ├── decisions.md
-│       ├── key_facts.md
-│       └── issues.md
 ├── CLAUDE.md
+├── index.html
 ├── package.json
-└── tsconfig.json
+└── tsconfig*.json
 ```
 
-## API Endpoints (Sprint 1 + Sprint 3)
+## Game Interface
 
-**Game Management:**
-- POST /api/game/new
-- GET /api/game/state
-- POST /api/game/save/:slot
-- GET /api/game/load/:slot
-- GET /api/game/saves
-- DELETE /api/game/saves/:slot
-
-**NPC & Dialogue:**
-- GET /api/npc/:npcId
-- GET /api/dialogue/:npcId
-- POST /api/dialogue/choose
-
-**Player:**
-- GET /api/player
-- GET /api/player/personality
-- POST /api/player/team
-
-**Narrative (Sprint 3):**
-- GET /api/narrative/start/:startingSceneId
-- GET /api/narrative/current
-- POST /api/narrative/choose
-- GET /api/narrative/state
-- POST /api/narrative/reset
-- GET /api/narrative/synergy
+The game has no network API. `src/session/` is its interface: the UI and tests call the session, and the session calls the engine. See `src/session/` for the operations.
 
 ## Documentation Reference
 
@@ -251,15 +207,18 @@ All docs in `docs/Reference Documents/`:
 - **Sprint 1:** Backend Core (Game State & Personality)
 - **Sprint 2:** Combat Engine (port Excel formulas, 5-phase rounds, path/energy system)
 - **Sprint 3:** Narrative & State Machine (Act 1 scenes, choice tracking, team synergy)
-- **Sprint 4:** Persistence & API (save/load, REST endpoints)
-- **Sprint 5:** Frontend React Phase 1 (Vite setup, GameStateProvider, Equinox HUD) — COMPLETE (54 tests)
-- **Sprint 6-7:** Frontend (Town scenes, Combat UI)
-- **Sprint 8-9:** Testing & Deployment (Vercel)
+- **Sprint 4:** Persistence (save/load, player and NPC state access)
+- **Sprint 5:** Frontend React Phase 1 (Vite setup, GameStateProvider, Equinox HUD) — COMPLETE
+- **Sprint 6:** In-browser game session, local saves, Phaser renderer
+- **Later:** Town scenes, Combat UI, PC/Steam packaging (ADR-055)
 
 ## Local Development
 
-- **Default Port:** 3000 (assumed, not specified)
-- **Save Directory:** ./saves/
+- `npm install` once.
+- `npm run dev` starts the game (Vite, opens the browser at http://localhost:5173).
+- `npm run verify` typechecks, lints, and runs every test. Run it before committing.
+- `npm run build` produces the static web build.
+- Saves live in browser `localStorage`.
 
 ## Combat System (Sprint 2 Reference)
 
@@ -406,7 +365,7 @@ ScoredCandidate: actionType, targetId, score, scoreBreakdown
 - **Values:** Empty `[]` when no team selected; exactly 2 NPC ID strings when team is set
 - **Position:** After `npcs` field in GameState interface
 - **Initialization:** `[]` in `createNewGameState()`
-- **Backward compat:** `loadGame()` normalizes missing `team` to `[]` (same pattern as `narrativeState`)
+- **Backward compat:** loading normalizes missing `team` to `[]` (same pattern as `narrativeState`)
 
 ### State Updater Signature Pattern
 - All state updaters follow: `(state: Readonly<GameState>, ...args) => GameState`
@@ -414,7 +373,7 @@ ScoredCandidate: actionType, targetId, score, scoreBreakdown
 - New `updateTeamComposition(state, npcIds)` follows this pattern
 
 ### ValidationResult Type
-- **Location:** `src/persistence/saveLoad.ts` (local export, not in types barrel)
+- **Location:** `src/persistence/validation.ts` (local export, not in types barrel)
 - **Shape:** `{ valid: true } | { valid: false; errors: string[] }` (discriminated union)
 - **Replaces:** Boolean type predicate return from `validateGameState()`
 
@@ -427,8 +386,8 @@ ScoredCandidate: actionType, targetId, score, scoreBreakdown
 
 ### Error Codes (Pre-Existing, Confirmed)
 - `TEAM_COMPOSITION_INVALID` — already defined in `ErrorCodes` (src/types/index.ts line 197)
-- `VALIDATION_ERROR` — already defined in `ErrorCodes` (src/types/index.ts line 198), maps to HTTP 400
-- `loadGame()` now uses `VALIDATION_ERROR` instead of `SAVE_NOT_FOUND` for corrupt saves
+- `VALIDATION_ERROR` — already defined in `ErrorCodes` (src/types/index.ts line 198), 
+- Loading now uses `VALIDATION_ERROR` instead of `SAVE_NOT_FOUND` for corrupt saves
 
 ### Error Throwing Pattern (Codebase Convention)
 ```typescript
@@ -438,5 +397,4 @@ throw err;
 ```
 
 ### Session State Access Pattern
-- `fastify.gameStateContainer.state` — shared mutable container across all plugins
-- Accessible in all registered plugins (game, player, npc, dialogue, combat, narrative)
+- The game session (`src/session/`) holds the active game state; the UI subscribes to it and tests call it directly.

@@ -220,6 +220,20 @@ export function processDialogueChoice(
   return addConversationEntry(newState, entry);
 }
 
+/**
+ * Sets or clears the currentDialogueNode field on GameState.
+ * Pass `null` when the conversation ends.
+ */
+export function setCurrentDialogueNode(
+  state: Readonly<GameState>,
+  nodeId: string | null
+): GameState {
+  return updateTimestamp({
+    ...state,
+    currentDialogueNode: nodeId,
+  });
+}
+
 // ============================================================================
 // Combat State
 // ============================================================================
@@ -306,21 +320,21 @@ export function updateTeamComposition(
 ): GameState {
   if (npcIds.length !== 2) {
     const err = new Error('Team must contain exactly 2 NPCs');
-    (err as NodeJS.ErrnoException & { code: string }).code = ErrorCodes.TEAM_COMPOSITION_INVALID;
+    (err as Error & { code: string }).code = ErrorCodes.TEAM_COMPOSITION_INVALID;
     throw err;
   }
 
   for (const id of npcIds) {
     if (!(id in state.npcs)) {
       const err = new Error(`Invalid NPC ID: ${id}`);
-      (err as NodeJS.ErrnoException & { code: string }).code = ErrorCodes.TEAM_COMPOSITION_INVALID;
+      (err as Error & { code: string }).code = ErrorCodes.TEAM_COMPOSITION_INVALID;
       throw err;
     }
   }
 
   if (npcIds[0] === npcIds[1]) {
     const err = new Error(`Duplicate NPC ID: ${npcIds[0]}`);
-    (err as NodeJS.ErrnoException & { code: string }).code = ErrorCodes.TEAM_COMPOSITION_INVALID;
+    (err as Error & { code: string }).code = ErrorCodes.TEAM_COMPOSITION_INVALID;
     throw err;
   }
 

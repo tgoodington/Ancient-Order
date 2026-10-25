@@ -1,0 +1,29 @@
+{
+  "_note": "PLACEHOLDER CONTENT. Temporary one-line greetings so conversations work until Sprint 7 writes the real dialogue. Replace this file's trees (via SessionContent.dialogues); do not build on this text.",
+  "dialogues": {
+    "npc_scout_elena": [
+      {
+        "id": "npc_scout_elena_greet",
+        "npcId": "npc_scout_elena",
+        "text": "Elena nods in greeting.",
+        "options": [{ "id": "opt_farewell", "text": "Farewell.", "nextNodeId": null }]
+      }
+    ],
+    "npc_merchant_lars": [
+      {
+        "id": "npc_merchant_lars_greet",
+        "npcId": "npc_merchant_lars",
+        "text": "Lars nods in greeting.",
+        "options": [{ "id": "opt_farewell", "text": "Farewell.", "nextNodeId": null }]
+      }
+    ],
+    "npc_outlaw_kade": [
+      {
+        "id": "npc_outlaw_kade_greet",
+        "npcId": "npc_outlaw_kade",
+        "text": "Kade nods in greeting.",
+        "options": [{ "id": "opt_farewell", "text": "Farewell.", "nextNodeId": null }]
+      }
+    ]
+  }
+}

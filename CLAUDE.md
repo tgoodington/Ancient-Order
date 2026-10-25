@@ -1,12 +1,15 @@
 # Ancient Order
 
-Turn-based combat RPG prototype with personality-driven narrative. Act 1 backend for investor/publisher pitch.
+Turn-based combat RPG with personality-driven narrative, growing from the Act 1 pitch prototype into the shipping game. TypeScript, running entirely in the browser.
 
 ## Technical Stack
-- Node.js + Express.js + TypeScript
+- TypeScript ~6.0, one package at the repo root
+- Vite 8 + React 19 (Equinox HUD), Phaser 4 renderer
+- In-client engine and game session (`src/session/` is the game's interface)
 - Immutable state management (no mutations)
-- JSON file-based persistence (saves/ directory)
-- REST API for testing and future React frontend
+- Local browser saves (`localStorage`, 10 slots)
+- Vitest 5, ESLint 10
+- Commands: `npm run dev` starts the game in the browser; `npm run verify` runs typecheck, lint, and all tests
 
 ## Key Constraints
 - Personality traits: 6 traits, 5-35% range, sum always = 100%

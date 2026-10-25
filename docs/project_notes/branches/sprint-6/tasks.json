@@ -1,0 +1,1060 @@
+{
+  "parent_context": {
+    "parent": "sprint-5",
+    "note": "Parent sprint used the pre-Enuncia outline format (outline.md) with no experience slices, so every slice here is new. Sprint 5's Equinox HUD is carried forward unchanged in look and behavior (ES-1, ES-4).",
+    "inherited_slices": [],
+    "modified_slices": [],
+    "new_slices": [
+      "ES-1",
+      "ES-2",
+      "ES-3",
+      "ES-4",
+      "ES-5"
+    ]
+  },
+  "title": "Sprint 6 — Self-Contained Game Foundation",
+  "experience_slices": [
+    {
+      "id": "ES-1",
+      "title": "The game plays with no server running",
+      "stakeholder": "Players",
+      "description": "Opening or reloading the game starts a new game, and the Equinox HUD and team selection look and behave exactly as before. Nothing has to be running except the game itself."
+    },
+    {
+      "id": "ES-2",
+      "title": "Saves live on the player's own machine",
+      "stakeholder": "Players",
+      "description": "Games can be saved to, loaded from, listed in, and deleted from 10 slots stored locally on the player's machine. Corrupted or older saves are handled as gracefully as today. There is no save UI this sprint (the demo loop fits in one play session); storage is shaped so autosaves alongside manual saves can be added later."
+    },
+    {
+      "id": "ES-3",
+      "title": "Every system that works today still works inside the client",
+      "stakeholder": "Players",
+      "description": "Combat, narrative, dialogue, and personality run inside the game itself with identical rules, outcomes, and rejections — including the rules that today live only in the server's routes. These systems have no UI until Sprints 7–8; automated tests are the proof they still work."
+    },
+    {
+      "id": "ES-4",
+      "title": "The game opens onto a scene stage",
+      "stakeholder": "Players",
+      "description": "The game window is a rendered scene showing a plain backdrop in the HUD's existing background color, with the HUD layered on top and unchanged. The stage is ready for the Sprint 7 town to be dropped in."
+    },
+    {
+      "id": "ES-5",
+      "title": "The designer starts the game with one command",
+      "stakeholder": "Designer/director",
+      "description": "One command starts the game and one command verifies everything. The server code and its packages are gone, and the project's instructions no longer describe a server, port, or REST API."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Client builds against the engine",
+      "domain": "code/build",
+      "experience_slices": [
+        "ES-3",
+        "ES-1"
+      ],
+      "description": "Collapse the separate client package into the root package so the repo is one Vite + React app that imports the game engine directly in the browser. Move the client's source, entry HTML, and Vite config to the root; keep the engine folders where they are; delete the client's duplicated game types and compile the HUD against the engine's own types (retires ADR-052). Upgrade the toolchain to current majors as part of the merge. The Fastify server keeps working during the transition (it is deleted in T12).",
+      "acceptance_criteria": [
+        "The client's dev server, typecheck, and production build all succeed with the engine included",
+        "The engine runs in the browser with nothing from the server included",
+        "The client's duplicated game type definitions are gone and the HUD components compile against the engine's types",
+        "There is one package.json and one lockfile at the root; client/ no longer exists",
+        "`npm run verify` passes: tsc -b across engine/app/node/server configs, ESLint over src and tests (including .tsx), and every existing engine, HTTP, and UI test",
+        "An engine file referencing `window`, `document`, `localStorage`, `process`, or `fs` fails typecheck or lint"
+      ],
+      "dependencies": [],
+      "decisions": [],
+      "technical_approach": "Single package at the repo root (decided by designer 2026-10-23). Root becomes a Vite 8 + React 19 SPA. Engine folders stay put: src/combat, src/narrative, src/personality, src/dialogue, src/state, src/types, src/fixtures (no engine file moves, so git history is preserved). Client source moves: client/src/main.tsx -> src/main.tsx; client/src/vite-env.d.ts -> src/vite-env.d.ts; client/src/App.tsx, App.module.css, components/, context/, api/, styles/, test/setup.ts -> src/ui/ (same sub-structure, e.g. src/ui/components/EquinoxHUD.tsx, src/ui/test/setup.ts); client/index.html -> index.html (script src '/src/main.tsx'); client/vite.config.ts -> vite.config.ts. Use `git mv` for every moved file so history follows. Reserve empty homes for later tasks: src/session/ (T2-T4), src/render/ (T10). TypeScript uses a `tsc -b` solution: tsconfig.json has `files: []` and references tsconfig.engine.json, tsconfig.app.json, tsconfig.node.json, and an interim tsconfig.server.json. tsconfig.engine.json: engine folders + src/session + src/persistence + tests/; lib [ES2022] only and `types: []` so engine code cannot use DOM or Node globals; module ESNext, moduleResolution bundler, resolveJsonModule, isolatedModules, strict, noEmit, tsBuildInfoFile under node_modules/.tmp. tsconfig.app.json: src/ui, src/render, src/main.tsx, src/vite-env.d.ts; lib [ES2022, DOM, DOM.Iterable]; jsx react-jsx; types ['vite/client']; same strictness/resolution; it type-checks engine files transitively via imports. tsconfig.node.json: vite.config.ts, vitest.config.ts; types ['node']. tsconfig.server.json (INTERIM, deleted in T12): src/api/**, src/persistence/saveLoad.ts + saveLoad.test.ts, tests/*.integration.test.ts, src/combat/e2e.test.ts, src/combat/sync.test.ts, src/narrative/integration.test.ts with types ['node'] — exclude exactly these files from tsconfig.engine.json. Vite config: plugins [react()], server.port 5173, server.open true (dev opens the browser), no proxy. Vitest config (vitest.config.ts, separate from vite.config.ts): `test.projects` with two inline projects — 'engine' (environment node; include src/**/*.test.ts and tests/**/*.test.ts; exclude src/ui/**, src/render/**) and 'ui' (environment jsdom; plugins [react()]; include src/ui/**/*.test.{ts,tsx}, src/render/**/*.test.{ts,tsx}; setupFiles src/ui/test/setup.ts). ESLint 10 flat config using the `typescript-eslint` meta package (recommended) over src/**/*.{ts,tsx} and tests/**/*.ts, eslint-plugin-react-hooks recommended for src/ui/**/*.tsx and src/render/**, keep the existing no-unused-vars `_` ignore patterns and no-explicit-any warn, plus a layering rule: `no-restricted-imports` in engine folders, src/session and src/persistence forbidding imports of react, phaser/pixi.js, and any path under ui/ or render/. Types: delete client/src/types/index.ts; UI files import GameState, Personality, PersonalityTrait, NPC, Combatant, CombatState, etc. from src/types/index.js (engine). PERSONALITY_TRAITS: export the existing private constant from src/personality/personalitySystem.ts (typed `readonly PersonalityTrait[]`) and import it in the UI. ApiResponse/ApiError still come from src/types until T6/T12 remove the HTTP layer. package.json (root, merged): name 'ancient-order', private true, type module, engines.node '>=22.12'. dependencies: react ^19.3, react-dom ^19.3, uuid ^14 (ships its own types; drop @types/uuid), plus fastify kept ONLY until T12. devDependencies: vite ^8.3, @vitejs/plugin-react ^6.1, vitest ^5.0, jsdom ^30, typescript ~6.0.3 (NOT 7.x: typescript-eslint supports <6.1), eslint ^10, typescript-eslint ^8.72, eslint-plugin-react-hooks ^7.1, @testing-library/react ^16.3, @testing-library/jest-dom ^7, @testing-library/user-event ^14.6, @types/react ^19.3, @types/react-dom ^19, @types/node ^24, prettier ^3.9, plus tsx and concurrently kept ONLY until T12. Scripts: dev 'vite', build 'tsc -b && vite build', preview 'vite preview', typecheck 'tsc -b', lint 'eslint src tests', test 'vitest run', test:watch 'vitest', format 'prettier --write src tests', verify 'npm run typecheck && npm run lint && npm test', plus interim dev:server 'tsx watch src/api/index.ts' until T12. Delete client/package.json, client/package-lock.json, client/tsconfig*.json, client/vitest.config.ts, client/tsconfig.tsbuildinfo, client/node_modules; regenerate the single root package-lock.json.",
+      "interfaces": "Produces: the build/test/lint scaffolding every other task lands in; the folder conventions (engine in src/<system>/, session in src/session/, UI in src/ui/, renderer in src/render/); engine types importable from UI code via src/types/index.js; PERSONALITY_TRAITS exported from src/personality/personalitySystem.ts. Consumed by: T6/T7 (UI on session), T10/T11 (renderer and stage), T12 (removes interim server config, packages, scripts). The Vitest 'engine' and 'ui' projects are where T5, T7, T9 tests run.",
+      "files": [
+        {
+          "path": "package.json",
+          "purpose": "Single merged package: React/Vite app deps, upgraded toolchain, scripts (dev, build, typecheck, lint, test, verify)"
+        },
+        {
+          "path": "package-lock.json",
+          "purpose": "Regenerated single lockfile"
+        },
+        {
+          "path": "index.html",
+          "purpose": "Moved from client/; app entry HTML pointing at /src/main.tsx"
+        },
+        {
+          "path": "vite.config.ts",
+          "purpose": "Moved from client/; React plugin, port 5173, open browser on dev, no API proxy"
+        },
+        {
+          "path": "vitest.config.ts",
+          "purpose": "Replaces root and client configs; two projects: engine (node) and ui (jsdom + setup file)"
+        },
+        {
+          "path": "tsconfig.json",
+          "purpose": "Solution file referencing the per-area configs for tsc -b"
+        },
+        {
+          "path": "tsconfig.engine.json",
+          "purpose": "Engine, session, persistence, tests: ES2022 lib, no DOM/Node globals"
+        },
+        {
+          "path": "tsconfig.app.json",
+          "purpose": "UI, renderer, entry: DOM lib, react-jsx"
+        },
+        {
+          "path": "tsconfig.node.json",
+          "purpose": "Vite/Vitest config files with Node types"
+        },
+        {
+          "path": "tsconfig.server.json",
+          "purpose": "INTERIM: server routes, old disk saves, and HTTP-driven tests with Node types; deleted in T12"
+        },
+        {
+          "path": "tsconfig.build.json",
+          "purpose": "Delete (tsc emit build no longer used)"
+        },
+        {
+          "path": "eslint.config.js",
+          "purpose": "Flat config for .ts/.tsx with typescript-eslint, react-hooks, and engine-layering import restriction"
+        },
+        {
+          "path": "src/main.tsx",
+          "purpose": "Moved from client/src; React root"
+        },
+        {
+          "path": "src/vite-env.d.ts",
+          "purpose": "Moved from client/src"
+        },
+        {
+          "path": "src/ui/",
+          "purpose": "Moved client source: App.tsx, App.module.css, components/, context/, api/, styles/, test/setup.ts"
+        },
+        {
+          "path": "src/personality/personalitySystem.ts",
+          "purpose": "Export the existing PERSONALITY_TRAITS constant (no behavior change)"
+        },
+        {
+          "path": ".gitignore",
+          "purpose": "Change the vite-env.d.ts exception from client/src/ to src/"
+        },
+        {
+          "path": "client/",
+          "purpose": "Delete entirely after moving its source"
+        },
+        {
+          "path": "client/src/types/index.ts",
+          "purpose": "Delete (duplicated types; UI imports engine types)"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "One package at the repo root instead of keeping client/ as a separate package",
+          "rationale": "Designer decision 2026-10-23. One install, one toolchain, one place for all future code; the Steam wrapper later wraps one app. Supersedes ADR-046's separate client folder (its reason — a backend beside it — is gone) and retires ADR-052."
+        },
+        {
+          "decision": "Engine folders stay in place under src/; React moves to src/ui/",
+          "rationale": "Zero churn on ~9,600 engine lines and their history; the engine/UI boundary is enforced by tsconfig and lint instead of by folder nesting."
+        },
+        {
+          "decision": "Engine, session, and persistence type-check with no DOM or Node globals",
+          "rationale": "Keeps the engine portable to the desktop build and a possible console port (ADR-055: the tests become the port's spec)."
+        },
+        {
+          "decision": "Upgrade toolchain to current majors: Vite 8, plugin-react 6, Vitest 5, ESLint 10, TypeScript 6.0, jsdom 30, React 19.3, uuid 14",
+          "rationale": "Designer asked to upgrade where it makes sense. TypeScript 7 is excluded because typescript-eslint supports <6.1. Vite 8 + Vitest 4/5 resolution of the engine's .js specifiers and JSON import attributes was verified with a scratch build."
+        },
+        {
+          "decision": "Keep the uuid package (upgraded) for the player id instead of crypto.randomUUID()",
+          "rationale": "The global would need a DOM/Node type and break the engine's no-platform-globals rule; uuid is pure and portable."
+        },
+        {
+          "decision": "Server stays runnable until T12 via an interim tsconfig and kept packages",
+          "rationale": "T5's tests are ported against live route behavior; T12 deletes the server only after the session and ports are in."
+        }
+      ],
+      "producer_notes": "Do not edit engine logic. Allowed engine edits in this task: exporting PERSONALITY_TRAITS, and any `import type`/`export type` adjustments isolatedModules demands (types only). Engine imports use explicit `.js` specifiers — keep that style in engine files; UI files keep their current extensionless style. TypeScript 6 changes several defaults (e.g. `types` defaults to [], strict on); set `types`, `strict`, `module`, `moduleResolution`, `target` explicitly in every tsconfig rather than relying on defaults. Vite 8 uses Rolldown: use `build.rolldownOptions` if any bundler option is ever needed (none expected). If Vitest 5 breaks engine tests in a way that is not a quick config fix, pin vitest ^4.1.12 instead and report it. After the merge, run `npm run verify`: all engine tests, all existing client tests (now under src/ui), and the HTTP-driven tests must still pass. Watch .gitignore: `*.js` is ignored except `*.config.js`, which is fine for this TS-only repo."
+    },
+    {
+      "id": "T2",
+      "title": "Game session core",
+      "domain": "code/engine",
+      "experience_slices": [
+        "ES-3",
+        "ES-1"
+      ],
+      "description": "An in-client game session that holds this player's single active game and offers the operations the game and player/NPC routes offer today: start a new game, read the current state, read the player and their personality, adjust personality, set the team, and list/look up NPCs. Rules and error outcomes match today's routes, including the input rules that Fastify's request schemas enforced. Also builds the session's foundation that T3, T4, and T8 extend: the result type, the session state holder with change subscription, content injection, and input validation.",
+      "acceptance_criteria": [
+        "Each operation produces the same resulting game state as the corresponding route does today for the same inputs",
+        "Error outcomes match today: no active game, unknown NPC, personality adjustment with no recognized traits, team not exactly two companions, team change during combat or an active narrative scene",
+        "Every operation produces a new state; earlier states are never altered",
+        "Nothing in the session depends on a server or network",
+        "A refused or read-only operation leaves the snapshot reference unchanged and does not notify subscribers; a changing operation notifies exactly once",
+        "An unexpected engine error returns INTERNAL_ERROR and leaves the game unchanged",
+        "Starting a new game clears any pending combat orders and last fight result"
+      ],
+      "dependencies": [],
+      "decisions": [],
+      "technical_approach": "New module src/session/ (pure TypeScript, engine tsconfig: no DOM/Node globals). (1) Result model — src/session/result.ts: `SessionResult<T> = { ok: true; data: T } | { ok: false; error: SessionError }`, `SessionError = { code: ErrorCode; message: string; details?: unknown; cause?: unknown }`, helpers ok(data), fail(code, message, details?), and fromThrown(err): an Error carrying a `.code` that is a known ErrorCode becomes fail(code, err.message); anything else becomes fail('INTERNAL_ERROR', 'An unexpected error occurred', undefined, err) — mirroring today's globalErrorHandler 500 fallback. Refusals are values, never thrown. (2) Session state — src/session/sessionState.ts: `SessionState = { game: GameState | null; pendingDeclarations: readonly CombatAction[]; lastCombatOutcome: CombatOutcome | null }` (CombatOutcome = { status: 'victory' | 'defeat'; round: number }, used by T4), `initialSessionState`, and `startFresh(game)` which returns a SessionState with the given game, pendingDeclarations [] and lastCombatOutcome null (used by newGame and, in T8, load). (3) Operations — pure functions in src/session/operations/<area>.ts, one file per old route file, signature `(s: SessionState, content: SessionContent, ...inputs) => Outcome<T>` where `Outcome<T> = { next: SessionState; result: SessionResult<T> }`. A refusal or a read returns `next === s` (same reference). This task: operations/game.ts (newGame, getState), operations/player.ts (getPlayer, getPersonality, adjustPersonality, setTeam), operations/npc.ts (listNpcs, getNpc). (4) Holder — src/session/gameSession.ts: `createGameSession(options?: { content?: Partial<SessionContent>; saves?: SaveStore })` returns a `GameSession` object whose methods call the operations, commit `next` when it differs from the current snapshot, and notify listeners. Exposes `getSnapshot(): SessionState` (stable reference between changes) and `subscribe(listener): () => void` — the shape React's useSyncExternalStore expects (T6). The `saves` option is accepted but unused until T8. (5) Content — src/session/content.ts: `SessionContent = { sceneGraph; encounters: Record<string, EncounterConfig>; dialogues: Record<string, DialogueNode[]> }` and `defaultContent` (sceneGraph and encounters filled by T3/T4; start with empty records typed correctly). createGameSession merges options.content over defaultContent so tests and future content can swap pieces. (6) Input validation — src/session/validation.ts: explicit checks that replace the Fastify JSON schemas, each returning a VALIDATION_ERROR SessionError or null. For this task: personality adjustment must be a plain object with at least one key, every key one of the six traits, every value a finite number (no unknown keys — matches `additionalProperties: false, minProperties: 1`); team must be an array of exactly two strings, each at most 64 chars. Order of checks mirrors today: input validation first (schemas ran before handlers), then GAME_NOT_FOUND, then rules. (7) Ported route rules: newGame ignores options and calls createNewGameState(), then startFresh (fix: clears pending combat orders and last fight result — designer decision); getState → GAME_NOT_FOUND 'No active game' when none; getPlayer/getPersonality → GAME_NOT_FOUND when none; adjustPersonality → applyPersonalityAdjustment, returns the new GameState; setTeam → combatState !== null ⇒ TEAM_COMPOSITION_INVALID 'Cannot change team during combat'; narrativeState !== null ⇒ TEAM_COMPOSITION_INVALID 'Cannot change team during narrative scene'; else updateTeamComposition (its own TEAM_COMPOSITION_INVALID throws map via fromThrown) and return { team }; listNpcs → getAllNPCs() templates (no game required); getNpc(id) → live state.npcs[id] when a game is active, else template getNPC(id), else NPC_NOT_FOUND `NPC not found: \"${id}\"` (ADR-042). Add `INTERNAL_ERROR` to ErrorCodes in src/types/index.ts. Barrel src/session/index.ts exports createGameSession, GameSession, SessionState, SessionResult, SessionError, SessionContent, defaultContent.",
+      "interfaces": "Receives: engine functions createNewGameState (src/state/gameState.ts), applyPersonalityAdjustment and updateTeamComposition (src/state/stateUpdaters.ts), getAllNPCs and getNPC (src/state/npcs.ts), ErrorCodes and types (src/types). Produces: `GameSession` (methods newGame(), getState(), getPlayer(), getPersonality(), adjustPersonality(adj), setTeam(npcIds), listNpcs(), getNpc(id), getSnapshot(), subscribe(fn)) returning SessionResult<T>; the operation-module pattern, Outcome<T>, startFresh, validation helpers, and SessionContent that T3/T4/T8 extend. Consumed by T6 (provider), T5/T7 (tests), T8 (save operations attach to the same holder).",
+      "files": [
+        {
+          "path": "src/session/index.ts",
+          "purpose": "Public barrel for the session"
+        },
+        {
+          "path": "src/session/gameSession.ts",
+          "purpose": "createGameSession: holds the SessionState snapshot, commits operation results, notifies subscribers"
+        },
+        {
+          "path": "src/session/sessionState.ts",
+          "purpose": "SessionState type, initial state, startFresh helper"
+        },
+        {
+          "path": "src/session/result.ts",
+          "purpose": "SessionResult/SessionError types, ok/fail/fromThrown helpers"
+        },
+        {
+          "path": "src/session/content.ts",
+          "purpose": "SessionContent type and defaultContent (scene graph, encounters, dialogues)"
+        },
+        {
+          "path": "src/session/validation.ts",
+          "purpose": "Input checks that replace the Fastify request schemas"
+        },
+        {
+          "path": "src/session/operations/game.ts",
+          "purpose": "newGame, getState"
+        },
+        {
+          "path": "src/session/operations/player.ts",
+          "purpose": "getPlayer, getPersonality, adjustPersonality, setTeam"
+        },
+        {
+          "path": "src/session/operations/npc.ts",
+          "purpose": "listNpcs, getNpc (live state when game active)"
+        },
+        {
+          "path": "src/types/index.ts",
+          "purpose": "Add INTERNAL_ERROR to ErrorCodes"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "Operations return a success-or-refusal result instead of throwing",
+          "rationale": "Refusals are ordinary gameplay outcomes the UI must show; mirrors today's ApiResponse so the T5 port is mechanical; precedent ADR-033 (discriminated-union result)."
+        },
+        {
+          "decision": "Session is one mutable slot holding immutable snapshots, with subscribe/getSnapshot",
+          "rationale": "Same 'mutable location, immutable contents' principle as ADR-022 without Fastify; snapshot identity changes exactly when state changes, which React's useSyncExternalStore needs (T6)."
+        },
+        {
+          "decision": "Pending combat orders and the last fight result live in session state, not GameState",
+          "rationale": "They were route-plugin memory before (not saved); keeping them out of GameState leaves the save format unchanged."
+        },
+        {
+          "decision": "New game clears pending combat orders and the last fight result",
+          "rationale": "Designer decision 2026-10-23 (fix latent bug: stale orders survived a new game)."
+        },
+        {
+          "decision": "Fastify schema rules become explicit session validation with VALIDATION_ERROR",
+          "rationale": "Brief: rules and error outcomes match today, including ones that lived only in the server layer."
+        },
+        {
+          "decision": "Content (scenes, encounters, dialogues) is injectable with game data as the default",
+          "rationale": "Tests swap in fixtures; Sprint 7 adds town content the same way."
+        }
+      ],
+      "producer_notes": "Source of truth for every rule and message: src/api/game.ts, src/api/player.ts, src/api/npc.ts, and src/api/index.ts (globalErrorHandler) — read them before writing each operation and keep messages identical. Operations must never mutate: build new SessionState objects with spread; return the same `s` reference for reads and refusals so the holder does not notify. Wrap every engine call in try/catch → fromThrown so an engine throw can never escape a GameSession method. Do not import anything from src/api (it is deleted in T12). No console, window, or Node APIs (engine tsconfig forbids them). Follow the engine's `.js` import specifier style. getSnapshot must return the same object until a commit happens. Implement GameSession as a plain object of closures (not a class relying on this), so methods such as subscribe and getSnapshot can be passed unbound — T6 hands them straight to useSyncExternalStore."
+    },
+    {
+      "id": "T3",
+      "title": "Narrative and dialogue in the session",
+      "domain": "code/engine",
+      "experience_slices": [
+        "ES-3"
+      ],
+      "description": "Add the narrative and dialogue operations to the game session: start a scene, get the current scene (with personality gating), make a choice, read narrative state, reset narrative, read team synergy, start a dialogue with an NPC, and choose a dialogue option. Narrative matches today's routes except that starting a scene that does not exist is refused. Dialogue is fixed to work as the engine intended: the session owns each NPC's conversation, tracks the player's position in it on the game state, and returns real nodes — with a one-line placeholder greeting for Elena, Lars, and Kade until Sprint 7 writes their dialogue.",
+      "acceptance_criteria": [
+        "Making a narrative choice applies that choice's consequence before advancing the scene, exactly as today",
+        "Team synergy is calculated from the player's personality against all NPC personalities, as today",
+        "Error outcomes match today: no active game, no active narrative, unknown scene or choice, unknown NPC",
+        "Starting a scene that is not in the scene graph is refused with SCENE_NOT_FOUND and the game is unchanged",
+        "Starting a dialogue with Elena, Lars, or Kade returns their placeholder greeting node (id `<npcId>_greet`) with only the options the player's personality unlocks, and records it as the current dialogue node",
+        "Choosing a dialogue option uses the session's own tree, applies the same personality/NPC/log changes as today's engine, and moves the current dialogue node to the next node (or clears it when the conversation ends)",
+        "Choosing with no active conversation is refused with DIALOGUE_NOT_ACTIVE; unknown option, unavailable (gated) option, and missing node keep today's codes"
+      ],
+      "dependencies": [
+        "T2"
+      ],
+      "decisions": [],
+      "technical_approach": "operations/narrative.ts — port of src/api/narrative.ts using content.sceneGraph (defaultContent.sceneGraph = TEST_SCENE_GRAPH from src/narrative/fixtures.ts, exactly what the route uses today). startScene(sceneId): validate string ≤128 chars (VALIDATION_ERROR) → GAME_NOT_FOUND → NEW: scene id not in the scene graph ⇒ SCENE_NOT_FOUND `Scene \"${id}\" not found in scene graph` → initializeNarrative; returns narrativeState. getCurrentScene(): GAME_NOT_FOUND → NARRATIVE_NOT_STARTED 'Narrative has not been started' → getCurrentScene(narrativeState, personality, sceneGraph), null ⇒ SCENE_NOT_FOUND. makeChoice(choiceId): validate string ≤128 → GAME_NOT_FOUND → advanceNarrative(state, choiceId, sceneGraph); an error result maps to its code; on success look up the current scene and chosen choice, apply applyConsequence when the choice has one, THEN updateNarrativeState (consequence before advancing, exactly as today); returns { narrativeState, nextScene }. getNarrativeState() → { narrativeState } (may be null). resetNarrative() → clearNarrative, returns { narrativeState: null }. getSynergy() → calculateSynergy(player personality, personalities of Object.values(state.npcs) with a truthy personality — live NPC state, DEFAULT_PARADIGMS). operations/dialogue.ts — NEW behavior (designer decision 'fix everything'). Content: defaultContent.dialogues maps npcId → DialogueNode[] loaded from src/fixtures/dialogues/placeholders.json (import with `with { type: 'json' }`, same pattern as encounter.json). Placeholder content: for each of npc_scout_elena, npc_merchant_lars, npc_outlaw_kade one node `${npcId}_greet` (npcId set, text a single neutral line such as '<Name> nods in greeting.') with one ungated option { id: 'opt_farewell', text: 'Farewell.', nextNodeId: null }. Mark the file clearly as placeholder content for Sprint 7 to replace. The session builds a nodeId → { npcId, tree } index from content.dialogues at creation. startDialogue(npcId): GAME_NOT_FOUND → template getNPC(npcId) missing ⇒ NPC_NOT_FOUND (matches today) → tree missing or no `${npcId}_greet` node ⇒ DIALOGUE_NODE_NOT_FOUND (via engine getStartingNode) → set game.currentDialogueNode to the start node id (new state) → return { node, availableOptions: getAvailableOptions(node, personality) }. chooseDialogueOption(optionId): validate string → GAME_NOT_FOUND → currentDialogueNode null ⇒ DIALOGUE_NOT_ACTIVE (new code) → node id not in the index ⇒ DIALOGUE_NODE_NOT_FOUND → option not on node ⇒ DIALOGUE_OPTION_NOT_FOUND → gate not met ⇒ DIALOGUE_OPTION_NOT_AVAILABLE (checked by the session with engine helpers, so no message-text matching is needed) → processDialogueSelection(state, npcId, nodeId, optionId, tree) → set currentDialogueNode to nextNode?.id ?? null → return { state, nextNode, availableOptions (for nextNode, [] when ended), selectedOptionId }. Add engine updater `setCurrentDialogueNode(state, nodeId | null)` to src/state/stateUpdaters.ts following the updater pattern (spread + updateTimestamp). Add `DIALOGUE_NOT_ACTIVE` to ErrorCodes. Because currentDialogueNode is already part of GameState and save validation, a save taken mid-conversation resumes at the same node (verified in T8/T9). Wire all eight methods onto GameSession.",
+      "interfaces": "Receives: T2's SessionState/Outcome/result/validation/content pattern; engine initializeNarrative, updateNarrativeState, clearNarrative (stateUpdaters), getCurrentScene (narrative/sceneEngine), advanceNarrative (narrative/narrativeStateMachine), applyConsequence (narrative/choiceEngine), calculateSynergy (narrative/synergyCalculator), DEFAULT_PARADIGMS (fixtures/synergyConfig), getStartingNode, findNode, getAvailableOptions, evaluatePersonalityGate, processDialogueSelection (dialogue/dialogueEngine), getNPC (state/npcs). Produces GameSession methods startScene, getCurrentScene, makeChoice, getNarrativeState, resetNarrative, getSynergy, startDialogue, chooseDialogueOption. Sprint 7's dialogue UI consumes startDialogue/chooseDialogueOption and replaces placeholders.json with authored trees through SessionContent.dialogues.",
+      "files": [
+        {
+          "path": "src/session/operations/narrative.ts",
+          "purpose": "Scene start (with existence check), current scene, choice, state, reset, synergy"
+        },
+        {
+          "path": "src/session/operations/dialogue.ts",
+          "purpose": "Session-owned conversations: start returns the real opening node, choose advances by option and tracks position"
+        },
+        {
+          "path": "src/session/content.ts",
+          "purpose": "defaultContent.sceneGraph = TEST_SCENE_GRAPH; defaultContent.dialogues from placeholders.json"
+        },
+        {
+          "path": "src/fixtures/dialogues/placeholders.json",
+          "purpose": "Placeholder greeting + Farewell for Elena, Lars, Kade (Sprint 7 replaces)"
+        },
+        {
+          "path": "src/state/stateUpdaters.ts",
+          "purpose": "Add setCurrentDialogueNode updater (additive)"
+        },
+        {
+          "path": "src/types/index.ts",
+          "purpose": "Add DIALOGUE_NOT_ACTIVE to ErrorCodes"
+        },
+        {
+          "path": "src/session/gameSession.ts",
+          "purpose": "Wire the narrative and dialogue methods"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "Starting a scene that does not exist is refused with SCENE_NOT_FOUND",
+          "rationale": "Designer decision 2026-10-23 ('fix everything'); today the error only surfaced later on get-current."
+        },
+        {
+          "decision": "Dialogue is session-owned: trees come from content, position is tracked in GameState.currentDialogueNode, choose takes only the option id",
+          "rationale": "Designer decision 2026-10-23 ('fix everything'); replaces today's synthetic empty greeting and caller-supplied dialogue tree. Uses an existing, never-written GameState field, so the save format is unchanged and conversations resume from saves."
+        },
+        {
+          "decision": "One-line placeholder greeting with a single ungated Farewell for Elena, Lars, and Kade",
+          "rationale": "Designer chose placeholders over refusing conversations (2026-10-23). Ungated Farewell satisfies the no-dead-ends constraint; Sprint 7 replaces the text."
+        },
+        {
+          "decision": "Session pre-checks dialogue node/option/gate with engine helpers instead of matching error message text",
+          "rationale": "Same error codes as today without depending on message wording."
+        },
+        {
+          "decision": "Scene graph stays TEST_SCENE_GRAPH",
+          "rationale": "That is what the game uses today; switching to act1_demo.json would be a gameplay change (out of scope)."
+        }
+      ],
+      "producer_notes": "Port narrative from src/api/narrative.ts line by line; keep messages identical. The consequence-before-advance order in makeChoice is load-bearing (choice flags gate later scenes). Placeholder dialogue text must be neutral and obviously temporary — no lore, no personality adjustments, no NPC adjustments, no gates; label the file as placeholder in a top-level JSON field (e.g. \"_note\") or keep the note in content.ts if the loader is strict. Run validateDialogueTree over defaultContent.dialogues in a test so no placeholder ever becomes a dead end. Do not change processDialogueSelection or other engine behavior; the only engine addition is setCurrentDialogueNode."
+    },
+    {
+      "id": "T4",
+      "title": "Combat in the session",
+      "domain": "code/engine",
+      "experience_slices": [
+        "ES-3"
+      ],
+      "description": "Add the combat operations to the game session: start an encounter from the available encounter configurations, declare player actions, advance a round, and read combat visual state, round history, and result. Matches today's routes, with the fixes the designer approved: a fully refused declaration changes nothing, starting a fight while one is running is refused, and the last fight's result stays readable after it ends.",
+      "acceptance_criteria": [
+        "Declaring actions validates each one; a rejected action with a fallback (e.g., group action falling back to attack) is replaced by its fallback; a new declaration replaces the previous one; a declaration where every action is rejected is refused and leaves the previous declaration in place",
+        "Advancing a round resolves it with the pending declarations, clears them, syncs the result into the game, and ends combat on victory or defeat",
+        "The combat visual state does not reveal enemy decisions, matching today",
+        "Error outcomes match today: no active game, no active combat, unknown encounter, all declarations invalid",
+        "Starting an encounter while combat is active is refused with COMBAT_ALREADY_ACTIVE",
+        "After a fight ends in victory or defeat, reading the combat result returns that outcome until the next encounter, new game, or load"
+      ],
+      "dependencies": [
+        "T2",
+        "T3"
+      ],
+      "decisions": [],
+      "technical_approach": "operations/combat.ts — port of src/api/combat.ts. Encounters: move ENCOUNTER_REGISTRY (encounter_demo from src/fixtures/encounter.json via `with { type: 'json' }`, plus the inline encounter_test) to src/session/encounters.ts and set defaultContent.encounters to it. Pending declarations live in SessionState.pendingDeclarations (replacing the route plugin's module-level variable). Move COMBAT_ERROR_CODES into ErrorCodes: NO_ACTIVE_COMBAT, COMBAT_INVALID_DECLARATION, ENCOUNTER_NOT_FOUND, plus new COMBAT_ALREADY_ACTIVE. startEncounter(encounterId): validate string → GAME_NOT_FOUND → not in content.encounters ⇒ ENCOUNTER_NOT_FOUND `Encounter '${id}' not found in registry` → NEW: game.combatState !== null ⇒ COMBAT_ALREADY_ACTIVE → initCombatState + syncToGameState; pendingDeclarations [] and lastCombatOutcome null; returns { encounterId, round, status }. declareActions(actions): validate like the old schema (array, ≤10 items, each object with string combatantId and string type, optional targetId string|null, optional finite-number energySegments, no other keys) ⇒ VALIDATION_ERROR → GAME_NOT_FOUND → NO_ACTIVE_COMBAT 'No active combat encounter' → for each action normalize targetId (undefined → null) and include energySegments only when defined, run validateDeclaration; valid ⇒ accepted; invalid ⇒ rejected entry, and if the result has a fallback the fallback is accepted in its place → if actions.length > 0 and accepted.length === 0 ⇒ COMBAT_INVALID_DECLARATION 'All declarations were invalid' with details { rejected } and pendingDeclarations UNCHANGED (fix) → otherwise pendingDeclarations = accepted (an empty actions array clears them, as today); returns { accepted, rejected }. advanceRound(): GAME_NOT_FOUND → NO_ACTIVE_COMBAT → runRound(combatState, pendingDeclarations) → clear pending → syncToGameState → if status !== 'active': endCombat(newState, status) and lastCombatOutcome = { status, round: resolved.round } → return { ...buildVisualInfo(resolved, []), round, status } (empty declarations, as today). getCombatView(): GAME_NOT_FOUND → NO_ACTIVE_COMBAT → buildVisualInfo(combatState, pendingDeclarations) (enemy decisions stay hidden — that logic is inside buildVisualInfo). getRoundHistory(): GAME_NOT_FOUND → NO_ACTIVE_COMBAT → combatState.roundHistory. getCombatResult(): GAME_NOT_FOUND → combat active ⇒ { status: 'active', round } → else lastCombatOutcome ⇒ that outcome (fix: final result readable after the fight) → else NO_ACTIVE_COMBAT. Wire methods onto GameSession.",
+      "interfaces": "Receives: T2 session pattern; engine initCombatState, syncToGameState, endCombat (combat/sync), validateDeclaration (combat/declaration), runRound and buildVisualInfo (combat/roundManager), EncounterConfig/CombatAction types. Produces GameSession methods startEncounter, declareActions, advanceRound, getCombatView, getRoundHistory, getCombatResult; src/session/encounters.ts registry. Sprint 8's combat UI consumes these.",
+      "files": [
+        {
+          "path": "src/session/operations/combat.ts",
+          "purpose": "Encounter start, declarations with fallback substitution, round resolution, view, history, result"
+        },
+        {
+          "path": "src/session/encounters.ts",
+          "purpose": "Encounter registry moved from src/api/combat.ts (encounter_demo JSON + encounter_test)"
+        },
+        {
+          "path": "src/session/content.ts",
+          "purpose": "defaultContent.encounters = registry"
+        },
+        {
+          "path": "src/types/index.ts",
+          "purpose": "Add NO_ACTIVE_COMBAT, COMBAT_INVALID_DECLARATION, ENCOUNTER_NOT_FOUND, COMBAT_ALREADY_ACTIVE to ErrorCodes"
+        },
+        {
+          "path": "src/session/gameSession.ts",
+          "purpose": "Wire the combat methods"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "A fully refused declaration leaves the previous pending orders intact",
+          "rationale": "Designer decision 2026-10-23; today the store was overwritten before the 422, so the next round ran with no player actions."
+        },
+        {
+          "decision": "Starting a fight while one is running is refused with COMBAT_ALREADY_ACTIVE",
+          "rationale": "Designer decision 2026-10-23 ('fix everything')."
+        },
+        {
+          "decision": "The last fight's outcome stays readable from getCombatResult until the next fight, new game, or load; it is not saved",
+          "rationale": "Designer decision 2026-10-23; today endCombat cleared combatState so /result always reported no active combat after a fight."
+        },
+        {
+          "decision": "Refused declarations carry the rejected entries in error.details",
+          "rationale": "The combat UI (Sprint 8) needs the reasons; additive to today's code and message."
+        },
+        {
+          "decision": "Starting a fight during a narrative scene stays allowed",
+          "rationale": "Not flagged as a bug; scenes are expected to lead into fights. Unchanged from today."
+        }
+      ],
+      "producer_notes": "Port from src/api/combat.ts (declare logic around lines 274-388, round 396-446). Keep messages identical. Do not pass rollFn — the engine's Math.random default is today's behavior; deterministic tests inject rolls at the engine level as they do now. Keep the targetId normalization and the energySegments-only-when-defined detail exactly; validateDeclaration depends on them. The registry entry encounter_test is used by tests — keep it."
+    },
+    {
+      "id": "T5",
+      "title": "Port the server-based tests to the session",
+      "domain": "test/engine",
+      "experience_slices": [
+        "ES-3"
+      ],
+      "description": "The tests that currently drive the engine through the HTTP server (Sprint 1 and Sprint 4 integration suites, combat end-to-end suite) are rewritten to drive the in-client game session instead, so every behavior they protect stays protected after the server is gone. Where the designer approved a fix (refused declarations, already-active combat, result after a fight, unknown scenes, session-owned dialogue, clean new game), the ported test asserts the fixed behavior. Save/load portions of these suites are ported in T9 against the session's save operations.",
+      "acceptance_criteria": [
+        "Every behavior the server-based suites check today is checked against the game session, minus HTTP-only concerns (status codes, request-body shape) and the save/load portions owned by T9",
+        "The route-only rules moved in T2–T4 are each covered by at least one test",
+        "Each approved fix (refused declaration keeps previous orders, new game clears orders and last result, result readable after a fight, unknown scene refused, already-active combat refused, session-owned dialogue) has at least one test asserting the fixed behavior; the load-clears-orders fix is tested in T9",
+        "The full engine test suite passes without starting or importing the server"
+      ],
+      "dependencies": [
+        "T2",
+        "T3",
+        "T4"
+      ],
+      "decisions": [
+        {
+          "tier": "USER",
+          "description": "No developer debug panel or console hook for combat/narrative/dialogue this sprint; automated tests are the only way these systems are exercised until their UI lands in Sprints 7–8",
+          "rationale": "Decided by the designer during compose (2026-10-23) — avoids throwaway UI that Sprints 7–8 would replace"
+        }
+      ],
+      "technical_approach": "Vitest 'engine' project (node environment). New files: tests/session.sprint1.test.ts (port of tests/sprint1.integration.test.ts), tests/session.sprint4.test.ts (port of tests/sprint4.integration.test.ts), tests/session.combat-e2e.test.ts (port of src/combat/e2e.test.ts). Each test creates its own session with createGameSession() (fresh per test via beforeEach) and asserts on SessionResult: `body.success` → `result.ok`, `body.data` → `result.data`, `body.error.code` → `result.error.code`. Drop HTTP-only checks: status codes, the /health test, JSON parsing, route paths. Keep checks for rules that used to be request-schema validation — they are now session rules (VALIDATION_ERROR). Dialogue gate tests that posted a dialogueTree now inject a test tree via createGameSession({ content: { dialogues: { npc_scout_elena: <tree built in the test using the TEST_DIALOGUE_TREE shape, node ids prefixed npc_scout_elena_> } } }). The Sprint 1 'dialogue start' tests now expect the placeholder node (same `<npcId>_greet` id) with its Farewell option. The save/load describes (Sprint 1 save/load flow, Sprint 4 GET /saves and DELETE /saves/:slot) are NOT ported here — T9 owns them. Unit tests for the session itself, co-located: src/session/gameSession.test.ts (snapshot immutability — earlier snapshots unaltered after operations; subscribe notifies once per change and never on refusals/reads; new game clears pending orders and last outcome; engine throw → INTERNAL_ERROR with state unchanged), src/session/validation.test.ts (every former schema rule), src/session/operations/combat.test.ts (fallback substitution, refused declaration keeps previous orders, COMBAT_ALREADY_ACTIVE, result after victory/defeat, view hides enemy decisions), src/session/operations/narrative.test.ts (unknown scene refused, consequence before advance), src/session/operations/dialogue.test.ts (start/choose/position tracking/end of conversation/DIALOGUE_NOT_ACTIVE/gated option, validateDialogueTree passes for defaultContent.dialogues), src/session/operations/player.test.ts (team locks during combat and narrative, team must be two companions). Run: `npm test` (all projects) or `npx vitest run --project engine`.",
+      "interfaces": "Exercises GameSession from src/session/index.ts (T2-T4). Uses engine fixtures: src/dialogue/fixtures.ts, src/narrative/fixtures.ts, src/fixtures/encounter.json, encounter_test via defaultContent.encounters.",
+      "files": [
+        {
+          "path": "tests/session.sprint1.test.ts",
+          "purpose": "Sprint 1 integration suite ported to the session (minus save/load and HTTP-only checks)"
+        },
+        {
+          "path": "tests/session.sprint4.test.ts",
+          "purpose": "Sprint 4 integration suite ported (personality, team, NPC live state; saves go to T9)"
+        },
+        {
+          "path": "tests/session.combat-e2e.test.ts",
+          "purpose": "3v3 demo encounter end-to-end scenarios ported to the session"
+        },
+        {
+          "path": "src/session/gameSession.test.ts",
+          "purpose": "Holder behavior: immutability, notifications, fresh-start, INTERNAL_ERROR"
+        },
+        {
+          "path": "src/session/validation.test.ts",
+          "purpose": "Former request-schema rules"
+        },
+        {
+          "path": "src/session/operations/player.test.ts",
+          "purpose": "Route-only player/team rules"
+        },
+        {
+          "path": "src/session/operations/narrative.test.ts",
+          "purpose": "Route-only narrative rules and scene existence fix"
+        },
+        {
+          "path": "src/session/operations/dialogue.test.ts",
+          "purpose": "Session-owned dialogue behavior and placeholder validity"
+        },
+        {
+          "path": "src/session/operations/combat.test.ts",
+          "purpose": "Route-only combat rules and the approved fixes"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "Ported suites live in tests/ beside the originals until T12 deletes the HTTP versions",
+          "rationale": "Side-by-side lets reviewers confirm every original check has a session counterpart before the server is removed."
+        },
+        {
+          "decision": "Save/load portions of the HTTP suites are ported in T9, not here",
+          "rationale": "They need T8's save operations; T5 depends only on T2-T4."
+        },
+        {
+          "decision": "No developer debug panel or console hook for combat/narrative/dialogue this sprint; automated tests are the only way these systems are exercised until their UI lands in Sprints 7–8",
+          "rationale": "Decided by the designer during compose (2026-10-23) — avoids throwaway UI that Sprints 7–8 would replace"
+        }
+      ],
+      "producer_notes": "Go describe-by-describe through each original file and keep a one-to-one mapping (same describe names where possible) so coverage parity is reviewable; list any dropped test with its reason (HTTP-only, or moved to T9) in a comment block at the top of each ported file. Do not import buildApp, fastify, or anything under src/api. Do not delete the original HTTP suites — T12 does. For the e2e determinism scenario keep the same intent (two fresh sessions both complete without errors). Don't test engine internals already covered by the engine's own unit tests."
+    },
+    {
+      "id": "T6",
+      "title": "HUD runs on the in-client game",
+      "domain": "code/frontend",
+      "experience_slices": [
+        "ES-1"
+      ],
+      "description": "The client's game-state provider uses the in-client game session instead of calling the server. Opening or reloading the game starts a new game. The HUD and team selection behave exactly as they do now, including loading and error display. The client's HTTP request code is removed.",
+      "acceptance_criteria": [
+        "Opening or reloading the game starts a new game and the HUD shows it, with no server running",
+        "Choosing a team updates the HUD exactly as today, and a refused team change shows in the error banner as today",
+        "The game makes no network requests to run",
+        "Running the dev app under StrictMode creates exactly one game per page load"
+      ],
+      "dependencies": [
+        "T1",
+        "T2"
+      ],
+      "decisions": [
+        {
+          "tier": "USER",
+          "description": "Reload starts a fresh game; the current game is not kept between page loads outside the save slots",
+          "rationale": "Decided by the designer during compose (2026-10-23). Intentional change: today a reload keeps the game because the server holds it in memory"
+        }
+      ],
+      "technical_approach": "React 19 + the T2 session. Composition root src/ui/appSession.ts: `createAppSession(): GameSession` calls createGameSession() (T8 later adds the browser save store here) and then session.newGame(), so opening or reloading the page always starts a fresh game (designer decision). src/main.tsx: `const session = createAppSession()` at module scope, then render `<StrictMode><App session={session} /></StrictMode>` — the session lives outside React, so StrictMode double effects and component Fast Refresh never create a second game; editing session/engine modules triggers a full reload (fresh game), which is expected. src/ui/App.tsx takes a `session: GameSession` prop and passes it to `<GameStateProvider session={session}>`. src/ui/context/GameStateContext.tsx is rewritten: `GameStateProvider({ session, children })` reads `const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot)`; gameState = snapshot.game; npcs = useMemo(Object.values(gameState.npcs) or []); loading = gameState === null; error = local useState<string | null>; setTeam(npcIds) keeps its async signature (TeamSelector awaits it): calls session.setTeam(npcIds) and, when the result is a refusal, sets error to result.error.message (same banner as today); dismissError clears it. refreshState is removed (no consumer outside the provider; snapshots replace refetching). useGameState() keeps throwing outside the provider. The context value shape seen by components is otherwise unchanged: gameState, npcs, loading, error, setTeam, dismissError — EquinoxHUD and TeamSelector need no changes. Delete src/ui/api/apiClient.ts and src/ui/api/apiClient.test.ts. After this task nothing under src/ calls fetch or references /api paths.",
+      "interfaces": "Receives: GameSession (getSnapshot, subscribe, newGame, setTeam) from src/session (T2); engine types from src/types. Produces: createAppSession() (T8 adds saves; T7 tests use it), App with a `session` prop (T11 adds the stage layer to App), GameStateProvider with a `session` prop and the unchanged useGameState() contract.",
+      "files": [
+        {
+          "path": "src/ui/appSession.ts",
+          "purpose": "Composition root: create the session and start a new game"
+        },
+        {
+          "path": "src/main.tsx",
+          "purpose": "Create the session once at module scope and render App with it"
+        },
+        {
+          "path": "src/ui/App.tsx",
+          "purpose": "Accept the session prop and pass it to the provider"
+        },
+        {
+          "path": "src/ui/context/GameStateContext.tsx",
+          "purpose": "Provider reads the session via useSyncExternalStore; refusals go to the error banner"
+        },
+        {
+          "path": "src/ui/api/apiClient.ts",
+          "purpose": "Delete (HTTP request code)"
+        },
+        {
+          "path": "src/ui/api/apiClient.test.ts",
+          "purpose": "Delete (tests for removed HTTP code)"
+        },
+        {
+          "path": "src/ui/context/GameStateContext.test.tsx",
+          "purpose": "Minimal port off the deleted apiClient mocks onto a real session so the suite stays green (T7 completes coverage)"
+        },
+        {
+          "path": "src/ui/components/EquinoxHUD.test.tsx",
+          "purpose": "Drop refreshState from mocked context values so it still type-checks (T7 rewrites these tests)"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "Reload starts a fresh game; the current game is not kept between page loads outside the save slots",
+          "rationale": "Decided by the designer during compose (2026-10-23). Intentional change: today a reload keeps the game because the server holds it in memory"
+        },
+        {
+          "decision": "The new game starts in the app's composition root, not inside a React effect",
+          "rationale": "One game per page load regardless of StrictMode double effects; no loading flash; Fast Refresh keeps the current game while editing components."
+        },
+        {
+          "decision": "Provider subscribes to the session with useSyncExternalStore and the session is passed in as a prop",
+          "rationale": "Idiomatic React 19 binding to an external store; tests inject their own session."
+        },
+        {
+          "decision": "Provider's public contract stays the same except refreshState is dropped",
+          "rationale": "Brief: the HUD looks and behaves exactly as before; refreshState had no consumer once state changes push automatically."
+        }
+      ],
+      "producer_notes": "Do not change EquinoxHUD, TeamSelector, or any component's markup or CSS. `npm run verify` must stay green after this task: port GameStateContext.test.tsx off the deleted apiClient mocks onto a real session (createGameSession() + newGame()) with at least the existing cases, and remove refreshState from any mocked context value in EquinoxHUD.test.tsx (tests are type-checked by tsc -b). T7 then completes and extends the coverage. GameSession methods are closures (T2), so passing session.subscribe and session.getSnapshot directly to useSyncExternalStore is safe. Keep UI files' extensionless import style."
+    },
+    {
+      "id": "T7",
+      "title": "Client tests on the in-client game",
+      "domain": "test/frontend",
+      "experience_slices": [
+        "ES-1"
+      ],
+      "description": "The client's provider, HUD, and team selector tests exercise the real in-client game instead of faking HTTP responses. Tests for the removed HTTP request code are retired.",
+      "acceptance_criteria": [
+        "Automated tests cover new game on open, team selection updating the HUD, and refused actions surfacing as errors — and pass",
+        "No client test depends on faked network responses",
+        "A test proves the running game makes zero fetch calls"
+      ],
+      "dependencies": [
+        "T3",
+        "T4",
+        "T6"
+      ],
+      "decisions": [],
+      "technical_approach": "Vitest 'ui' project (jsdom) with @testing-library/react and user-event. Complete src/ui/context/GameStateContext.test.tsx (T6 already moved it onto a real session): build one with createGameSession() + newGame() (or createGameSession() alone for the no-game/loading case), render the provider with a small consumer, and assert: the game is present on render; setTeam with two joinable companions updates gameState.team; a refused setTeam (call session.startEncounter('encounter_demo') first, then setTeam → 'Cannot change team during combat') sets error; dismissError clears it; useGameState outside the provider throws. Rewrite the state-driven cases in src/ui/components/EquinoxHUD.test.tsx to render through the real provider and session instead of mocking useGameState: player name and personality shown; TeamSelector enabled with no fight or scene; combat readouts (stamina/energy) appear after session.startEncounter('encounter_demo') and the TeamSelector is disabled; TeamSelector disabled during a narrative scene (session.startScene with a scene id from TEST_SCENE_GRAPH); loading screen when the session has no game. Add src/ui/App.test.tsx: render <App session={createAppSession()} /> and assert the HUD shows 'Kael' on open; pick two companions through the TeamSelector with user-event and confirm; the HUD shows the new team; a fetch spy installed with vi.stubGlobal('fetch', vi.fn()) is never called. Leave the pure component tests (StaminaBar, EnergyDisplay, PersonalityBreakdown, ErrorBanner, TeamSelector) as they are. Run with `npm test` or `npx vitest run --project ui`.",
+      "interfaces": "Exercises GameStateProvider/useGameState, EquinoxHUD, App, createAppSession (T6) over the real GameSession (T2-T4).",
+      "files": [
+        {
+          "path": "src/ui/context/GameStateContext.test.tsx",
+          "purpose": "Provider tests over a real session"
+        },
+        {
+          "path": "src/ui/components/EquinoxHUD.test.tsx",
+          "purpose": "HUD state-driven tests through the real provider and session"
+        },
+        {
+          "path": "src/ui/App.test.tsx",
+          "purpose": "Open → new game, team selection end-to-end, no network"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "UI tests drive the real in-client game; mocks only for purely visual components",
+          "rationale": "T7 requirement: no client test depends on faked network responses; real-session tests catch session/UI drift."
+        }
+      ],
+      "producer_notes": "Use a fresh session per test. After T8, createAppSession attaches browser storage — App.test does not save, but if it ever does, clear ancient-order/ keys from jsdom localStorage in afterEach. After T11 adds the scene stage to App, App.test must pass a fake renderer factory (see T10/T11); if T11 lands first, follow its notes. Restore stubbed globals with vi.unstubAllGlobals() in afterEach."
+    },
+    {
+      "id": "T8",
+      "title": "Local save storage",
+      "domain": "code/persistence",
+      "experience_slices": [
+        "ES-2"
+      ],
+      "description": "Save storage that lives on the player's machine instead of server disk: save the current game to a slot, load a slot as the active game, list all slots with their status, and delete a slot. Keeps today's 10 slots, save validation, and older-save normalization, behind an async storage interface so a desktop file backend can replace browser storage later. Saves use a labeled, versioned format with kind-namespaced keys so autosaves can sit beside manual slots later. Fixes today's save quirks (designer approved): broken files report as corrupted, the save time is consistent, damaged slots list as corrupted, invalid game data is refused at save time, and a full storage is a clear refusal. No UI this sprint.",
+      "acceptance_criteria": [
+        "A game saved to any of slots 1–10 loads back as an identical active game, and survives closing and reopening the browser",
+        "Listing shows all 10 slots with their status and save details; deleting empties a slot; out-of-range slots and empty slots are refused as today",
+        "A corrupted save is reported as an error rather than loaded or crashing the game, and older saves missing newer fields load with today's defaults",
+        "A save with invalid JSON, a wrong format tag, or an unsupported version is reported as VALIDATION_ERROR on load and listed with status 'corrupted'",
+        "The timestamp returned when saving equals the timestamp shown in the slot listing",
+        "Saving a game that fails validation is refused with VALIDATION_ERROR and nothing is written",
+        "A storage write failure is refused with STORAGE_ERROR and the game keeps running",
+        "Loading a save clears pending combat orders and the last fight result",
+        "A game saved mid-conversation resumes at the same dialogue node after loading",
+        "Persistence code contains no references to window, localStorage, fs, or other platform globals"
+      ],
+      "dependencies": [
+        "T2",
+        "T3",
+        "T4",
+        "T6"
+      ],
+      "decisions": [
+        {
+          "tier": "USER",
+          "description": "Save storage is built this sprint with no save/load UI; long-term saving is a mix of autosaves and manual save slots",
+          "rationale": "Decided by the designer during compose (2026-10-23) — the demo loop fits within one play session, so no in-game saving is needed yet"
+        }
+      ],
+      "technical_approach": "Rewrite src/persistence/ as a platform-neutral module (engine tsconfig: no DOM/Node globals). Layer 1 — backends (src/persistence/backends.ts): `SaveBackend = { read(key): Promise<string | null>; write(key, value): Promise<void>; remove(key): Promise<void> }`; `createMemoryBackend()` (Map-based, for tests and as the session's default); `createWebStorageBackend(storage: StorageLike)` where `StorageLike = { getItem(k): string | null; setItem(k, v): void; removeItem(k): void }` is declared locally (no DOM types) and the real window.localStorage is passed in by the app. A write that throws (QuotaExceededError or any storage failure) is rethrown as a coded Error STORAGE_ERROR 'Not enough storage space to save' (quota) or 'Save storage is unavailable' (other). Layer 2 — format (src/persistence/saveFormat.ts): envelope `{ format: 'ancient-order-save', version: 1, kind: 'manual', slot, savedAt: number, playerName: string, game: GameState }`; key scheme `ancient-order/saves/<kind>/<slot>` (only kind 'manual', slots 1-10, this sprint; 'auto' reserved); `parseSave(raw)` → envelope or a corrupted reason (invalid JSON, wrong format tag, unsupported version, invalid game); `normalizeOlderSave(game)` applies today's defaults — missing narrativeState → null, missing team → [], missing reactionProgress → {} — after validation, exactly as loadGame does today; version gate leaves room for future migrations. Layer 3 — validation (src/persistence/validation.ts): move validateGameState and ValidationResult verbatim from src/persistence/saveLoad.ts (all seven phases, personality range 5-35 and sum 100 ± 0.01). Layer 4 — store (src/persistence/saveStore.ts): `createSaveStore(backend): SaveStore` with async `save(slot, game): Promise<SaveMetadata>`, `load(slot): Promise<GameState>`, `list(): Promise<SaveSlotInfo[]>`, `remove(slot): Promise<void>`; slots MIN_SLOT 1 / MAX_SLOT 10; it throws coded Errors following the engine convention (INVALID_SLOT, SAVE_NOT_FOUND, VALIDATION_ERROR, STORAGE_ERROR) which the session maps with fromThrown. `SaveMetadata = { slot, timestamp, playerName }` (timestamp = the envelope's savedAt, so save and list agree — fix). `SaveSlotInfo = { slot, exists: boolean, status: 'empty' | 'saved' | 'corrupted', metadata?: SaveMetadata }` — exists stays true only for loadable saves (today's meaning); status distinguishes damaged slots (fix). save validates the game first and refuses invalid state with VALIDATION_ERROR (fix). load: missing → SAVE_NOT_FOUND; invalid JSON or envelope or game → VALIDATION_ERROR `Save file in slot N is corrupted: <reasons>` (fix for invalid JSON, per ADR-043). Barrel src/persistence/index.ts. Session wiring (src/session/operations/saves.ts, async): saveToSlot(slot), loadFromSlot(slot), listSlots(), deleteSlot(slot). Order: slot rule first (integer 1-10 else INVALID_SLOT 'Slot must be an integer between 1 and 10' — the route message), then GAME_NOT_FOUND where a game is needed (save only), then the store. saveToSlot returns SaveMetadata; loadFromSlot commits startFresh(loadedGame) — clears pending combat orders and last fight result (designer fix) — and returns the GameState; listSlots returns 10 SaveSlotInfo; deleteSlot returns { slot, deleted: true } and never touches the active game. createGameSession's `saves` option takes a SaveStore; default createSaveStore(createMemoryBackend()). Add STORAGE_ERROR to ErrorCodes. App wiring: in the app's session creation (src/ui/appSession.ts from T6) pass `saves: createSaveStore(createWebStorageBackend(window.localStorage))`; if accessing window.localStorage throws (storage disabled), fall back to the memory backend.",
+      "interfaces": "Receives: GameState and ErrorCodes (src/types), T2's session holder, startFresh, and fromThrown; T6's src/ui/appSession.ts composition root. Produces: SaveStore/SaveBackend interfaces and createSaveStore, createMemoryBackend, createWebStorageBackend (src/persistence/index.ts); GameSession methods saveToSlot, loadFromSlot, listSlots, deleteSlot. A future desktop build adds a file-based SaveBackend; a future save UI and autosave use these methods and the reserved 'auto' kind.",
+      "files": [
+        {
+          "path": "src/persistence/backends.ts",
+          "purpose": "SaveBackend interface, memory backend, web-storage backend over an injected StorageLike"
+        },
+        {
+          "path": "src/persistence/saveFormat.ts",
+          "purpose": "Versioned save envelope, key scheme, parse, older-save normalization"
+        },
+        {
+          "path": "src/persistence/validation.ts",
+          "purpose": "validateGameState + ValidationResult moved verbatim from saveLoad.ts"
+        },
+        {
+          "path": "src/persistence/saveStore.ts",
+          "purpose": "Slot rules, save/load/list/remove over a backend"
+        },
+        {
+          "path": "src/persistence/index.ts",
+          "purpose": "Public barrel"
+        },
+        {
+          "path": "src/session/operations/saves.ts",
+          "purpose": "Async session save/load/list/delete operations"
+        },
+        {
+          "path": "src/session/gameSession.ts",
+          "purpose": "Accept the saves option (default memory store) and wire the four save methods"
+        },
+        {
+          "path": "src/ui/appSession.ts",
+          "purpose": "Pass the browser save store when the app creates its session"
+        },
+        {
+          "path": "src/types/index.ts",
+          "purpose": "Add STORAGE_ERROR to ErrorCodes"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "Save storage is built this sprint with no save/load UI; long-term saving is a mix of autosaves and manual save slots",
+          "rationale": "Decided by the designer during compose (2026-10-23) — the demo loop fits within one play session, so no in-game saving is needed yet"
+        },
+        {
+          "decision": "localStorage behind an async backend interface (not IndexedDB)",
+          "rationale": "Ten 10-100 KB slots fit comfortably; IndexedDB adds complexity and a test dependency for capacity not needed; the desktop build will use a file backend through the same interface."
+        },
+        {
+          "decision": "Versioned, labeled save envelope with kind-namespaced keys",
+          "rationale": "Room for autosaves beside manual slots and for future save migrations without reworking storage (T8 requirement)."
+        },
+        {
+          "decision": "Fix save quirks: invalid JSON reported as corrupted (VALIDATION_ERROR), one consistent save timestamp, damaged slots listed as corrupted, invalid game refused at save time, storage-full refusal (STORAGE_ERROR)",
+          "rationale": "Designer approved 2026-10-23 alongside the Group 2 'fix everything' direction."
+        },
+        {
+          "decision": "Loading a save clears pending combat orders and the last fight result",
+          "rationale": "Designer decision 2026-10-23 (Group 2 fix)."
+        },
+        {
+          "decision": "Persistence throws coded errors; the session converts them to results",
+          "rationale": "Keeps persistence a close port of saveLoad.ts and the engine's error convention; one place (session) produces player-facing results."
+        },
+        {
+          "decision": "No navigator.storage.persist() request this sprint",
+          "rationale": "Firefox shows a permission prompt; the web build is for pitching and durable saves arrive with the desktop file backend."
+        }
+      ],
+      "producer_notes": "Port validateGameState byte-for-byte; T9 ports its 74-test suite and those must pass unchanged except for file paths. Keep the persistence module free of DOM and Node types: the only place window.localStorage is touched is src/ui/appSession.ts. Every backend call is awaited even though localStorage is synchronous — the async shape is what lets the file backend drop in. Do not delete src/persistence/saveLoad.ts here; T12 deletes it with the server (the old routes still import it until then). Name new files so they do not collide with saveLoad.ts."
+    },
+    {
+      "id": "T9",
+      "title": "Save storage tests",
+      "domain": "test/persistence",
+      "experience_slices": [
+        "ES-2"
+      ],
+      "description": "Automated tests for local save storage and the session's save operations, replacing the current tests that write to server disk — including the save/load portions of the old HTTP suites and the save round-trips inside the combat sync and narrative integration tests.",
+      "acceptance_criteria": [
+        "Automated tests cover save/load round-trip, listing, deleting, slot bounds, empty-slot load, corrupted saves, and older-save normalization — and pass",
+        "Running the save tests leaves no saved data behind on the developer's machine",
+        "Each save fix (corrupted JSON, consistent timestamp, corrupted listing status, validation on save, storage failure, load clears combat orders) has a test",
+        "The save/load checks from the old HTTP suites have session counterparts",
+        "No test in src/persistence, src/session, or tests/session.* imports fs, os, or path"
+      ],
+      "dependencies": [
+        "T8"
+      ],
+      "decisions": [],
+      "technical_approach": "Vitest. Engine project (node): src/persistence/validation.test.ts — port of the validateGameState describes from src/persistence/saveLoad.test.ts (basic, personality depth, combat depth, team, narrative depth, ValidationResult shape) unchanged except imports; src/persistence/saveStore.test.ts — round-trip for every slot, slot independence, listing (10 entries, status/exists/metadata), remove, slot bounds (0, 11, non-integer), empty-slot load and delete (SAVE_NOT_FOUND), corrupted saves (invalid JSON, wrong format tag, unsupported version, invalid game) on load and in listing, older-save normalization (game missing narrativeState/team/reactionProgress loads with null/[]/{}), validation on save (nothing written), matching timestamps, write failure → STORAGE_ERROR via a backend whose write throws; all over createMemoryBackend(), so nothing touches the developer's machine; src/persistence/backends.test.ts — createWebStorageBackend over a Map-based fake StorageLike, including quota-error mapping; src/session/operations/saves.test.ts — session save/load/list/delete rules and messages, save with no game → GAME_NOT_FOUND, load clears pending combat orders and last fight result, a game saved mid-conversation resumes at the same dialogue node; tests/session.saves.test.ts — port of the save/load describes from tests/sprint1.integration.test.ts and the GET /saves and DELETE /saves/:slot describes from tests/sprint4.integration.test.ts. Rewrite the save round-trip portions of src/combat/sync.test.ts and src/narrative/integration.test.ts to use createSaveStore(createMemoryBackend()) instead of temp directories, removing their fs/os/path imports. UI project (jsdom): src/ui/webStorageBackend.test.ts — createWebStorageBackend against jsdom's real window.localStorage; clear only the ancient-order/ keys in afterEach. It lives under src/ui/ so it is type-checked with the DOM lib (tsconfig.app.json) and picked up by the existing ui project; no config changes are needed. Run with `npm test`.",
+      "interfaces": "Exercises src/persistence/index.ts (T8) and GameSession save methods (T8 on T2's holder).",
+      "files": [
+        {
+          "path": "src/persistence/validation.test.ts",
+          "purpose": "Ported validateGameState suite"
+        },
+        {
+          "path": "src/persistence/saveStore.test.ts",
+          "purpose": "Save store behavior over the memory backend"
+        },
+        {
+          "path": "src/persistence/backends.test.ts",
+          "purpose": "Web-storage backend over a fake StorageLike"
+        },
+        {
+          "path": "src/ui/webStorageBackend.test.ts",
+          "purpose": "Web-storage backend against jsdom's localStorage (DOM-typed, ui project)"
+        },
+        {
+          "path": "src/session/operations/saves.test.ts",
+          "purpose": "Session save operations and the load-clears-combat fix"
+        },
+        {
+          "path": "tests/session.saves.test.ts",
+          "purpose": "Save/load portions of the Sprint 1 and Sprint 4 HTTP suites, ported"
+        },
+        {
+          "path": "src/combat/sync.test.ts",
+          "purpose": "Replace temp-dir save round-trip with the memory store"
+        },
+        {
+          "path": "src/narrative/integration.test.ts",
+          "purpose": "Replace temp-dir save round-trip with the memory store"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "Save tests run on an in-memory backend; only one jsdom test touches localStorage and cleans its own keys",
+          "rationale": "T9 requirement: running the save tests leaves no saved data behind on the developer's machine."
+        }
+      ],
+      "producer_notes": "Do not delete src/persistence/saveLoad.test.ts or the HTTP suites — T12 does. After rewriting sync.test.ts and narrative/integration.test.ts, they no longer need Node types; T12 moves them out of the interim server tsconfig. Keep describe names aligned with the originals so coverage parity is reviewable."
+    },
+    {
+      "id": "T10",
+      "title": "Scene renderer",
+      "domain": "code/frontend",
+      "experience_slices": [
+        "ES-4"
+      ],
+      "description": "Add the game-rendering framework to the client. It starts with the game, runs one empty scene, can be told which scene to show (so Sprint 7 can add the town as a new scene), and shuts down cleanly when the app unmounts or hot-reloads.",
+      "acceptance_criteria": [
+        "The renderer starts when the game opens and shows the empty scene",
+        "A new scene can be added and switched to without changing how the renderer is started",
+        "Reloading or hot-reloading never leaves a duplicate or orphaned render surface",
+        "Phaser is loaded as a separate chunk and is never imported by engine, session, persistence, or UI test code"
+      ],
+      "dependencies": [
+        "T1"
+      ],
+      "decisions": [
+        {
+          "tier": "USER",
+          "description": "Rendering framework: Phaser vs PixiJS",
+          "rationale": "Brief and ADR-055 assign this choice to the design phase with the designer deciding"
+        }
+      ],
+      "technical_approach": "Phaser 4 (designer decision 2026-10-23; add dependency phaser ^4.2.1). Framework-neutral contract in src/render/renderer.ts: `StageRenderer = { showScene(key: SceneKey): void; destroy(): void }` and `CreateRenderer = (parent: HTMLElement, options: { backgroundColor: string; initialScene: SceneKey }) => StageRenderer`. Scene keys in src/render/sceneKeys.ts with no Phaser import: `SCENE_KEYS = ['stage'] as const; type SceneKey = (typeof SCENE_KEYS)[number]`. Phaser side, loaded lazily so Phaser is its own chunk and never loads in jsdom tests: src/render/phaserRenderer.ts exports `createPhaserRenderer: CreateRenderer`, which returns a StageRenderer immediately and inside does `import('./phaserGame')`; showScene calls made before the game is ready are queued (last one wins); destroy() before ready sets a flag so the game is never created, destroy() after ready calls game.destroy(true) (removes the canvas). src/render/phaserGame.ts imports Phaser and the registry and builds the Game: type AUTO (WebGL with Canvas fallback), parent, backgroundColor from options, scale { mode: Phaser.Scale.RESIZE } so the canvas tracks the parent's size without stretching, banner false, audio { noAudio: true } until a later sprint adds sound (avoids autoplay warnings), every registry scene added and only initialScene started; showScene(key) stops the other active scenes and starts key. Scene registry src/render/scenes/index.ts: `SCENES: Record<SceneKey, typeof Phaser.Scene> = { stage: StageScene }` — the Record type forces every key to have a scene class, so Sprint 7 adds 'town' to SCENE_KEYS plus one entry here. src/render/scenes/StageScene.ts: a Phaser.Scene with key 'stage' that draws nothing (the camera shows the game background color). React bridge src/ui/components/SceneStage.tsx: props { scene: SceneKey; createRenderer?: CreateRenderer } (default createPhaserRenderer); renders a single div (ref) that fills its container; effect keyed on createRenderer creates the renderer with backgroundColor read from the CSS custom property --color-bg-deep on document.documentElement (fallback '#1a1410') and initialScene = scene, cleanup destroys it — this makes StrictMode double-mount and Fast Refresh safe; a second effect keyed on scene calls renderer.showScene(scene). vite.config.ts: set build.chunkSizeWarningLimit to fit the Phaser chunk (~1.4 MB minified) with a comment explaining why.",
+      "interfaces": "Produces: SceneStage React component (consumed by T11's App layout), StageRenderer/CreateRenderer contract (tests pass a fake factory), SceneKey and the scene registry (Sprint 7 adds the town scene, Sprint 8 the combat scene). Receives: the --color-bg-deep design token from src/ui/styles/tokens.css. Does not read game state this sprint.",
+      "files": [
+        {
+          "path": "package.json",
+          "purpose": "Add phaser ^4.2.1"
+        },
+        {
+          "path": "src/render/renderer.ts",
+          "purpose": "StageRenderer and CreateRenderer contract (no Phaser import)"
+        },
+        {
+          "path": "src/render/sceneKeys.ts",
+          "purpose": "Scene key list and SceneKey type (no Phaser import)"
+        },
+        {
+          "path": "src/render/phaserRenderer.ts",
+          "purpose": "createPhaserRenderer: lazy-loads Phaser, queues showScene, safe destroy before/after boot"
+        },
+        {
+          "path": "src/render/phaserGame.ts",
+          "purpose": "Builds the Phaser.Game (AUTO renderer, RESIZE scaling, no audio) and scene switching"
+        },
+        {
+          "path": "src/render/scenes/index.ts",
+          "purpose": "Scene registry typed so every SceneKey has a scene class"
+        },
+        {
+          "path": "src/render/scenes/StageScene.ts",
+          "purpose": "Empty stage scene"
+        },
+        {
+          "path": "src/ui/components/SceneStage.tsx",
+          "purpose": "React bridge: create on mount, destroy on unmount, switch scene on prop change"
+        },
+        {
+          "path": "src/ui/components/SceneStage.module.css",
+          "purpose": "Stage element fills its container"
+        },
+        {
+          "path": "src/ui/components/SceneStage.test.tsx",
+          "purpose": "Fake-renderer tests: one live renderer under StrictMode, none after unmount, scene prop switches scenes"
+        },
+        {
+          "path": "vite.config.ts",
+          "purpose": "Raise the chunk-size warning limit for the Phaser chunk"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "Rendering framework: Phaser 4 (not PixiJS)",
+          "rationale": "Designer decision 2026-10-23. Phaser includes tilemaps (Tiled), cameras, input, animation, tweens, audio, loader, and scene management that the Sprint 7 town and Sprint 8 combat need; PixiJS would require assembling and maintaining add-ons for each. Bundle size difference (~360 KB vs ~150 KB gzip, measured) is irrelevant for a desktop download."
+        },
+        {
+          "decision": "Renderer sits behind a small framework-neutral contract and is injected into the React bridge",
+          "rationale": "Tests use a fake; Phaser stays out of jsdom; the React side never imports Phaser directly."
+        },
+        {
+          "decision": "Phaser loads lazily as its own chunk",
+          "rationale": "Keeps the HUD's code path light and lets the stage boot after the HUD renders; same backdrop color on body and canvas means no visible flash."
+        },
+        {
+          "decision": "Scale mode RESIZE",
+          "rationale": "Canvas matches the window exactly with no stretching or letterboxing (T11: fill without distortion)."
+        },
+        {
+          "decision": "Audio disabled until a sprint adds sound",
+          "rationale": "Avoids browser autoplay warnings for a scene with no audio."
+        }
+      ],
+      "producer_notes": "Phaser 4 is recent (4.0 April 2026); prefer the official Phaser 4 docs/API over Phaser 3 examples, which may use renamed or removed APIs. Verify by running `npm run dev` that StrictMode in development leaves exactly one <canvas> in the DOM, and that a component Fast Refresh (edit SceneStage.tsx) leaves exactly one. Only src/render/phaserGame.ts and src/render/scenes/** may import 'phaser' (statically); everything else uses the contract and SceneKey. Do not draw anything in StageScene — no art this sprint."
+    },
+    {
+      "id": "T11",
+      "title": "Stage behind the HUD",
+      "domain": "ui/layout",
+      "experience_slices": [
+        "ES-4"
+      ],
+      "description": "The rendered scene fills the game window behind the Equinox HUD, showing a plain backdrop in the HUD's existing background color. The HUD sits on top, looking and responding exactly as it does now.",
+      "acceptance_criteria": [
+        "The scene fills the window behind the HUD with a plain backdrop matching the HUD's current background color",
+        "The HUD looks identical to today and every HUD control still responds to clicks and keyboard",
+        "Resizing the window keeps the scene filling it without distortion or scrollbars",
+        "Clicks outside the HUD reach the stage layer"
+      ],
+      "dependencies": [
+        "T6",
+        "T7",
+        "T10"
+      ],
+      "decisions": [],
+      "technical_approach": "CSS Modules + existing design tokens (ADR-047). src/ui/App.tsx renders: an app root (position fixed, inset 0, overflow hidden — the page never scrolls) containing `<SceneStage scene=\"stage\" createRenderer={createRenderer} />` in a stage layer (position absolute, inset 0, z-index 0) and a HUD layer above it (position absolute, inset 0, z-index 1) that takes over today's .app layout exactly — display flex, justify-content center, align-items flex-start, padding var(--space-lg) — so the HUD sits where it does today. The HUD layer has pointer-events none and its direct children pointer-events auto (`.hudLayer > *`), so every HUD control keeps responding while clicks elsewhere fall through to the stage for Sprint 7. App props become { session: GameSession; createRenderer?: CreateRenderer } (default createPhaserRenderer); main.tsx keeps passing only the session. The backdrop is the deep brown --color-bg-deep (#1a1410), the color behind the HUD today (designer decision), read by SceneStage from the token; reset.css keeps the same body background so there is no flash before the canvas boots. Update src/ui/App.test.tsx to pass a fake renderer factory and add checks that the stage and HUD layers are both rendered and that HUD controls still respond.",
+      "interfaces": "Receives SceneStage and CreateRenderer (T10), GameStateProvider and EquinoxHUD (T6), the session prop (T6). Produces the layered layout Sprint 7 builds on: stage fills the window, React UI layers above and passes non-HUD input through.",
+      "files": [
+        {
+          "path": "src/ui/App.tsx",
+          "purpose": "Stage layer behind, HUD layer above; createRenderer prop"
+        },
+        {
+          "path": "src/ui/App.module.css",
+          "purpose": "Full-window fixed root, stage layer, HUD layer carrying today's centering layout and pointer-events pass-through"
+        },
+        {
+          "path": "src/ui/App.test.tsx",
+          "purpose": "Pass a fake renderer; assert stage + HUD layers render and HUD controls respond"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "Backdrop color is the deep brown behind the HUD today (--color-bg-deep, #1a1410), not the HUD panel color",
+          "rationale": "Designer decision 2026-10-23; the panel color would make the HUD blend into the stage and change how it looks."
+        },
+        {
+          "decision": "HUD layer passes clicks through except on the HUD itself",
+          "rationale": "HUD keeps all its input now; the Sprint 7 town can receive clicks around it without a layout rework."
+        },
+        {
+          "decision": "HUD position and styling are untouched; only the surrounding layout moves into the HUD layer",
+          "rationale": "Brief: the HUD looks identical to today."
+        }
+      ],
+      "producer_notes": "Do not edit EquinoxHUD.module.css or any component CSS. Compare before/after in the browser at a few window sizes — the HUD's position, width, and colors must match today's exactly. No scrollbars on the page at any window size; the canvas must resize with the window (Phaser RESIZE handles this as long as the stage layer is sized by inset 0)."
+    },
+    {
+      "id": "T12",
+      "title": "Retire the server and consolidate to one command",
+      "domain": "code/build",
+      "experience_slices": [
+        "ES-5"
+      ],
+      "description": "Delete the server: its routes, HTTP layer, server start-up, server-disk save code, and server packages. One command starts the game, and one command verifies everything (typecheck, lint, all engine and client tests). Update the project's developer-facing instructions so they no longer describe the server, port 3000, REST API, or server-disk saves.",
+      "acceptance_criteria": [
+        "No server code or server packages remain, and nothing in the engine or client references them",
+        "One command starts the game in the browser; one command runs typecheck, lint, and all engine and client tests, and passes",
+        "CLAUDE.md and key_facts.md describe how the game runs now, with no reference to a server, port 3000, REST API, or saves directory",
+        "Greps for fastify, src/api, buildApp, port 3000, and /api/ paths return nothing outside docs/Reference Documents and git history"
+      ],
+      "dependencies": [
+        "T5",
+        "T6",
+        "T7",
+        "T8",
+        "T9",
+        "T10",
+        "T11"
+      ],
+      "decisions": [
+        {
+          "tier": "USER",
+          "description": "Server code is deleted, not kept dormant in the repo; git history retains it",
+          "rationale": "Decided by the designer during compose (2026-10-23) — dead code rots and the pitch web build is the static client, not a server"
+        }
+      ],
+      "technical_approach": "Deletion and consolidation after T5-T9 land. Delete: src/api/ (all route files and index.ts), src/persistence/saveLoad.ts and saveLoad.test.ts (replaced by T8/T9), tests/sprint1.integration.test.ts, tests/sprint4.integration.test.ts, src/combat/e2e.test.ts (ported by T5), src/ui/api/ (if T6 has not already), tsconfig.server.json (and its reference and exclusions in tsconfig.json/tsconfig.engine.json), the stale root dist/ and saves/ directories. Remove packages: fastify, tsx, concurrently, @types/uuid; remove the dev:server script. Remove HTTP-only types from src/types/index.ts if nothing references them after T6 (ApiResponse, ApiError); keep ErrorCodes. Regenerate package-lock.json. Final commands: `npm run dev` (vite, opens the browser) starts the game; `npm run verify` (tsc -b, eslint src tests, vitest run across both projects) verifies everything. .gitignore: remove the `saves/*.json` rule. Docs: rewrite CLAUDE.md's opening line and Technical Stack (TypeScript game running entirely in the browser: Vite + React HUD, in-client engine and game session, local browser saves, rendering framework from T10; commands npm run dev / npm run verify) and drop server/REST/JSON-file-save lines while keeping Key Constraints and the rest; rewrite key_facts.md's Project Information, Technical Stack, quality gate, Save/Load System, Local Development, Project Structure, and Sprint Schedule sections, delete the Fastify State Pattern and API Endpoints sections (replace API Endpoints with a short pointer to src/session/ as the game's interface), and remove the Vercel target in favor of PC/Steam per ADR-055. Leave docs/Reference Documents/ untouched (historical specs).",
+      "interfaces": "Consumes: the completed session (T2-T4), ported tests (T5), UI on the session (T6/T7), local saves (T8/T9), and T1's interim scaffolding to remove. Produces: the final two-command developer workflow recorded in project_map.md Operational Foundation.",
+      "files": [
+        {
+          "path": "src/api/",
+          "purpose": "Delete entirely"
+        },
+        {
+          "path": "src/persistence/saveLoad.ts",
+          "purpose": "Delete (replaced by T8 save storage)"
+        },
+        {
+          "path": "src/persistence/saveLoad.test.ts",
+          "purpose": "Delete (replaced by T9 tests)"
+        },
+        {
+          "path": "tests/sprint1.integration.test.ts",
+          "purpose": "Delete (ported in T5)"
+        },
+        {
+          "path": "tests/sprint4.integration.test.ts",
+          "purpose": "Delete (ported in T5)"
+        },
+        {
+          "path": "src/combat/e2e.test.ts",
+          "purpose": "Delete (ported in T5)"
+        },
+        {
+          "path": "tsconfig.server.json",
+          "purpose": "Delete; remove its reference from tsconfig.json and its exclusions from tsconfig.engine.json"
+        },
+        {
+          "path": "src/types/index.ts",
+          "purpose": "Remove ApiResponse/ApiError if unreferenced; keep ErrorCodes"
+        },
+        {
+          "path": "package.json",
+          "purpose": "Drop fastify, tsx, concurrently, @types/uuid and the dev:server script"
+        },
+        {
+          "path": "package-lock.json",
+          "purpose": "Regenerate"
+        },
+        {
+          "path": ".gitignore",
+          "purpose": "Remove saves/*.json rule"
+        },
+        {
+          "path": "dist/",
+          "purpose": "Delete stale server build output"
+        },
+        {
+          "path": "saves/",
+          "purpose": "Delete server-disk save directory"
+        },
+        {
+          "path": "CLAUDE.md",
+          "purpose": "Describe the in-browser game, its stack, and the two commands; no server, port 3000, REST API, or saves directory"
+        },
+        {
+          "path": "docs/project_notes/key_facts.md",
+          "purpose": "Same update for project facts, stack, structure, saves, local dev, and schedule"
+        },
+        {
+          "path": "src/combat/sync.test.ts",
+          "purpose": "Move from the interim server tsconfig back under tsconfig.engine.json (rewritten by T9)"
+        },
+        {
+          "path": "src/narrative/integration.test.ts",
+          "purpose": "Move from the interim server tsconfig back under tsconfig.engine.json (rewritten by T9)"
+        },
+        {
+          "path": "tsconfig.engine.json",
+          "purpose": "Remove the interim server-file exclusions"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "Server code is deleted, not kept dormant; git history retains it",
+          "rationale": "Designer decision during compose (2026-10-23)."
+        },
+        {
+          "decision": "docs/Reference Documents/ are left as historical specs",
+          "rationale": "They are the original Sprint 1-2 specs; rewriting them is out of scope and they are not developer instructions."
+        },
+        {
+          "decision": "`npm run dev` opens the browser automatically",
+          "rationale": "Brief: the designer starts the game with one command."
+        }
+      ],
+      "producer_notes": "Run this last. Before deleting, grep the repo (excluding docs/ and node_modules) for 'fastify', 'src/api', 'saveLoad', '3000', '/api/', 'buildApp', 'inject(' to confirm nothing still depends on them; afterwards those greps must come back clean outside docs/ and git history. After deleting tsconfig.server.json, files it covered that still exist (src/combat/sync.test.ts, src/narrative/integration.test.ts — rewritten by T9) must type-check under tsconfig.engine.json. Keep CLAUDE.md's Project Goal, How to Interact, and memory-system sections intact; only the stack/runtime descriptions change. In key_facts.md keep all game-design content (personality, NPCs, factions, combat reference) untouched."
+    }
+  ],
+  "open_questions": []
+}
