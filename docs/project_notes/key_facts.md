@@ -220,6 +220,18 @@ All docs in `docs/Reference Documents/`:
 - `npm run build` produces the static web build.
 - Saves live in browser `localStorage`.
 
+### Godot toolchain (ADR-063, installed 2026-10-26)
+- Godot 4.7.2 .NET (portable, no installer): `%LOCALAPPDATA%\Programs\Godot\Godot_v4.7.2-stable_mono_win64\`
+  - Editor: `Godot_v4.7.2-stable_mono_win64.exe`
+  - Command line / headless (prints to the terminal): `Godot_v4.7.2-stable_mono_win64_console.exe`
+  - Keep the `GodotSharp` folder beside the executables; the .NET build needs it.
+- `godot` command: `%LOCALAPPDATA%\Programs\Godot\bin\godot.cmd` (on the user PATH) forwards to the console executable. Update its path when upgrading Godot.
+- Start menu: "Godot 4.7.2 (.NET)" opens the editor.
+- .NET SDKs: 10.0.200 and 10.0.403 (`C:\Program Files\dotnet\sdk`).
+- Godot project: `godot/project.godot` (assembly `AncientOrder`, references `rules/AncientOrder.Rules`); `GameHost` is the composition root, real saves at `user://saves`.
+- Smoke run: scene `res://smoke/smoke.tscn` (`SmokeRun.cs`, stand-in content in `godot/StandIn`); first builds `GameHost` and starts a game through it with no save calls, then plays a fight on its own session; saves only under `user://smoke/saves` (on Windows `%APPDATA%\Godot\app_userdata\Ancient Order\smoke\saves`), emptied before and after.
+- `./verify.ps1` steps: 1 `dotnet format --verify-no-changes`, 2 `dotnet build AncientOrder.sln`, 3 `dotnet test`, 4 Godot `--headless --import` (only if `godot/.godot` was missing before the run), 5 smoke scene headless with a 180 s timeout. Godot executable: `$env:GODOT`, else the console exe path above; fails with instructions if missing.
+
 ## Combat System (Sprint 2 Reference)
 
 ### Round Structure (5 Phases)

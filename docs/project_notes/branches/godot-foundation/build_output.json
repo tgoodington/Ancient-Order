@@ -1,0 +1,595 @@
+{
+  "title": "Godot Foundation — Rules Engine Move to C#",
+  "date": "2026-10-28",
+  "status": "success",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Rules library and test project",
+      "domain": "code/build",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "AncientOrder.sln",
+        "global.json",
+        ".editorconfig",
+        ".gitignore",
+        "verify.ps1",
+        "rules/Directory.Build.props",
+        "rules/AncientOrder.Rules/AncientOrder.Rules.csproj",
+        "rules/AncientOrder.Rules/Common/*",
+        "rules/AncientOrder.Rules.Tests/AncientOrder.Rules.Tests.csproj",
+        "rules/AncientOrder.Rules.Tests/{Support,Architecture,Common}/*"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Dependency guard (AORULES001), analyzers as errors, BannedApiTests IL scan, xoshiro256** golden sequence. Security minor items logged, not acted on (banned-list gaps: TickCount, Stopwatch, HashCode, Guid.CreateVersion7)."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "Method names IRollSource.Roll, IIdSource.NextId, ISeedSource.NextSeed",
+        "CA1707/CA1000 suppressed with justification"
+      ]
+    },
+    {
+      "id": "T2",
+      "title": "Personality rules",
+      "domain": "code/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules/Personality/*"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Security retry 1: Validate reports non-finite traits invalid. 20,002 parity cases vs TS; micro-correction fix per spec."
+      },
+      "deviations": [
+        "Validate rejects NaN/Infinity traits (TS accepted them)"
+      ],
+      "unanticipated_decisions": []
+    },
+    {
+      "id": "T3",
+      "title": "Game state and characters",
+      "domain": "code/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules/{Content,Characters,State}/*"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Security retry 1: null/default content inputs and null/empty archetype ids refused with VALIDATION_ERROR; non-finite relationship changes refused."
+      },
+      "deviations": [
+        "Non-finite affection/trust change refused (TS stored NaN)"
+      ],
+      "unanticipated_decisions": [
+        "Extra settings checks (empty player name, negative lineup size)",
+        "Content/Characters files in namespace AncientOrder.Rules.State"
+      ]
+    },
+    {
+      "id": "T4",
+      "title": "Fight lineup and team synergy",
+      "domain": "code/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules/Party/**",
+        "rules/AncientOrder.Rules/Combat/Stats/*",
+        "rules/AncientOrder.Rules.Tests/Combat/StatModifiersTests.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Security retry 1: SynergySettings refuses a null bonus or missing bonus list. Synergy parity 400/400 vs TS."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "AddPercent value is a fraction (0.10 = +10%)"
+      ]
+    },
+    {
+      "id": "T5",
+      "title": "Combat data and damage math",
+      "domain": "code/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules/Combat/{CombatEnums,CombatConstants,ReactionSkills,Combatant,CombatState,Formulas,Defense,ElementalPaths,Energy,ReactionProgression}.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "78/78 spot values identical to TS. Producer briefly created and deleted a temp file under src/; verified clean."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "Energy.SpendEnergy helper added"
+      ]
+    },
+    {
+      "id": "T6",
+      "title": "How enemies decide what to do",
+      "domain": "code/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules/Combat/Ai/**"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Security retry 1: ArchetypeCatalog refuses a default array or null element. 900+ fight situations identical to TS."
+      },
+      "deviations": [
+        "Basic archetype attacks the first living opponent (TS stub targeted the player party)"
+      ],
+      "unanticipated_decisions": []
+    },
+    {
+      "id": "T7",
+      "title": "Round resolution",
+      "domain": "code/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules/Combat/{Declarations,Pipeline,CounterChain,GroupAction,RoundManager}.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Builder fix: snapshot carries end-of-round dice. About 800 differential fights vs a TS copy patched with the 3 spec changes: identical."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "EvadeRecovery is the stamina actually restored after the cap"
+      ]
+    },
+    {
+      "id": "T8",
+      "title": "Setting up a fight from the party and an encounter",
+      "domain": "code/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules/Combat/Encounters/*",
+        "rules/AncientOrder.Rules/Combat/FightSetup.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Builder fixes: enemy stat validation, empty player side refused. Security retry 1: post-synergy stat check, duplicate fighter ids, encounter needs enemies, a name, and id <= 64."
+      },
+      "deviations": [
+        "Enemy stats validated in content (TS had none)"
+      ],
+      "unanticipated_decisions": [
+        "Synergy on MaxStamina also sets Stamina",
+        "Invalid post-synergy stats refuse the fight (no clamp)"
+      ]
+    },
+    {
+      "id": "T9",
+      "title": "Game session core",
+      "domain": "code/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules/Session/{GameSession,GameSessionOptions,SessionSnapshot,Outcome,SessionValidation}.cs",
+        "rules/AncientOrder.Rules/Session/Operations/{Game,Player,Character}Operations.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Builder fix: player id player_<id>. Security retry 1: re-entrant notifications queued in commit order with a 1,000-delivery runaway bound; per-registration idempotent dispose."
+      },
+      "deviations": [
+        "Notifications queued in commit order (TS delivered nested notifications immediately)"
+      ],
+      "unanticipated_decisions": []
+    },
+    {
+      "id": "T10",
+      "title": "Session combat operations",
+      "domain": "code/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules/Session/Operations/CombatOperations.cs",
+        "rules/AncientOrder.Rules/Session/CombatView.cs",
+        "rules/AncientOrder.Rules/Session/GameSession.Combat.cs",
+        "rules/AncientOrder.Rules/Session/SessionValidation.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "All five refusals required by the T7 review enforced; hardening: caller order list copied once."
+      },
+      "deviations": [
+        "GROUP ally override applied at declaration (TS did it in the round)",
+        "Shape messages use actions/... (TS used body/actions/...)"
+      ],
+      "unanticipated_decisions": [
+        "Public ops in partial GameSession.Combat.cs instead of GameSession.cs"
+      ]
+    },
+    {
+      "id": "T11",
+      "title": "Save format and checks",
+      "domain": "code/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules/Saves/{SaveConstants,SaveMapper,SaveFormat,SaveUpgrades,SaveReconciler,SaveChecks}.cs",
+        "rules/AncientOrder.Rules/Saves/Format/*"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Follow-ups: T7 fields mirrored; saved ids 1-64 chars; top-level saved fight must be Active."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "SaveFormat.Write takes content (catalog order)",
+        "Strict custom enum converter"
+      ]
+    },
+    {
+      "id": "T12",
+      "title": "Save slots on disk",
+      "domain": "code/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules/Saves/{ISaveBackend,FileSaveBackend,MemorySaveBackend,SaveStore}.cs",
+        "rules/AncientOrder.Rules/Session/Operations/SaveOperations.cs",
+        "rules/AncientOrder.Rules/Session/GameSession.Saves.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Security retry 1: bounded reads (MaxSaveBytes + 1), ExistsAsync, missing folder is not an error, disk work off the caller thread."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "GameSessionOptions.Saves nullable (session builds an in-memory store)",
+        "ISaveBackend.ExistsAsync added"
+      ]
+    },
+    {
+      "id": "T13",
+      "title": "Godot project connected to the rules",
+      "domain": "code/godot",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "godot/**",
+        "AncientOrder.sln",
+        "verify.ps1",
+        "CLAUDE.md",
+        "docs/project_notes/key_facts.md"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Smoke run proves the wiring incl. mid-fight save/load byte identity; hardening: import and smoke timeouts with process-tree kill. Editor GUI not opened (headless only)."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "ImplicitUsings in the Godot csproj",
+        "Stand-in enemy stamina 400 so a mid-fight save is possible",
+        "Import runs only if godot/.godot was missing before the build steps"
+      ]
+    },
+    {
+      "id": "T14",
+      "title": "Carried-over tests: personality, game state, and lineup",
+      "domain": "test/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules.Tests/{Fixtures,Personality,State,Characters,Party}/*",
+        "rules/AncientOrder.Rules.Tests/Support/PersonalityBuilders.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "181 tests incl. the 100,000-adjustment invariant. Security: batch review of test code PASS."
+      },
+      "deviations": [],
+      "unanticipated_decisions": []
+    },
+    {
+      "id": "T15",
+      "title": "Carried-over tests: combat math and enemy decisions",
+      "domain": "test/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules.Tests/Combat/{Formulas,Energy,ElementalPaths,Defense,ReactionProgression}Tests.cs",
+        "rules/AncientOrder.Rules.Tests/Combat/Ai/*",
+        "rules/AncientOrder.Rules.Tests/Fixtures/TestCombatants.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "363 tests; no carried-over failures."
+      },
+      "deviations": [],
+      "unanticipated_decisions": []
+    },
+    {
+      "id": "T16",
+      "title": "Carried-over tests: round resolution and fight setup",
+      "domain": "test/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules.Tests/Combat/{Declarations,CounterChain,GroupAction,Pipeline,RoundManager,FightSetup,CombatIntegration,RoundHistorySize}Tests.cs",
+        "rules/AncientOrder.Rules.Tests/Fixtures/TestEncounters.cs",
+        "rules/AncientOrder.Rules.Tests/Support/ConstantRolls.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "277 tests; fight-setup parity proven against the TS initCombatState output."
+      },
+      "deviations": [],
+      "unanticipated_decisions": []
+    },
+    {
+      "id": "T17",
+      "title": "Carried-over tests: game session",
+      "domain": "test/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules.Tests/Session/*",
+        "rules/AncientOrder.Rules.Tests/Support/{TestSessions,QuickFight,SessionAssert}.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "195 tests; format fix applied."
+      },
+      "deviations": [],
+      "unanticipated_decisions": []
+    },
+    {
+      "id": "T18",
+      "title": "Carried-over tests: saves",
+      "domain": "test/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules.Tests/Saves/*",
+        "rules/AncientOrder.Rules.Tests/Session/SaveOperationsTests.cs",
+        "rules/AncientOrder.Rules.Tests/Support/{TempFolder,SaveFixtures}.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "212 tests; culture byte identity, mid-fight resume, 35-round fight about 480 KB."
+      },
+      "deviations": [],
+      "unanticipated_decisions": []
+    },
+    {
+      "id": "T19",
+      "title": "Port record",
+      "domain": "docs/record",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "docs/project_notes/port_record.md",
+        "rules/AncientOrder.Rules.Tests/PortRecord/PortRecordTests.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "1015 TS titles checked: 872 matched by name, 143 listed in the record; failure proven by removing an entry."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "Extra test: every record entry names a real TS test"
+      ]
+    }
+  ],
+  "files_created": [
+    ".editorconfig",
+    "AncientOrder.sln",
+    "docs/project_notes/port_record.md",
+    "global.json",
+    "godot/AncientOrder.csproj",
+    "godot/GameHost.cs",
+    "godot/GameHost.cs.uid",
+    "godot/StandIn/StandInContent.cs",
+    "godot/StandIn/StandInContent.cs.uid",
+    "godot/main.tscn",
+    "godot/project.godot",
+    "godot/smoke/SmokeRun.cs",
+    "godot/smoke/SmokeRun.cs.uid",
+    "godot/smoke/smoke.tscn",
+    "rules/AncientOrder.Rules.Tests/AncientOrder.Rules.Tests.csproj",
+    "rules/AncientOrder.Rules.Tests/Architecture/BannedApiTests.cs",
+    "rules/AncientOrder.Rules.Tests/Architecture/RulesIndependenceTests.cs",
+    "rules/AncientOrder.Rules.Tests/Characters/CharacterCatalogTests.cs",
+    "rules/AncientOrder.Rules.Tests/Characters/CharacterRulesTests.cs",
+    "rules/AncientOrder.Rules.Tests/Combat/Ai/ArchetypeCatalogTests.cs",
+    "rules/AncientOrder.Rules.Tests/Combat/Ai/EnemyDecisionsTests.cs",
+    "rules/AncientOrder.Rules.Tests/Combat/Ai/FactorsTests.cs",
+    "rules/AncientOrder.Rules.Tests/Combat/Ai/PerceptionTests.cs",
+    "rules/AncientOrder.Rules.Tests/Combat/Ai/RankCoefficientTests.cs",
+    "rules/AncientOrder.Rules.Tests/Combat/Ai/TieBreakingTests.cs",
+    "rules/AncientOrder.Rules.Tests/Combat/CombatIntegrationTests.cs",
+    "rules/AncientOrder.Rules.Tests/Combat/CounterChainTests.cs",
+    "rules/AncientOrder.Rules.Tests/Combat/DeclarationsTests.cs",
+    "rules/AncientOrder.Rules.Tests/Combat/DefenseTests.cs",
+    "rules/AncientOrder.Rules.Tests/Combat/ElementalPathsTests.cs",
+    "rules/AncientOrder.Rules.Tests/Combat/EnergyTests.cs",
+    "rules/AncientOrder.Rules.Tests/Combat/FightSetupTests.cs",
+    "rules/AncientOrder.Rules.Tests/Combat/FormulasTests.cs",
+    "rules/AncientOrder.Rules.Tests/Combat/GroupActionTests.cs",
+    "rules/AncientOrder.Rules.Tests/Combat/PipelineTests.cs",
+    "rules/AncientOrder.Rules.Tests/Combat/ReactionProgressionTests.cs",
+    "rules/AncientOrder.Rules.Tests/Combat/RoundHistorySizeTests.cs",
+    "rules/AncientOrder.Rules.Tests/Combat/RoundManagerTests.cs",
+    "rules/AncientOrder.Rules.Tests/Combat/StatModifiersTests.cs",
+    "rules/AncientOrder.Rules.Tests/Common/JsMathTests.cs",
+    "rules/AncientOrder.Rules.Tests/Common/ResultTests.cs",
+    "rules/AncientOrder.Rules.Tests/Common/SeededRollsTests.cs",
+    "rules/AncientOrder.Rules.Tests/Fixtures/TestArchetypes.cs",
+    "rules/AncientOrder.Rules.Tests/Fixtures/TestCast.cs",
+    "rules/AncientOrder.Rules.Tests/Fixtures/TestCombatants.cs",
+    "rules/AncientOrder.Rules.Tests/Fixtures/TestContent.cs",
+    "rules/AncientOrder.Rules.Tests/Fixtures/TestEncounters.cs",
+    "rules/AncientOrder.Rules.Tests/Party/LineupRulesTests.cs",
+    "rules/AncientOrder.Rules.Tests/Party/SynergyCalculatorTests.cs",
+    "rules/AncientOrder.Rules.Tests/Party/SynergyLineupTests.cs",
+    "rules/AncientOrder.Rules.Tests/Personality/PersonalityInvariantTests.cs",
+    "rules/AncientOrder.Rules.Tests/Personality/PersonalitySystemTests.cs",
+    "rules/AncientOrder.Rules.Tests/PortRecord/PortRecordTests.cs",
+    "rules/AncientOrder.Rules.Tests/Saves/SaveBackendTests.cs",
+    "rules/AncientOrder.Rules.Tests/Saves/SaveFormatTests.cs",
+    "rules/AncientOrder.Rules.Tests/Saves/SaveReconcilerTests.cs",
+    "rules/AncientOrder.Rules.Tests/Saves/SaveStoreTests.cs",
+    "rules/AncientOrder.Rules.Tests/Session/CharacterOperationsTests.cs",
+    "rules/AncientOrder.Rules.Tests/Session/CombatOperationsTests.cs",
+    "rules/AncientOrder.Rules.Tests/Session/GameSessionTests.cs",
+    "rules/AncientOrder.Rules.Tests/Session/PlayerOperationsTests.cs",
+    "rules/AncientOrder.Rules.Tests/Session/SaveOperationsTests.cs",
+    "rules/AncientOrder.Rules.Tests/Session/SessionEndToEndTests.cs",
+    "rules/AncientOrder.Rules.Tests/Session/SessionValidationTests.cs",
+    "rules/AncientOrder.Rules.Tests/State/GameStateTests.cs",
+    "rules/AncientOrder.Rules.Tests/State/StateUpdatesTests.cs",
+    "rules/AncientOrder.Rules.Tests/Support/ConstantRolls.cs",
+    "rules/AncientOrder.Rules.Tests/Support/FixedRolls.cs",
+    "rules/AncientOrder.Rules.Tests/Support/PersonalityBuilders.cs",
+    "rules/AncientOrder.Rules.Tests/Support/QuickFight.cs",
+    "rules/AncientOrder.Rules.Tests/Support/SaveFixtures.cs",
+    "rules/AncientOrder.Rules.Tests/Support/SessionAssert.cs",
+    "rules/AncientOrder.Rules.Tests/Support/StateAssert.cs",
+    "rules/AncientOrder.Rules.Tests/Support/TempFolder.cs",
+    "rules/AncientOrder.Rules.Tests/Support/TestSessions.cs",
+    "rules/AncientOrder.Rules/AncientOrder.Rules.csproj",
+    "rules/AncientOrder.Rules/Characters/CharacterCatalog.cs",
+    "rules/AncientOrder.Rules/Characters/CharacterDefinition.cs",
+    "rules/AncientOrder.Rules/Characters/CharacterRules.cs",
+    "rules/AncientOrder.Rules/Characters/CharacterState.cs",
+    "rules/AncientOrder.Rules/Characters/CharacterView.cs",
+    "rules/AncientOrder.Rules/Characters/CombatProfile.cs",
+    "rules/AncientOrder.Rules/Combat/Ai/ArchetypeCatalog.cs",
+    "rules/AncientOrder.Rules/Combat/Ai/ArchetypeDefinition.cs",
+    "rules/AncientOrder.Rules/Combat/Ai/EnemyDecisions.cs",
+    "rules/AncientOrder.Rules/Combat/Ai/Factors/AllyInDangerFactor.cs",
+    "rules/AncientOrder.Rules/Combat/Ai/Factors/EnergyAvailabilityFactor.cs",
+    "rules/AncientOrder.Rules/Combat/Ai/Factors/OwnStaminaFactor.cs",
+    "rules/AncientOrder.Rules/Combat/Ai/Factors/RoundPhaseFactor.cs",
+    "rules/AncientOrder.Rules/Combat/Ai/Factors/ScoringFactors.cs",
+    "rules/AncientOrder.Rules/Combat/Ai/Factors/SpeedAdvantageFactor.cs",
+    "rules/AncientOrder.Rules/Combat/Ai/Factors/TargetVulnerabilityFactor.cs",
+    "rules/AncientOrder.Rules/Combat/Ai/Factors/TeamBalanceFactor.cs",
+    "rules/AncientOrder.Rules/Combat/Ai/Perception.cs",
+    "rules/AncientOrder.Rules/Combat/Ai/RankCoefficient.cs",
+    "rules/AncientOrder.Rules/Combat/Ai/TieBreaking.cs",
+    "rules/AncientOrder.Rules/Combat/CombatConstants.cs",
+    "rules/AncientOrder.Rules/Combat/CombatEnums.cs",
+    "rules/AncientOrder.Rules/Combat/CombatState.cs",
+    "rules/AncientOrder.Rules/Combat/Combatant.cs",
+    "rules/AncientOrder.Rules/Combat/CounterChain.cs",
+    "rules/AncientOrder.Rules/Combat/Declarations.cs",
+    "rules/AncientOrder.Rules/Combat/Defense.cs",
+    "rules/AncientOrder.Rules/Combat/ElementalPaths.cs",
+    "rules/AncientOrder.Rules/Combat/Encounters/EncounterCatalog.cs",
+    "rules/AncientOrder.Rules/Combat/Encounters/EncounterDefinition.cs",
+    "rules/AncientOrder.Rules/Combat/Energy.cs",
+    "rules/AncientOrder.Rules/Combat/FightSetup.cs",
+    "rules/AncientOrder.Rules/Combat/Formulas.cs",
+    "rules/AncientOrder.Rules/Combat/GroupAction.cs",
+    "rules/AncientOrder.Rules/Combat/Pipeline.cs",
+    "rules/AncientOrder.Rules/Combat/ReactionProgression.cs",
+    "rules/AncientOrder.Rules/Combat/ReactionSkills.cs",
+    "rules/AncientOrder.Rules/Combat/RoundManager.cs",
+    "rules/AncientOrder.Rules/Combat/Stats/StatModifier.cs",
+    "rules/AncientOrder.Rules/Combat/Stats/StatModifiers.cs",
+    "rules/AncientOrder.Rules/Common/IIdSource.cs",
+    "rules/AncientOrder.Rules/Common/IRollSource.cs",
+    "rules/AncientOrder.Rules/Common/ISeedSource.cs",
+    "rules/AncientOrder.Rules/Common/JsMath.cs",
+    "rules/AncientOrder.Rules/Common/Result.cs",
+    "rules/AncientOrder.Rules/Common/RuleError.cs",
+    "rules/AncientOrder.Rules/Common/SeededRolls.cs",
+    "rules/AncientOrder.Rules/Content/GameContent.cs",
+    "rules/AncientOrder.Rules/Content/GameSettings.cs",
+    "rules/AncientOrder.Rules/Party/LineupRules.cs",
+    "rules/AncientOrder.Rules/Party/Synergy/Synergy.cs",
+    "rules/AncientOrder.Rules/Party/Synergy/SynergyBonusDefinition.cs",
+    "rules/AncientOrder.Rules/Party/Synergy/SynergyCalculator.cs",
+    "rules/AncientOrder.Rules/Party/Synergy/SynergySettings.cs",
+    "rules/AncientOrder.Rules/Personality/Personality.cs",
+    "rules/AncientOrder.Rules/Personality/PersonalityAdjustment.cs",
+    "rules/AncientOrder.Rules/Personality/PersonalityRules.cs",
+    "rules/AncientOrder.Rules/Personality/Trait.cs",
+    "rules/AncientOrder.Rules/Saves/FileSaveBackend.cs",
+    "rules/AncientOrder.Rules/Saves/Format/SaveEnvelope.cs",
+    "rules/AncientOrder.Rules/Saves/Format/SaveJsonContext.cs",
+    "rules/AncientOrder.Rules/Saves/Format/SavedCombat.cs",
+    "rules/AncientOrder.Rules/Saves/ISaveBackend.cs",
+    "rules/AncientOrder.Rules/Saves/MemorySaveBackend.cs",
+    "rules/AncientOrder.Rules/Saves/SaveChecks.cs",
+    "rules/AncientOrder.Rules/Saves/SaveConstants.cs",
+    "rules/AncientOrder.Rules/Saves/SaveFormat.cs",
+    "rules/AncientOrder.Rules/Saves/SaveMapper.cs",
+    "rules/AncientOrder.Rules/Saves/SaveReconciler.cs",
+    "rules/AncientOrder.Rules/Saves/SaveStore.cs",
+    "rules/AncientOrder.Rules/Saves/SaveUpgrades.cs",
+    "rules/AncientOrder.Rules/Session/CombatView.cs",
+    "rules/AncientOrder.Rules/Session/GameSession.Combat.cs",
+    "rules/AncientOrder.Rules/Session/GameSession.Saves.cs",
+    "rules/AncientOrder.Rules/Session/GameSession.cs",
+    "rules/AncientOrder.Rules/Session/GameSessionOptions.cs",
+    "rules/AncientOrder.Rules/Session/Operations/CharacterOperations.cs",
+    "rules/AncientOrder.Rules/Session/Operations/CombatOperations.cs",
+    "rules/AncientOrder.Rules/Session/Operations/GameOperations.cs",
+    "rules/AncientOrder.Rules/Session/Operations/PlayerOperations.cs",
+    "rules/AncientOrder.Rules/Session/Operations/SaveOperations.cs",
+    "rules/AncientOrder.Rules/Session/Outcome.cs",
+    "rules/AncientOrder.Rules/Session/SessionSnapshot.cs",
+    "rules/AncientOrder.Rules/Session/SessionValidation.cs",
+    "rules/AncientOrder.Rules/State/GameState.cs",
+    "rules/AncientOrder.Rules/State/GameStateUpdates.cs",
+    "rules/Directory.Build.props",
+    "verify.ps1"
+  ],
+  "files_modified": [
+    ".gitignore",
+    "CLAUDE.md",
+    "docs/project_notes/key_facts.md"
+  ],
+  "escalated_issues": [],
+  "open_items": [
+    "Godot editor GUI not opened; the build is proven headless only",
+    "First build on a fresh machine needs nuget.org for Godot.NET.Sdk 4.7.2",
+    "A save with non-empty nested round history is not refused on read (only guaranteed on write)",
+    "Timing assertion in CombatIntegrationTests (< 1000 ms) could flake on a loaded CI machine",
+    "Security notes not acted on are listed under Set aside in docs/project_notes/port_record.md"
+  ],
+  "verification": {
+    "verify.ps1": "pass: format, build, 1256 C# tests, Godot import + headless smoke",
+    "npm run verify": "pass: 59 files, 1329 tests; no TypeScript file changed"
+  },
+  "brief_alignment": {
+    "north_star": "met",
+    "constraints_respected": true,
+    "stakeholders_served": [
+      "Designer/director",
+      "Players (frozen TypeScript build untouched)"
+    ]
+  }
+}

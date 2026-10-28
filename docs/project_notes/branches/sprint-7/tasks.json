@@ -1,0 +1,686 @@
+{
+  "parent_context": {
+    "parent": "sprint-6",
+    "note": "This branch numbers its own slices ES-1..ES-11. Parent slices are referenced as sprint-6:ES-n. Per ADR-062, every task builds content-agnostic systems; story, dialogue, characters, town layouts, and art are decided outside the pipeline and plugged in as content. Inherited constraints apply to every task: the game runs entirely on the player's machine in the browser with no server (ADR-055), state is immutable, NPC archetypes stay fixed, and personality traits stay within 5–35% summing to 100%.",
+    "inherited_slices": [
+      "sprint-6:ES-3",
+      "sprint-6:ES-5"
+    ],
+    "modified_slices": [
+      "sprint-6:ES-1 (a new game starts in the town; team selection shows the characters actually in the party, see ES-7)",
+      "sprint-6:ES-2 (saves carry the town, conversations, flags, party, and hand-off, see ES-9)",
+      "sprint-6:ES-4 (the stage shows the town instead of an empty backdrop, see ES-1)"
+    ],
+    "new_slices": [
+      "ES-1",
+      "ES-2",
+      "ES-3",
+      "ES-4",
+      "ES-5",
+      "ES-6",
+      "ES-7",
+      "ES-8",
+      "ES-9",
+      "ES-10",
+      "ES-11"
+    ]
+  },
+  "title": "Sprint 7 — Town and Conversation Systems",
+  "experience_slices": [
+    {
+      "id": "ES-1",
+      "title": "Walk a town built from content",
+      "stakeholder": "Demo players",
+      "description": "Whatever town the content describes — its layout, where people stand, and its trigger spots — appears on the scene stage with placeholder art, and the player walks it."
+    },
+    {
+      "id": "ES-2",
+      "title": "Town spots lead into conversations and scenes",
+      "stakeholder": "Demo players",
+      "description": "Reaching a person or spot opens whatever conversation or scene the content attaches there; walking pauses while it runs and resumes when it ends."
+    },
+    {
+      "id": "ES-3",
+      "title": "Any authored conversation plays on screen",
+      "stakeholder": "Demo players",
+      "description": "One-on-one conversations and narrated scenes with any number of speakers play over the stage as text and choices, and the player moves through them by choosing."
+    },
+    {
+      "id": "ES-4",
+      "title": "Choices shift who the player is; who they are opens options",
+      "stakeholder": "Demo players",
+      "description": "Choices visibly shift the player's personality, and some choices need a certain personality. Every locked choice has an ordinary fallback, so the player is never stuck."
+    },
+    {
+      "id": "ES-5",
+      "title": "People respond according to their archetype",
+      "stakeholder": "Demo players",
+      "description": "Characters react to the player's choices in keeping with their fixed archetype, so the same choice can land differently with different people and change how they feel about the player."
+    },
+    {
+      "id": "ES-6",
+      "title": "Earlier choices carry forward",
+      "stakeholder": "Demo players",
+      "description": "Flags and remembered choices change later lines, choices, which conversations and scenes play, and the town itself — who stands where and what is open."
+    },
+    {
+      "id": "ES-7",
+      "title": "Choices shape the party",
+      "stakeholder": "Demo players",
+      "description": "Conversations can win someone over or bring in a new recruit, and the player chooses who from the party goes into the fight. Supports every team-building direction still open."
+    },
+    {
+      "id": "ES-8",
+      "title": "The town hands off to the gym fight",
+      "stakeholder": "Demo players",
+      "description": "Content marks where the town ends; with a valid lineup the player leaves for the gym fight, landing on a clearly marked placeholder until Sprint 8 builds the fight."
+    },
+    {
+      "id": "ES-9",
+      "title": "Saves keep all of it",
+      "stakeholder": "Demo players",
+      "description": "Saving and loading keep the town, the player's position, conversations, flags, remembered choices, party, lineup, relationships, and the hand-off — including saves made before the content changed."
+    },
+    {
+      "id": "ES-10",
+      "title": "Creative decisions go in as content",
+      "stakeholder": "Designer/director",
+      "description": "The designer hands over creative decisions in any form; Claude turns them into content files using a written guide. Characters, towns, conversations, scenes, and fight hand-offs all live in content, and the game checks content for dead ends and broken references before it plays. No code changes for a new story."
+    },
+    {
+      "id": "ES-11",
+      "title": "Stand-in content proves every mechanic",
+      "stakeholder": "Designer/director",
+      "description": "Clearly marked stand-in content — a cast, a town, conversations and scenes — lets one playthrough touch all five mechanics and all three team-building directions and end at the hand-off. It is test material, not a creative draft."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Characters come from content",
+      "domain": "code/content",
+      "experience_slices": [
+        "ES-10",
+        "ES-7"
+      ],
+      "description": "The game's characters — each one's identity, display name, archetype, fixed personality, and starting relationship values — come from content instead of being hard-coded, along with the player character's name and starting personality and the party the player starts with (which may be empty). A new game builds its characters and starting party from that content. Everything that looks characters up (NPC lookups, team selection, conversations, saves) works with whatever roster the content provides.",
+      "acceptance_criteria": [
+        "Adding, removing, or changing a character, the player's starting name or personality, or the starting party is a content-only change",
+        "A new game's characters and starting party match the content, and character archetypes and personalities never change during play",
+        "Operations that look up characters (listing and getting NPCs, team selection) work with any roster from content, including one without Elena, Lars, or Kade"
+      ],
+      "dependencies": [],
+      "decisions": []
+    },
+    {
+      "id": "T2",
+      "title": "Conversations play from content",
+      "domain": "code/engine",
+      "experience_slices": [
+        "ES-3"
+      ],
+      "description": "The game session can play any conversation or scene described in content — one-on-one or narrated, with any number of speakers — from start to finish: starting it, presenting each step (who is speaking, what is said, and the choices available), taking the player's choice, and moving on until it ends. Nothing about a particular conversation lives in code. This is the base the mechanics tasks (T3–T6) attach to.",
+      "acceptance_criteria": [
+        "Any conversation or scene described in content can be started, stepped through, and finished through the game session with no code change per conversation",
+        "Each step reports who is speaking, what is said, and which choices are available, for both one-on-one conversations and narrated scenes with several speakers",
+        "Every step that changes the game produces a new game state and leaves earlier states unaltered; starting a conversation while one is running, or taking an unknown or unavailable choice, is refused and leaves the game unchanged",
+        "While a conversation is running, the game state records which conversation it is and where the player is in it"
+      ],
+      "dependencies": [],
+      "decisions": [
+        {
+          "tier": "SPEC",
+          "description": "Whether narrated scenes and one-on-one conversations share one content format and engine, or stay separate (today they are two formats: the Sprint 3 scene graph and per-NPC dialogue trees)",
+          "rationale": "Internal and hard to reverse once content is written against it; players see both the same way (ES-3)"
+        }
+      ]
+    },
+    {
+      "id": "T3",
+      "title": "Personality shifts and gates in conversations",
+      "domain": "code/engine",
+      "experience_slices": [
+        "ES-4"
+      ],
+      "description": "A choice can shift the player's personality, and a choice can require a personality condition before it can be taken. Each conversation step reports which choices are locked and what they require, and taking a choice reports what it shifted, so the screen can show both. The guarantee that every locked choice has an ungated fallback is enforced by the content check (T10).",
+      "acceptance_criteria": [
+        "A choice can shift any of the six traits; after every shift each trait stays within 5–35% and all six sum to 100%",
+        "A choice can require a personality condition; a locked choice cannot be taken, and each step reports which choices are locked and what each requires",
+        "Taking a choice reports the personality change it caused"
+      ],
+      "dependencies": [
+        "T2"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "T4",
+      "title": "Archetype-driven reactions",
+      "domain": "code/engine",
+      "experience_slices": [
+        "ES-5"
+      ],
+      "description": "When the player takes a choice, the characters present can react according to their fixed archetype, so the same choice can land differently with different characters. A reaction is reported for display and can change that character's affection and trust. How each archetype tends to react is defined in content.",
+      "acceptance_criteria": [
+        "Characters with different archetypes can react differently to the same choice, and each reaction is reported for display along with who reacted",
+        "A reaction can change the reacting character's affection and trust, within their allowed ranges",
+        "How an archetype reacts is defined in content; adding an archetype or changing its tendencies needs no code change, and archetypes never change during play"
+      ],
+      "dependencies": [
+        "T1",
+        "T2"
+      ],
+      "decisions": [
+        {
+          "tier": "USER",
+          "description": "How archetype drives reactions: reactions written per archetype for each choice, computed from the archetype's fixed tendencies (for example its personality compared with the choice), or both",
+          "rationale": "Shapes how every conversation feels to players and how much the designer has to write per conversation"
+        }
+      ]
+    },
+    {
+      "id": "T5",
+      "title": "Choices carry forward",
+      "domain": "code/engine",
+      "experience_slices": [
+        "ES-6"
+      ],
+      "description": "Choices can set and clear flags, and every choice the player takes is remembered for the rest of the game. Later lines, choices, and which conversation or scene a person or spot leads to can depend on those flags and remembered choices, as well as on relationships, personality, and who is in the party. Conditions are written in content.",
+      "acceptance_criteria": [
+        "A choice can set or clear flags, and every choice taken is remembered for the rest of the game",
+        "Lines, choices, and which conversation plays can each be conditioned on flags, earlier choices, relationship values, personality, and party membership, alone or combined",
+        "Changing what a condition checks, or adding a new conditioned line or choice, is a content-only change"
+      ],
+      "dependencies": [
+        "T2"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "T6",
+      "title": "Party changes and fight lineup",
+      "domain": "code/engine",
+      "experience_slices": [
+        "ES-7"
+      ],
+      "description": "A choice can add a character to the player's party or remove one, covering both winning someone over and new recruits. The player chooses the fight lineup only from characters currently in the party; how many companions the lineup takes comes from content (two today). Otherwise team rules stay as today: no lineup changes during a conversation or combat.",
+      "acceptance_criteria": [
+        "A choice can add a character to or remove a character from the party, and the party can start empty or with anyone the content names",
+        "The fight lineup can only be chosen from current party members and its size comes from content; removing someone from the party also removes them from the lineup",
+        "Lineup changes are refused during a conversation or combat, as today"
+      ],
+      "dependencies": [
+        "T1",
+        "T2"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "T7",
+      "title": "Town in the session",
+      "domain": "code/engine",
+      "experience_slices": [
+        "ES-1",
+        "ES-2",
+        "ES-6"
+      ],
+      "description": "The game session holds the town the player is in and where they are standing. The town's layout (walkable area and obstacles), where each person stands, and the trigger spots with what each opens all come from content. Which people and spots are present, and where people stand, follow content conditions (T5) and update as the game changes. Triggering a person or spot starts whatever the content attaches to it. A new game starts in the town the content names, at its starting point.",
+      "acceptance_criteria": [
+        "A town described in content — layout, people and their positions, trigger spots and what each opens — is available through the game session with no code change, holds as many people, spots, conversations, and scenes as about 30 minutes of town play needs, and a new game starts in it",
+        "Which people and spots are present, and where people stand, follow the content's conditions and update as flags, choices, and the party change",
+        "Triggering a person or spot starts the attached conversation or scene; triggering while a conversation is running is refused",
+        "The player's position in the town is part of the game state"
+      ],
+      "dependencies": [
+        "T2",
+        "T5"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "T8",
+      "title": "Town end hands off to the fight",
+      "domain": "code/engine",
+      "experience_slices": [
+        "ES-8"
+      ],
+      "description": "Content marks where the town ends and which fight follows. Reaching the end checks that the fight lineup is valid for that fight; if it is, the game records that the town is complete, which fight comes next, and who is in the lineup, and play leaves the town. Turning the lineup into fighters and running the fight are Sprint 8 (today's encounters use a fixed party unrelated to the team).",
+      "acceptance_criteria": [
+        "Content names where the town ends and which fight follows; moving either is a content-only change",
+        "Leaving for the fight requires a valid lineup; otherwise it is refused with a reason the player can be shown, and the player stays in the town",
+        "After the hand-off the game state records which fight is next and who is in the lineup, ready for Sprint 8 to start from"
+      ],
+      "dependencies": [
+        "T6",
+        "T7"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "T9",
+      "title": "Saves carry everything",
+      "domain": "code/persistence",
+      "experience_slices": [
+        "ES-9"
+      ],
+      "description": "Saving and loading keep everything Sprint 7 adds: the town and the player's position, any conversation in progress, flags and remembered choices, the party and lineup, relationship changes, and the hand-off. Saves stay usable when the content has changed since they were made (the designer's normal workflow), and saves made before this sprint are handled without crashing. There is still no save menu this sprint.",
+      "acceptance_criteria": [
+        "Saving and loading anywhere in the town returns the player to the same place with the same personality, party, lineup, flags, remembered choices, relationships, and hand-off state",
+        "A save made during a conversation resumes that conversation, or saving at that moment is refused with a clear reason",
+        "A save whose content references characters, conversations, or places that no longer exist in the current content lands in a playable state or is refused with a clear reason, never a crash",
+        "Saves made before this sprint land in a playable state or are refused with a clear reason, never a crash"
+      ],
+      "dependencies": [
+        "T1",
+        "T5",
+        "T6",
+        "T7",
+        "T8"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "T10",
+      "title": "Content check",
+      "domain": "code/content",
+      "experience_slices": [
+        "ES-10",
+        "ES-4"
+      ],
+      "description": "One check over all game content that catches mistakes before they reach play: dead ends (a step whose every choice is locked, with no ungated fallback), references to characters, conversations, scenes, steps, places, or fights that don't exist, personalities outside 5–35% or not summing to 100%, and malformed conditions and effects. It runs as part of the project's verify command, and the game refuses to play content that fails it.",
+      "acceptance_criteria": [
+        "A step whose choices are all locked fails the check, which names the conversation and step",
+        "Broken references, out-of-range or mis-summed personalities, and malformed conditions or effects fail the check, each reported with where it is",
+        "The verify command fails when the game's content fails the check, naming each problem, and the game session refuses to play content that fails it"
+      ],
+      "dependencies": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "T5",
+        "T6",
+        "T7",
+        "T8"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "T11",
+      "title": "Walking the town",
+      "domain": "code/render",
+      "experience_slices": [
+        "ES-1",
+        "ES-2"
+      ],
+      "description": "The town scene's behavior on the stage: on a new game the stage shows the town from the game session instead of the empty backdrop; the player moves around it, blocked by obstacles and edges, and can interact with people and spots in reach, which triggers them through the session. Movement stops while a conversation or scene is open and resumes afterwards. Changes to the town from the session (people appearing, leaving, or moving) show up without restarting the scene. How it looks is T12.",
+      "acceptance_criteria": [
+        "On a new game the stage shows the town from the session, and the player can walk it but not through obstacles or off its edges",
+        "Interacting with a person or spot in reach triggers it through the session, and the HUD keeps its own input",
+        "Movement stops while a conversation or scene is open and resumes from the same spot when it ends",
+        "Town changes from the session appear without restarting the scene"
+      ],
+      "dependencies": [
+        "T7"
+      ],
+      "decisions": [
+        {
+          "tier": "USER",
+          "description": "Movement and interaction controls: keyboard, click-to-move, or both; and whether reaching a person starts the conversation or the player presses to interact",
+          "rationale": "Directly shapes how the town feels to play"
+        }
+      ]
+    },
+    {
+      "id": "T12",
+      "title": "Town look with placeholder art",
+      "domain": "ui/scene",
+      "experience_slices": [
+        "ES-1"
+      ],
+      "description": "How the town looks on the stage, using clearly placeholder art in keeping with the Equinox HUD's visual language: the layout and obstacles, the people, the trigger spots, and the player. People show their names, people and spots in reach are marked as interactable, and the view follows the player when the town is larger than the window.",
+      "acceptance_criteria": [
+        "Layout, obstacles, people, trigger spots, and the player are all visible and distinguishable using placeholder art",
+        "Each person shows their name, and people and spots the player can interact with right now are visibly marked",
+        "The view keeps the player on screen when the town is larger than the window, at any window size the HUD supports"
+      ],
+      "dependencies": [
+        "T11"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "T13",
+      "title": "UI wiring for town, conversations, and hand-off",
+      "domain": "code/frontend",
+      "experience_slices": [
+        "ES-2",
+        "ES-3",
+        "ES-8"
+      ],
+      "description": "The code that connects the screens to the game session: the town scene learns about town changes and sends triggers to the session; a running conversation opens the conversation panel and choices go back through the session; the hand-off swaps the town for the hand-off screen. Refusals show in the existing error banner, and everything stays in sync after every change, including after loading a save.",
+      "acceptance_criteria": [
+        "Triggering a person or spot opens the conversation panel at that conversation's first step, and taking a choice advances it through the session",
+        "When a conversation ends the panel closes and the town resumes; when the hand-off happens the hand-off screen replaces the town",
+        "Refused actions appear in the existing error banner, and the town, panel, and HUD match the session after every change, including after a load"
+      ],
+      "dependencies": [
+        "T2",
+        "T3",
+        "T4",
+        "T5",
+        "T6",
+        "T7",
+        "T8",
+        "T11"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "T14",
+      "title": "Conversation panel",
+      "domain": "ui/component",
+      "experience_slices": [
+        "ES-3",
+        "ES-4",
+        "ES-5"
+      ],
+      "description": "The conversation screen layered over the stage, in the Equinox HUD's look: who is speaking and what they say (for one-on-one conversations and narrated scenes with several speakers), the choices, personality-locked choices, the personality shifts a choice causes, and characters' reactions. Choices can be taken with mouse and keyboard.",
+      "acceptance_criteria": [
+        "Shows the speaker and their words for one-on-one conversations and narrated scenes with several speakers, plus the available choices",
+        "Locked choices are presented as decided in design, and a choice with no requirement is always selectable",
+        "When a choice shifts personality or a character reacts, the player sees it in the panel, and the HUD personality breakdown updates",
+        "Choices can be taken with mouse and keyboard, and the panel matches the Equinox HUD's look"
+      ],
+      "dependencies": [
+        "T13"
+      ],
+      "decisions": [
+        {
+          "tier": "USER",
+          "description": "Whether personality-locked choices are shown (with their requirement) or hidden, and how personality shifts and character reactions are shown",
+          "rationale": "This is how players notice the demo's core mechanics"
+        }
+      ]
+    },
+    {
+      "id": "T15",
+      "title": "Team selector shows the party",
+      "domain": "ui/component",
+      "experience_slices": [
+        "ES-7"
+      ],
+      "description": "The HUD's team selector lists the characters actually in the party — by name, however many there are — instead of a fixed three, updates as people join or leave, and lets the player pick the fight lineup up to the size content sets. An empty or too-small party is shown clearly rather than as broken controls.",
+      "acceptance_criteria": [
+        "Lists exactly the characters currently in the party, by name, and updates as people join or leave",
+        "Lets the player pick the fight lineup up to the size set by content; refused picks show in the error banner",
+        "An empty party, or one with fewer members than the lineup needs, is shown clearly instead of as broken controls"
+      ],
+      "dependencies": [
+        "T6"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "T16",
+      "title": "Fight hand-off placeholder screen",
+      "domain": "ui/component",
+      "experience_slices": [
+        "ES-8"
+      ],
+      "description": "After the town hands off, the player sees a clearly marked placeholder in the Equinox HUD's look standing in for the Sprint 8 gym fight, showing which fight is next and who is going in.",
+      "acceptance_criteria": [
+        "After the hand-off, a screen clearly marked as a placeholder for the coming fight replaces the town",
+        "It shows which fight is next and the names of the lineup going in"
+      ],
+      "dependencies": [
+        "T13"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "T17",
+      "title": "Stand-in content",
+      "domain": "content/stand-in",
+      "experience_slices": [
+        "ES-11"
+      ],
+      "description": "A clearly marked stand-in cast, town, and set of conversations and scenes that exercises every Sprint 7 mechanic, written entirely as content. It becomes the game's default content, replacing the placeholder greetings and the Sprint 3 test scene graph in play (test fixtures stay for tests; act1_demo.json is left untouched, since whether any of it survives is a creative question, ADR-062). It is test material, not a creative draft.",
+      "acceptance_criteria": [
+        "One playthrough can hit every mechanic: a personality shift, a locked choice and its fallback, characters of different archetypes reacting differently to the same choice, a later moment changed by an earlier choice, someone won over, a new recruit joining, choosing the fight lineup, and the hand-off to the existing demo fight",
+        "Every content file, and the content as seen in play, is clearly marked as stand-in",
+        "It passes the content check and is what a new game plays by default"
+      ],
+      "dependencies": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "T5",
+        "T6",
+        "T7",
+        "T8",
+        "T10"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "T18",
+      "title": "Content guide",
+      "domain": "docs/content",
+      "experience_slices": [
+        "ES-10"
+      ],
+      "description": "A written guide to the game's content: every content type (characters, towns, conversations and scenes, fight hand-offs), every condition and effect available, and the rules the content check enforces, each with an example drawn from the stand-in content. It is Claude's reference for turning the designer's creative decisions — handed over in any form — into content files, and it describes the hand-off loop: the designer hands over decisions, Claude writes the files, the check runs, the designer plays the result, and the two refine it.",
+      "acceptance_criteria": [
+        "Covers every content type, condition, and effect, and every rule the content check enforces, each with an example",
+        "Describes the hand-off loop from designer decision to playable content, including running the check and playing the result",
+        "Records the known gap: testing a moment deep in a playthrough after a content edit means playing back to it, since a reload starts a new game and there is no skip-ahead tool yet"
+      ],
+      "dependencies": [
+        "T10",
+        "T17"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "T19",
+      "title": "Tests: walking a town built from content",
+      "domain": "test/integration",
+      "experience_slices": [
+        "ES-1"
+      ],
+      "description": "Automated coverage for ES-1: a town loads from content, a new game starts at its starting point, movement is blocked by obstacles and edges, and town changes from the session appear in the scene.",
+      "acceptance_criteria": [
+        "Automated tests cover loading a town from content, the new-game starting point, movement blocking, and town changes reaching the scene, and they pass"
+      ],
+      "dependencies": [
+        "T7",
+        "T11",
+        "T12"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "T20",
+      "title": "Tests: town spots lead into conversations and scenes",
+      "domain": "test/integration",
+      "experience_slices": [
+        "ES-2"
+      ],
+      "description": "Automated coverage for ES-2: triggering a person or spot opens the attached conversation or scene, triggering during a conversation is refused, and the town resumes when the conversation ends.",
+      "acceptance_criteria": [
+        "Automated tests cover triggering people and spots, refusal during a conversation, and the town resuming afterwards, and they pass"
+      ],
+      "dependencies": [
+        "T7",
+        "T11",
+        "T13"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "T21",
+      "title": "Tests: conversations play on screen",
+      "domain": "test/integration",
+      "experience_slices": [
+        "ES-3"
+      ],
+      "description": "Automated coverage for ES-3: one-on-one conversations and multi-speaker narrated scenes can be started, stepped through, and finished; refusals leave the game unchanged; the panel shows speakers, lines, and choices.",
+      "acceptance_criteria": [
+        "Automated tests cover playing one-on-one and multi-speaker conversations end to end, refusals leaving the game unchanged, and the panel showing each step, and they pass"
+      ],
+      "dependencies": [
+        "T2",
+        "T13",
+        "T14"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "T22",
+      "title": "Tests: personality shifts and gates",
+      "domain": "test/integration",
+      "experience_slices": [
+        "ES-4"
+      ],
+      "description": "Automated coverage for ES-4: shifts keep traits within 5–35% summing to 100%, locked choices cannot be taken, requirements and shifts are reported, and the panel presents locked choices and shifts as designed.",
+      "acceptance_criteria": [
+        "Automated tests cover trait bounds after shifts, refusal of locked choices, reported requirements and shifts, and their presentation in the panel, and they pass"
+      ],
+      "dependencies": [
+        "T3",
+        "T14"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "T23",
+      "title": "Tests: archetype reactions",
+      "domain": "test/integration",
+      "experience_slices": [
+        "ES-5"
+      ],
+      "description": "Automated coverage for ES-5: characters of different archetypes react differently to the same choice, reactions change affection and trust within range, archetypes never change, and reactions appear in the panel.",
+      "acceptance_criteria": [
+        "Automated tests cover archetype-dependent reactions, relationship changes within range, fixed archetypes, and reactions shown in the panel, and they pass"
+      ],
+      "dependencies": [
+        "T4",
+        "T14"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "T24",
+      "title": "Tests: choices carry forward",
+      "domain": "test/engine",
+      "experience_slices": [
+        "ES-6"
+      ],
+      "description": "Automated coverage for ES-6: flags are set and cleared, choices are remembered, and lines, choices, which conversation plays, and town presence and positions follow conditions on flags, earlier choices, relationships, personality, and party.",
+      "acceptance_criteria": [
+        "Automated tests cover flags, remembered choices, and each kind of condition affecting lines, choices, conversations, and the town, and they pass"
+      ],
+      "dependencies": [
+        "T5",
+        "T7"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "T25",
+      "title": "Tests: choices shape the party",
+      "domain": "test/integration",
+      "experience_slices": [
+        "ES-7"
+      ],
+      "description": "Automated coverage for ES-7: choices add and remove party members, the lineup is chosen only from the party with a content-set size, removal also removes from the lineup, lineup changes are refused during conversations and combat, and the team selector shows the actual party.",
+      "acceptance_criteria": [
+        "Automated tests cover party joins and departures, lineup rules and size, refusals during conversations and combat, and the team selector reflecting the party, and they pass"
+      ],
+      "dependencies": [
+        "T6",
+        "T15"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "T26",
+      "title": "Tests: town hands off to the fight",
+      "domain": "test/integration",
+      "experience_slices": [
+        "ES-8"
+      ],
+      "description": "Automated coverage for ES-8: the hand-off requires a valid lineup, an invalid lineup is refused with a reason and keeps the player in town, the next fight and lineup are recorded, and the placeholder screen shows them.",
+      "acceptance_criteria": [
+        "Automated tests cover valid and invalid hand-offs, the recorded fight and lineup, and the placeholder screen, and they pass"
+      ],
+      "dependencies": [
+        "T8",
+        "T13",
+        "T16"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "T27",
+      "title": "Tests: saves keep all of it",
+      "domain": "test/engine",
+      "experience_slices": [
+        "ES-9"
+      ],
+      "description": "Automated coverage for ES-9: save and load round-trip every piece of Sprint 7 state, saves made mid-conversation behave as designed, and saves made against changed content or before this sprint never crash.",
+      "acceptance_criteria": [
+        "Automated tests cover the full save/load round trip, mid-conversation saves, saves against changed content, and pre-Sprint-7 saves, and they pass"
+      ],
+      "dependencies": [
+        "T9"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "T28",
+      "title": "Tests: content goes in and gets checked",
+      "domain": "test/engine",
+      "experience_slices": [
+        "ES-10"
+      ],
+      "description": "Automated coverage for ES-10: the roster and starting setup come from content, and the content check catches each kind of mistake with its location and blocks verify and play.",
+      "acceptance_criteria": [
+        "Automated tests cover characters and starting setup from content and every mistake the content check is meant to catch, and they pass"
+      ],
+      "dependencies": [
+        "T1",
+        "T10"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "T29",
+      "title": "Tests: stand-in playthrough proves every mechanic",
+      "domain": "test/engine",
+      "experience_slices": [
+        "ES-11"
+      ],
+      "description": "An automated playthrough of the stand-in content that reaches every mechanic listed in T17 and ends at the hand-off, so a regression in any mechanic or in the stand-in content fails the build.",
+      "acceptance_criteria": [
+        "An automated playthrough of the stand-in content hits every mechanic and reaches the hand-off, and it passes"
+      ],
+      "dependencies": [
+        "T17"
+      ],
+      "decisions": []
+    }
+  ],
+  "open_questions": [
+    "Testing a moment deep in a playthrough after a content edit (designer, 2026-10-26): a reload starts a new game, so the designer plays back to the moment. Whether a content edit should force a refresh likely depends on what changed. Documented gap; nothing built this sprint. Skip-ahead tools for the demo progression can come later.",
+    "No save menu yet; a reload starts a new game (carried from Sprint 6).",
+    "Turning the recorded fight lineup into fighters, and running the gym fight, is Sprint 8. Today's encounters use a fixed party unrelated to the team.",
+    "How real art plugs in as content is left until art exists. This sprint uses placeholder art only.",
+    "Creative, outside the pipeline (ADR-062): Ironhold's new beats and whether any existing act1_demo.json beats survive; the team-building direction."
+  ],
+  "resolved_questions": [
+    "Creative hand-off format: the designer hands over decisions in any form; Claude converts them into content files using the content guide (T18), and the two refine together."
+  ]
+}

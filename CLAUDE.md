@@ -3,6 +3,7 @@
 Turn-based combat RPG with personality-driven narrative, growing from the Act 1 pitch prototype into the shipping game. TypeScript, running entirely in the browser.
 
 ## Technical Stack
+- **Engine move decided (ADR-063):** the game is moving to Godot 4.7 (.NET) with C#. The list below is the TypeScript build, which is now the frozen, playable reference (`npm run dev`, `npm run verify`); it is not extended. Godot paths: `docs/project_notes/key_facts.md` → "Godot toolchain".
 - TypeScript ~6.0, one package at the repo root
 - Vite 8 + React 19 (Equinox HUD), Phaser 4 renderer
 - In-client engine and game session (`src/session/` is the game's interface)
@@ -10,6 +11,10 @@ Turn-based combat RPG with personality-driven narrative, growing from the Act 1 
 - Local browser saves (`localStorage`, 10 slots)
 - Vitest 5, ESLint 10
 - Commands: `npm run dev` starts the game in the browser; `npm run verify` runs typecheck, lint, and all tests
+- **Godot project (`godot/`, C#, net10.0):** a Godot 4.7.2 (.NET) project that uses the rules library (`rules/AncientOrder.Rules`, plain C#, no Godot reference). No UI yet.
+  - Open: `godot/project.godot` in the Godot 4.7.2 (.NET) editor (Start menu: "Godot 4.7.2 (.NET)")
+  - Build: `dotnet build AncientOrder.sln` (the solution holds the rules, their tests, and the Godot project)
+  - Verify: `pwsh -File ./verify.ps1` runs the format check, build, all C# tests, the Godot import (only when `godot/.godot` is missing), and the headless smoke run (`godot/smoke`, stand-in content, saves under `user://smoke/saves`)
 
 ## Key Constraints
 - Personality traits: 6 traits, 5-35% range, sum always = 100%
@@ -54,6 +59,16 @@ The user is the director. You are the implementer. This holds in every conversat
 - **Never flatter, never pad, never restate what they just said.** Show you heard them through substance, not echo.
 - **When a request is ambiguous, ask — don't guess.** One question at a time.
 - **Flag goal conflicts.** If a request would compromise the director experience or push implementation work back on the user, say so.
+
+## Systems in the Pipeline, Creative Work Outside It (ADR-062)
+
+Decided 2026-10-26. Do not reopen this in pipeline skills.
+
+- **Pipeline sprints build systems only.** Story, dialogue, characters (who they are, how they join), town and scene layouts, and art are decided outside the pipeline (e.g. `/intuition-meander`) and plugged in later as content.
+- **Systems stay content-agnostic.** Build them to support every creative option still open without committing to any one. A new story, town, character, or conversation is a content change, not a code change.
+- **Stand-in content proves the systems.** Each sprint ships clearly marked stand-in content that exercises every mechanic. It is test material, not a creative draft.
+- **Don't ask creative questions in pipeline work.** Creative ideas that come up get logged as open creative questions, not settled.
+- **Creative hand-off:** the designer hands over decisions, and Claude turns them into content files. The two refine them together.
 
 ## Project Workflow and Memory System
 

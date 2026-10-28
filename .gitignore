@@ -37,3 +37,10 @@ pids/
 
 # System
 .claude/skills/
+
+# C# / Godot
+bin/
+obj/
+.godot/
+TestResults/
+*.user

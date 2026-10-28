@@ -18,6 +18,33 @@ Each bug entry includes:
 ### 2026-05-31 — Natural-20 defense roll → 0 damage rule not implemented
 - **Description:** All three Excel defense formulas wrap with `IF(defenseRoll = 20, 0, …)` — a defense roll of exactly 20 fully negates damage regardless of SR. Our `resolveDefense` has no such rule.
 - **Status:** Deferred by decision (2026-05-31). Documented as a known, intentional omission; revisit if combat fidelity becomes a priority. Note our defense roll convention is also inverted vs Excel (we use low-roll-success `roll ≤ SR·20`; Excel uses high-roll-success `roll/20 ≥ 1−SR`) — statistically identical (`P=SR`) and internally consistent, so no action, but a literal natural-20 port would need the convention reconciled first.
+- **2026-10-28:** Still deferred; listed in the combat balance review (`docs/project_notes/port_record.md`, godot-foundation).
+
+The four entries below were found during godot-foundation design (2026-10-28). The TypeScript build is frozen, so each stays in it; the C# port fixes them, and each is listed in `docs/project_notes/port_record.md`.
+
+### 2026-10-28 — Personality total can land at 99.99%, and the game then refuses to save
+- **Description:** `adjustPersonality` can return a personality summing to 99.99 or 100.01 when a shift pushes a trait to the 35% cap: for example, the default personality plus logic +21.35. Over 800,000 random adjustments this happened in 5.5% of large shifts. About two-thirds of those fail `validatePersonality` (tolerance 0.01), and save validation then refuses the game until the personality moves again.
+- **Root cause:** the final micro-correction (personalitySystem.ts:198–207) adds the leftover to the largest trait. When that trait sits at 35, the clamp undoes the correction.
+- **Solution (C# port, T2):** give the leftover to the largest trait that can take it within 5–35. Verified against the TypeScript: no invalid results, and nothing changes where the sum was already 100.
+- **Prevention:** a randomized invariant test over at least 100,000 seeded adjustments; no test previously exercised the sum at the bounds.
+
+### 2026-10-28 — Round history doubles in size every round
+- **Description:** each `RoundResult.stateSnapshot` spreads the full CombatState, including `roundHistory`, so every record embeds all earlier records. A long fight would eventually make the game too large to save.
+- **Root cause:** roundManager.ts:351–355 snapshots `finalState` without excluding its history.
+- **Solution (C# port, T7):** snapshots hold the end-of-round state with empty history; a test checks that history grows linearly.
+- **Prevention:** keep snapshots free of nested history.
+
+### 2026-10-28 — Enemies silently use the fallback AI
+- **Description:** every `encounter_demo` enemy (archetype `enemy`) and two `encounter_test` enemies (`kade_bold_outlaw`, `lars_cautious_merchant`, which are misspelled against the registry) never run the decision system; they ATTACK the first living player. A catch-all in `_runPhase1AIDecision` also hides any real evaluator error the same way.
+- **Root cause:** a missing profile throws and roundManager.ts:108–113 catches everything.
+- **Solution (C# port, T6):** archetypes are content, each explicitly Scored or Basic; unknown archetypes are refused at content load; the catch-all is removed.
+- **Prevention:** validate content cross-references at load and never swallow exceptions in rules code.
+
+### 2026-10-28 — Enemy GROUP does nothing and drains the enemy team's energy
+- **Description:** the evaluator emits GROUP with no target and skips the energy gate; `resolveGroupAction` finds no target and sets every participant's energy to 0.
+- **Root cause:** evaluator.ts:146–148 gives GROUP a null target; the AI path never runs `validateDeclaration`.
+- **Solution (C# port, T7):** enemies don't choose GROUP until the combat balance review designs enemy group attacks.
+- **Prevention:** run AI actions through the same declaration checks as player actions.
 
 ## Resolved Issues
 

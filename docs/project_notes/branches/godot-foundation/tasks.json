@@ -1,0 +1,1724 @@
+{
+  "parent_context": {
+    "parent": "sprint-6",
+    "note": "Slice IDs are renumbered for this branch. Sprint 6 ES-1 (plays with no server) and ES-4 (scene stage) carry on unchanged inside the frozen TypeScript build, which is what this branch's ES-8 protects. Sprint 6 ES-3 (every system still works) is reworked here as ES-1 to ES-4, one slice per system so design reviews them one at a time. Sprint 6 ES-2 (local saves) becomes ES-5, and Sprint 6 ES-5 (one command) becomes part of ES-6. Review is at the level of concepts and intent: the designer approves each system's rules and purpose in design and does not review the finished C# (designer, 2026-10-26).",
+    "inherited_slices": [
+      "sprint-6/ES-1",
+      "sprint-6/ES-4"
+    ],
+    "modified_slices": [
+      "sprint-6/ES-2",
+      "sprint-6/ES-3",
+      "sprint-6/ES-5"
+    ],
+    "new_slices": [
+      "ES-1",
+      "ES-2",
+      "ES-3",
+      "ES-4",
+      "ES-5",
+      "ES-6",
+      "ES-7",
+      "ES-8"
+    ]
+  },
+  "title": "Godot Foundation — Rules Engine Move to C#",
+  "experience_slices": [
+    {
+      "id": "ES-1",
+      "title": "Personality, characters, and game state work the way the designer intends",
+      "stakeholder": "Designer/director",
+      "description": "The designer has approved the concepts and intent behind the personality rules, the game's state, and how characters enter a new game. Personality keeps its limits: 6 traits, each 5–35%, summing to 100%. NPC archetypes stay fixed, and state is never changed in place. Anything the designer didn't change on purpose behaves as it does in the TypeScript build."
+    },
+    {
+      "id": "ES-2",
+      "title": "The fight lineup and team synergy work the way the designer intends",
+      "stakeholder": "Designer/director",
+      "description": "The designer has approved how companions are chosen for a fight and how team synergy (Well Rounded, Bond) boosts the party. Anything the designer didn't change on purpose behaves as it does today."
+    },
+    {
+      "id": "ES-3",
+      "title": "Combat works the way the designer intends",
+      "stakeholder": "Designer/director",
+      "description": "The designer has approved, at the level of concepts and intent, every part of combat: damage and defense math, energy, elemental paths, reaction progression, declaring orders, counter chains, group actions, round resolution, how enemies decide what to do, and how a fight is set up from the party and an encounter. Anything the designer didn't change on purpose plays out exactly as today for the same rolls."
+    },
+    {
+      "id": "ES-4",
+      "title": "The game session is still the only way into the rules",
+      "stakeholder": "Designer/director",
+      "description": "Everything the future screens will need goes through one game session, as in ADR-057. Every action comes back as a success or a refusal with a reason. Each change produces a new snapshot that listeners hear about once, and bad input is refused instead of crashing. The overworld, conversations, and combat screens still to come can be built on it without revisiting the rules."
+    },
+    {
+      "id": "ES-5",
+      "title": "Saves carry over into the new foundation",
+      "stakeholder": "Designer/director",
+      "description": "Ten save slots in a versioned format, with checks that refuse damaged saves cleanly. Saves are kept as files on the player's machine, behind storage that can be swapped out (ADR-058). The new format starts fresh: browser saves from the TypeScript build are not carried over."
+    },
+    {
+      "id": "ES-6",
+      "title": "The Godot project is ready for UI work",
+      "stakeholder": "Designer/director",
+      "description": "The Godot 4.7 (.NET) project opens in the editor and is already connected to the rules, and the rules don't depend on Godot. One command builds the project and runs every C# test. There is no UI yet and nothing is playable in Godot."
+    },
+    {
+      "id": "ES-7",
+      "title": "Every deliberate difference is on record",
+      "stakeholder": "Designer/director",
+      "description": "One record lists, system by system: every deliberate difference from the TypeScript build and why it was made, every carried-over test that was changed or dropped, every larger change set aside for its own sprint, and any creative ideas that came up, logged as open creative questions."
+    },
+    {
+      "id": "ES-8",
+      "title": "Players keep playing the frozen TypeScript build",
+      "stakeholder": "Players",
+      "description": "The TypeScript build stays in the repo, untouched, and runs and verifies exactly as before. It remains the only playable build until Godot has UI."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Rules library and test project",
+      "domain": "code/build",
+      "experience_slices": [
+        "ES-6",
+        "ES-8"
+      ],
+      "description": "A .NET solution in the repo containing a plain C# rules library, which does not depend on Godot or on rendering, and a test project for it. Every later port task builds into these. Both sit beside the TypeScript build without touching it.",
+      "acceptance_criteria": [
+        "`dotnet test` builds the rules library and its test project and runs successfully",
+        "The rules library builds with no reference to Godot or rendering code, and adding one fails the build",
+        "`npm run verify` and `npm run dev` work exactly as before, and no TypeScript build file is changed",
+        "`dotnet test` run from the repo root finds and runs the test project through `AncientOrder.sln`",
+        "Adding any PackageReference, ProjectReference, or assembly Reference to `AncientOrder.Rules.csproj` fails its build with a message saying the rules library must stay dependency-free",
+        "A nullable warning or a recommended-level analyzer warning in a rules project fails the build",
+        "`./verify.ps1` runs the formatting check, the solution build, and the tests, and exits non-zero if any step fails"
+      ],
+      "dependencies": [],
+      "decisions": [],
+      "technical_approach": "A classic `AncientOrder.sln` at the repo root holds the C# projects: `rules/AncientOrder.Rules` (the rules library, net10.0, zero dependencies), `rules/AncientOrder.Rules.Tests` (xUnit v3 on Microsoft.Testing.Platform), and later the Godot project `godot/AncientOrder.csproj` (added by T13). `global.json` pins the .NET 10 SDK and selects the Microsoft.Testing.Platform runner for `dotnet test`. `rules/Directory.Build.props` applies only to projects under `rules/`: nullable enabled, latest C#, implicit usings, AnalysisLevel latest-Recommended, warnings as errors. A root `.editorconfig` has only `[*.cs]` sections, so the TypeScript tooling and Prettier are unaffected. The library enforces its independence twice: an MSBuild target in its csproj errors if any non-implicit PackageReference, ProjectReference, or Reference appears, and an architecture test asserts the compiled assembly references only framework assemblies (none starting with \"Godot\"). This task also lays down the shared conventions every rules task follows (see producer_notes) and their small shared types in `Common/`. Two dependency-free guards keep the conventions honest: `.editorconfig` raises the culture-sensitive string analyzers (CA1304, CA1305, CA1307, CA1309, CA1310, CA1311) to errors for `rules/**.cs`, and a metadata-scan test (System.Reflection.Metadata, part of the framework) fails if the compiled rules assembly references a banned API (see producer_notes). The default roll source is the library's own seeded generator (xoshiro256**, seeded through SplitMix64), because Microsoft does not guarantee `System.Random`'s sequence across .NET versions; a golden-sequence test pins its exact output. `verify.ps1` at the root is the one command: `dotnet format --verify-no-changes`, `dotnet build AncientOrder.sln`, `dotnet test`; T13 appends the Godot import and headless smoke steps. The TypeScript build is not touched: every TS config is scoped to `src/` and `tests/`; only `.gitignore` gains the C# and Godot build folders.",
+      "interfaces": "Produces the solution, the two rules projects, and the shared `Common` types every engine task builds on: `Result<T>` (success value or `RuleError`), `RuleError(ErrorCode Code, string Message, ImmutableArray<RuleErrorDetail> Details)` with `RuleErrorDetail(string Path, string Message)` (e.g. path `actions/1` for a rejected order), `ErrorCode` (mirrors the live TS codes in `src/types/index.ts` ErrorCodes: GAME_NOT_FOUND, INVALID_SLOT, SAVE_NOT_FOUND, NPC_NOT_FOUND, TEAM_COMPOSITION_INVALID, VALIDATION_ERROR, INTERNAL_ERROR, NO_ACTIVE_COMBAT, COMBAT_INVALID_DECLARATION, ENCOUNTER_NOT_FOUND, COMBAT_ALREADY_ACTIVE, STORAGE_ERROR; the dialogue and narrative codes of the retired engines and the unused INVALID_PERSONALITY_ADJUSTMENT are not carried), `IRollSource` (returns a double in [0,20) like the TS `rollFn`, which is `Math.random() * 20`; default `SeededRolls`: xoshiro256** seeded by SplitMix64, roll = (next >> 11) * 2^-53 * 20), `DiceState` (the generator's four 64-bit words as an immutable, saveable record; `DiceState.FromSeed(ulong)`; `SeededRolls.FromState(DiceState)` and `.State` let a fight carry its dice and resume them exactly after a save), `ISeedSource` (new fight seeds; default `SystemSeedSource` uses `RandomNumberGenerator`), `IIdSource` (new ids; `GuidIdSource` default), and `JsMath` (JS-identical rounding). The clock is .NET's `TimeProvider` (System by default; `FakeTimeProvider` in tests). Rules functions take `now`, rolls, and ids as parameters; only the session (T9) holds the sources. Tests get `FixedRolls` (a scripted roll sequence) and `StateAssert.Equivalent` (compares two states by their JSON form with `JsonNode.DeepEquals`, which ignores object property order, since records holding immutable collections don't compare by value and lookup maps have no fixed order).",
+      "files": [
+        {
+          "path": "AncientOrder.sln",
+          "purpose": "Classic solution holding the rules library, its tests, and (from T13) the Godot project; Godot builds its csproj directly and does not read .slnx"
+        },
+        {
+          "path": "global.json",
+          "purpose": "Pins the .NET SDK to 10.0.x (rollForward latestFeature) and sets the test runner to Microsoft.Testing.Platform"
+        },
+        {
+          "path": ".editorconfig",
+          "purpose": "C# formatting and analyzer settings in `[*.cs]` sections only; a `[rules/**.cs]` section raises CA1304, CA1305, CA1307, CA1309, CA1310, CA1311 to error"
+        },
+        {
+          "path": ".gitignore",
+          "purpose": "Modify: add bin/, obj/, .godot/, TestResults/, *.user"
+        },
+        {
+          "path": "rules/Directory.Build.props",
+          "purpose": "Shared settings for projects under rules/: Nullable enable, LangVersion latest, ImplicitUsings, AnalysisLevel latest-Recommended, TreatWarningsAsErrors"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/AncientOrder.Rules.csproj",
+          "purpose": "net10.0 class library, IsAotCompatible, no dependencies, plus the guard target that fails the build if a dependency is added"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Common/Result.cs",
+          "purpose": "Result<T> success-or-refusal value with helpers (Ok, Fail, Map/Bind as needed)"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Common/RuleError.cs",
+          "purpose": "RuleError record and the ErrorCode enum mirroring the TypeScript codes"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Common/IRollSource.cs",
+          "purpose": "Roll source interface (double in [0,20))"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Common/SeededRolls.cs",
+          "purpose": "Default roll source: xoshiro256** seeded through SplitMix64, integer-only state; DiceState record, FromSeed, FromState, State; about 40 lines"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Common/IIdSource.cs",
+          "purpose": "Id source interface and the GuidIdSource default"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Common/ISeedSource.cs",
+          "purpose": "Seed source interface and the SystemSeedSource default (RandomNumberGenerator)"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Common/JsMath.cs",
+          "purpose": "Round matching JavaScript Math.round (halves toward +infinity): f = Math.Floor(x); return x - f >= 0.5 ? f + 1 : f"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/AncientOrder.Rules.Tests.csproj",
+          "purpose": "xUnit v3 test project on Microsoft.Testing.Platform, referencing the rules library and Microsoft.Extensions.TimeProvider.Testing"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Support/FixedRolls.cs",
+          "purpose": "IRollSource that returns a scripted sequence and fails the test if it runs out"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Support/StateAssert.cs",
+          "purpose": "Equivalent(expected, actual): serializes both, compares with JsonNode.DeepEquals (property-order-insensitive), and shows the difference on failure"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Architecture/RulesIndependenceTests.cs",
+          "purpose": "Asserts the rules assembly references only framework assemblies and nothing named Godot*"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Architecture/BannedApiTests.cs",
+          "purpose": "Scans the compiled rules assembly's member references with System.Reflection.Metadata and fails on any banned API (list in producer_notes), naming the offender"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Common/SeededRollsTests.cs",
+          "purpose": "Golden-sequence test: a fixed seed produces a pinned list of rolls; all rolls fall in [0,20); resuming from a saved DiceState continues the identical sequence"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Common/JsMathTests.cs",
+          "purpose": "Proves JsMath.Round matches JavaScript on halves, negatives, and 2-decimal rounding (x*100 then /100)"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Common/ResultTests.cs",
+          "purpose": "Covers Result success, refusal, and error details"
+        },
+        {
+          "path": "verify.ps1",
+          "purpose": "The one command: format check, solution build, tests; non-zero exit on any failure (T13 appends the Godot steps)"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "Target .NET 10 for every C# project",
+          "rationale": "Spike: Godot 4.7.2 built and ran a net10.0 game project that references a net10.0 library, headless, with the exit code propagating. .NET 8 support ends Nov 2026 and the machine has no .NET 8 runtime. Desktop export with net10 is unverified until export templates are installed; retargeting is a one-property change."
+        },
+        {
+          "decision": "Classic AncientOrder.sln, not .slnx",
+          "rationale": "Godot builds the csproj directly and there is no evidence it reads .slnx; a classic solution also stops the Godot editor from generating a second one."
+        },
+        {
+          "decision": "Rules library has zero dependencies, enforced by a build guard and an architecture test",
+          "rationale": "ADR-063: the rules are independent of Godot and rendering. A guard that fails the build catches it before any test runs."
+        },
+        {
+          "decision": "Immutable sealed records; order is always explicit: ImmutableArray where order matters, ImmutableDictionary for lookup only and never iterated, no sorted dictionaries",
+          "rationale": "Designer-approved after research (2026-10-28). A spike showed System.Text.Json reloads an ImmutableSortedDictionary with the culture-sensitive default comparer, so key order changed with the OS language and re-saves differed. The TypeScript iterates objects in insertion order (Elena, Lars, Kade), which id-sorted order would silently change, and order matters (e.g. group damage is summed in insertion order and double addition is order-sensitive)."
+        },
+        {
+          "decision": "Culture-sensitive string APIs are build errors in the rules",
+          "rationale": "Same root cause as the sorted-map finding; catches the bug class at compile time."
+        },
+        {
+          "decision": "Refusals as Result<T> values; only real bugs throw, and the session turns them into INTERNAL_ERROR",
+          "rationale": "Carries ADR-057's results-as-values into the rules themselves."
+        },
+        {
+          "decision": "Rolls, clock, and ids are handed in (IRollSource, TimeProvider, IIdSource)",
+          "rationale": "Any outcome can be reproduced exactly from its rolls, live fights included."
+        },
+        {
+          "decision": "The library's own seeded generator (xoshiro256** via SplitMix64), not System.Random",
+          "rationale": "Designer-approved after research (2026-10-28): Microsoft's docs say seeded System.Random sequences may differ between .NET versions, which would break replays after an upgrade. Integer-only state is exactly reproducible; a golden test pins it."
+        },
+        {
+          "decision": "Keep double arithmetic with JS-identical rounding (halves up), stable sorts, and the same order of operations; ban transcendental and fused math in the rules",
+          "rationale": "Designer-approved after research (2026-10-28). Integer or fixed-point math (suggested by research) would change results throughout combat and break parity. IEEE 754 requires + - * / to be correctly rounded, and the engine uses only those plus floor, round, min, max (verified by grep), so results match the TypeScript to the last digit. Whether RyuJIT ever fuses a*b+c implicitly could not be sourced; the carried-over tests pin exact values and would catch it."
+        },
+        {
+          "decision": "xUnit v3 on Microsoft.Testing.Platform, one C# test file per TypeScript test file with the same test names",
+          "rationale": "Lets the port record account for every TypeScript test one-to-one."
+        },
+        {
+          "decision": "verify.ps1 as the single check",
+          "rationale": "Mirrors `npm run verify`: formatting plus nullable and analyzer warnings as errors is the C# equivalent of typecheck plus lint."
+        }
+      ],
+      "producer_notes": "Conventions every rules task (T2–T12) follows: (1) Types are `sealed record`s with init-only properties; updates use `with` and never mutate. Order is always explicit: use `ImmutableArray<T>` wherever order matters; use `ImmutableDictionary<string,T>` (built with `StringComparer.Ordinal`) for lookup only and never iterate it; never use `ImmutableSortedDictionary` or `SortedDictionary`. When something must be walked in order, walk an explicit ordered list (for characters, the catalog's content order) and look values up by id. (2) Expected refusals return `Result<T>.Fail(new RuleError(code, message))` with the same code and message text as the TypeScript; never throw for them. (3) No `Random`, `DateTime.Now`, `DateTimeOffset.UtcNow`, or `Guid.NewGuid()` inside rules functions: take an `IRollSource`, a `long now` (Unix ms, as TS `Date.now()`), or an `IIdSource`. (4) Use `JsMath.Round` wherever the TypeScript uses `Math.round`; never `Math.Round` (banker's rounding) or `MidpointRounding.ToPositiveInfinity` (that is directed rounding, not round-half-up). (5) Sorts must be stable: use `OrderBy`/`ThenBy`, never `List.Sort`/`Array.Sort`. (6) Keep double arithmetic in the same order as the TypeScript expression. (7) Where TS iterates `Object.values`/`Object.keys`, iterate in the same order the TS object had (insertion order); state that order explicitly in each task. (8) Banned in the rules assembly, enforced by BannedApiTests: `System.Random`; `DateTime.Now`/`UtcNow`/`Today`, `DateTimeOffset.Now`/`UtcNow`; `Guid.NewGuid`; `Math.Round` and `MathF.*`; `Math.Pow`, `Exp`, `Log*`, `Sqrt`, `Cbrt`, trig and hyperbolic functions, `FusedMultiplyAdd`, `ScaleB`; `List<T>.Sort`, `Array.Sort`, `ImmutableArray<T>.Sort`; anything in `System.Numerics.Vector*` or `System.Runtime.Intrinsics`; `ImmutableSortedDictionary`/`SortedDictionary`. JsMath may use `Math.Floor`. Allowlist (the only places nondeterminism may enter): `GuidIdSource` may call `Guid.NewGuid`, and `SystemSeedSource` may call `RandomNumberGenerator`; BannedApiTests also bans `RandomNumberGenerator` everywhere else. (9) Save files never serialize rules state directly; T11 maps state to its own save-format records. Namespaces: `AncientOrder.Rules.{Common,Personality,State,Party,Combat,Combat.Ai,Session,Saves}`. The guard target must ignore items with `IsImplicitlyDefined == true` (the SDK adds some for AOT analysis). Do not edit any file under `src/`, `tests/`, or the TS configs, or `package.json`. Test projects may suppress analyzer rules that clash with xUnit naming (such as CA1707) in their own csproj only."
+    },
+    {
+      "id": "T2",
+      "title": "Personality rules",
+      "domain": "code/engine",
+      "experience_slices": [
+        "ES-1"
+      ],
+      "description": "The personality system in the rules library: the six traits, their 5–35% limits and the 100% total, the default starting personality, checking that a personality is valid, and adjusting a personality so it stays within limits.",
+      "acceptance_criteria": [
+        "A personality always has the six traits, each between 5% and 35%, summing to 100%, and anything else is reported invalid",
+        "Adjusting a personality gives the same resulting values as the TypeScript build for the same inputs, unless the designer changed it on purpose",
+        "A new player starts with the same default personality as today, unless the designer changed it on purpose",
+        "A personality is never changed in place; every adjustment produces a new one",
+        "Every adjusted personality sums to 100 within 0.001 and keeps every trait within 5–35, proven by a randomized test of at least 100,000 adjustments from a fixed seed",
+        "Default personality plus a logic shift of +21.35 gives logic 35 and a valid personality summing to 100 (the TypeScript build gives 99.99, which its own check rejects)",
+        "Wherever the TypeScript result already summed to 100, the C# result is identical to the last digit"
+      ],
+      "dependencies": [
+        "T1"
+      ],
+      "decisions": [
+        {
+          "tier": "USER",
+          "description": "Review of the personality rules' concepts and intent: change now, set aside for its own sprint, or keep as is",
+          "rationale": "Discovery brief: the designer reviews each system as it moves and decides case by case."
+        }
+      ],
+      "technical_approach": "A direct port of `src/personality/personalitySystem.ts` into `AncientOrder.Rules.Personality`, with one deliberate fix. `Trait` is an enum in the TypeScript PERSONALITY_TRAITS order (Patience, Empathy, Cunning, Logic, Kindness, Charisma); that order is load-bearing (tie-breaks and iteration) and `PersonalityRules.Traits` exposes it as an ImmutableArray. `Personality` is a sealed record with one double per trait plus an indexer by `Trait`. `PersonalityRules` holds the constants (min 5, max 35, total 100, tolerance 0.01, correction threshold 0.001, 10 redistribution passes) and the functions `CreateDefault()`, `Sum(p)`, `Validate(p)`, and `Adjust(current, adjustment)`. `Adjust` keeps the three-pass algorithm exactly (apply and clamp each delta present, a zero delta still counting as adjusted; distribute the difference proportionally over unadjusted traits, or all six when none are unadjusted; up to 10 even-split passes over traits with headroom until |residual| <= 0.01; round each trait to 2 decimals with JsMath). Fix: the final micro-correction goes to the largest trait that can take it and stay within 5–35 after 2-decimal rounding (first in trait order on ties), instead of always the largest trait. When the largest trait can take it, the result is identical to today. Verified against the TypeScript over 800,000 random adjustments: the TS left 5.5% of large shifts off by 0.01 (sum 99.99 or 100.01, about two-thirds of them rejected by its own validity check, which makes the save refuse); the fix leaves none, and it changes no result whose sum was already 100.",
+      "interfaces": "Produces `Trait`, `Personality`, `PersonalityAdjustment` (a record wrapping an `ImmutableDictionary<Trait,double>` of deltas; lookup only), `PersonalityValidation(bool Valid, ImmutableArray<string> Errors)`, and `PersonalityRules` (CreateDefault, Sum, Validate, Adjust, Traits, constants). Consumed by T3 (player personality, character catalog validation, starting personality), T4 (synergy reads trait values in trait order), T9 (the session's adjustment input checks: at least one key, trait keys only, finite numbers), and T11 (save checks reuse Validate).",
+      "files": [
+        {
+          "path": "rules/AncientOrder.Rules/Personality/Trait.cs",
+          "purpose": "Trait enum in the TypeScript order"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Personality/Personality.cs",
+          "purpose": "Personality record (six doubles) with an indexer by Trait and a `With(trait, value)` helper"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Personality/PersonalityAdjustment.cs",
+          "purpose": "Deltas keyed by Trait"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Personality/PersonalityRules.cs",
+          "purpose": "Constants, CreateDefault, Sum, Validate, Adjust (three-pass redistribution plus the fixed micro-correction)"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "Fix the micro-correction: the leftover goes to the largest trait that can take it within 5–35",
+          "rationale": "Designer decision 2026-10-28. Today a trait capped at 35 swallows the correction and the total stays at 99.99, so saving is refused. Proven by running both versions over 800,000 adjustments."
+        },
+        {
+          "decision": "Keep everything else as today: default personality with charisma 16.65, a zero delta counts as adjusted, tolerance 0.01 for validity, 10 passes",
+          "rationale": "No reason to change; parity is the default. The default's comment ('all equal') is wrong, not the value: six traits at 16.67 would total 100.02."
+        }
+      ],
+      "producer_notes": "Port line by line from `src/personality/personalitySystem.ts` (adjustPersonality at lines 124–210); keep the order of every double operation, iterate traits in `PersonalityRules.Traits` order, use JsMath.Round for the 2-decimal rounding (`JsMath.Round(x * 100) / 100`). Micro-correction fix: candidates are traits whose `JsMath.Round((value + diff) * 100) / 100` lies within [5, 35]; pick the largest value among candidates, first in trait order on ties; if no candidate exists (not reachable in practice), fall back to today's behavior. Keep the final clamp. Validate's error messages match the TypeScript text. No input validation inside Adjust (the session checks input, as today)."
+    },
+    {
+      "id": "T3",
+      "title": "Game state and characters",
+      "domain": "code/engine",
+      "experience_slices": [
+        "ES-1"
+      ],
+      "description": "The game's state in the rules library: the player, the characters with their fixed archetypes and personalities and their affection and trust toward the player, the fight lineup, combat state, reaction progress, and the updates that change them. A new game gets its characters from a cast handed to it, because the hard-coded NPC roster is not carried over. State that only served the retired scene and dialogue engines is not carried over unless the designer keeps it.",
+      "acceptance_criteria": [
+        "A new game holds the player and the characters from the cast it is given, and the library has no character list built in",
+        "Characters' archetypes and fixed personalities cannot be changed by play",
+        "Personality, affection, trust, and lineup updates give the same results and refusals as the TypeScript build, unless the designer changed them on purpose",
+        "Every update produces a new state and leaves the previous state unchanged",
+        "A new game's character states start from each character's starting affection and trust, the lineup starts empty, and the player's name and personality come from the content's settings (today's default personality when none is given)",
+        "Content with duplicate character ids, an empty or over-64-character id, an empty name, an invalid fixed personality, or starting affection or trust outside −100 to 100 is refused with VALIDATION_ERROR",
+        "Listing characters returns them in the content's order; looking up an unknown character, or changing an unknown character's relationship, is refused with NPC_NOT_FOUND and leaves the state unchanged",
+        "Character state holds only what changes in play (affection, trust); name, archetype, and personality are read from the catalog and no update can reach them"
+      ],
+      "dependencies": [
+        "T2",
+        "T5"
+      ],
+      "decisions": [
+        {
+          "tier": "USER",
+          "description": "Review of the game state's concepts and intent: change now, set aside for its own sprint, or keep as is",
+          "rationale": "Discovery brief: the designer reviews each system as it moves."
+        },
+        {
+          "tier": "USER",
+          "description": "Where a new game's characters come from now that the hard-coded NPC roster is not carried over (Sprint 7 content packs are not built yet)",
+          "rationale": "The roster is out of scope, but new games, fight setup, and enemy decisions all depend on characters; ADR-062 moves creative data out of code."
+        },
+        {
+          "tier": "USER",
+          "description": "Whether state that only served the retired scene and dialogue engines (current dialogue node, conversation log, narrative scene state) is dropped",
+          "rationale": "Those engines are out of scope; dropping their state is a deliberate difference that goes in the port record."
+        }
+      ],
+      "technical_approach": "Characters are split into what never changes and what changes in play, with one module owning character logic. (1) Content: `GameContent` is the read-only bundle the session plays from, created through `GameContent.Create(...)`, which validates and returns `Result<GameContent>`. This task gives it `Settings` (`GameSettings`: PlayerName, optional StartingPersonality, LineupSize) and `Characters` (`CharacterCatalog`); T4 adds `Synergy`, T6 adds the AI profiles, and T8 adds the encounters, each extending `GameContent` and its validation. Sprint 7's content packs will fill this same record from files. (2) `CharacterCatalog` holds `CharacterDefinition`s (Id, Name, ArchetypeId, fixed Personality, StartingAffection, StartingTrust, optional `Combat`) in content order (`ImmutableArray`, which is the order every listing and every walk uses) plus a `FrozenDictionary` index by id (ordinal). `CombatProfile` (Rank, Stamina, Power, Speed, ElementalPath, AscensionLevel defaulting to 0) gives a character's fighting stats; a character without one never fights. `GameSettings` also gains an optional `PlayerCombat` profile; without it the player character does not fight (T8). Reaction skills are not part of the profile, because the player's side derives them from reaction progress (ADR-054). Definitions never change during play (ADR-003). Join conditions from Sprint 7's shared condition system are added when that system arrives; no speculative fields now. (3) `GameState` is the per-playthrough record: `Player` (`PlayerCharacter`: Id, Name, Personality), `Characters` (`ImmutableDictionary<string, CharacterState>`, lookup only; CharacterState holds Affection and Trust), `Lineup` (`ImmutableArray<string>`), `Combat` (`CombatState?`, from T5), `ReactionProgress` (from T5, same shape as the TypeScript record keyed by combatant id), and `Timestamp` (Unix ms). Dropped: currentDialogueNode, conversationLog, narrativeState, the never-written saveSlot, and the dialogue and scene types. (4) `CharacterRules` is the characters module, and the only code that reads or changes characters. Queries: `Get(content, state, id)` returns a `CharacterView` (definition and state combined) or NPC_NOT_FOUND; `All(content, state)` returns views in catalog order; `InLineup(content, state)` returns views in lineup order. Updates: `ChangeAffection`, `ChangeTrust`, and `ChangeRelationship` add the change and clamp to [−100, 100] exactly as the TypeScript does, returning `Result<GameState>`, and refuse an unknown id with NPC_NOT_FOUND (today that is a silent no-op). (5) `GameStateUpdates` holds the remaining updaters: `NewGame(content, playerId, now)`, `SetPlayerPersonality`, `AdjustPlayerPersonality` (through T2's Adjust), and `WithCombat`. Every successful update sets `Timestamp = now`; a refusal changes nothing. The session (T9) is the only caller from outside the library.",
+      "interfaces": "Receives T2's Personality types and T5's CombatState and ReactionProgress types. Produces `GameContent`, `GameSettings`, `CharacterCatalog`, `CharacterDefinition`, `GameState`, `PlayerCharacter`, `CharacterState`, `CharacterView`, `CharacterRules`, and `GameStateUpdates`. Consumed by T4 (lineup validation against the catalog; synergy reads the player and lineup personalities through CharacterRules.InLineup), T8 (fight setup reads the player and lineup), T9 (session operations and the new-game call: the session supplies `player_<id from IIdSource>` and `now` from TimeProvider), and T11 (saves store GameState's changing parts and pair them with the current catalog on load).",
+      "files": [
+        {
+          "path": "rules/AncientOrder.Rules/Content/GameContent.cs",
+          "purpose": "Read-only content bundle and its validating Create; T4, T6, T8 add their parts"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Content/GameSettings.cs",
+          "purpose": "Player name, optional starting personality, lineup size, optional player combat profile"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Characters/CombatProfile.cs",
+          "purpose": "A fighter's base combat stats from content: rank, stamina, power, speed, elemental path, ascension level; validated (stamina and rank above 0, power and speed 0 or more, all finite)"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Characters/CharacterDefinition.cs",
+          "purpose": "A character's fixed definition: id, name, archetype id, fixed personality, starting affection and trust"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Characters/CharacterCatalog.cs",
+          "purpose": "Definitions in content order plus a frozen lookup by id; validating factory"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Characters/CharacterState.cs",
+          "purpose": "What changes in play for one character: affection, trust"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Characters/CharacterView.cs",
+          "purpose": "Definition and state combined, for queries and screens"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Characters/CharacterRules.cs",
+          "purpose": "The characters module: Get, All, InLineup, ChangeAffection, ChangeTrust, ChangeRelationship"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/State/GameState.cs",
+          "purpose": "GameState and PlayerCharacter records"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/State/GameStateUpdates.cs",
+          "purpose": "NewGame, SetPlayerPersonality, AdjustPlayerPersonality, WithCombat; every update stamps the time"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "Characters split into a read-only catalog (from content) and per-game character state, with one characters module owning all character reads and changes behind the session; no stateful controller object",
+          "rationale": "Designer decision 2026-10-28 (asked for a character controller that tracks all characters and expands to the full game without rework; agreed this shape after research). Godot's docs note a loaded Resource is one shared copy, so fixed definitions and per-game state must be separate. One immutable snapshot stays the single source of truth (ADR-057)."
+        },
+        {
+          "decision": "A new game takes its cast, player name, starting personality, and lineup size from content handed in; the library has no characters built in; Elena, Lars, and Kade become a test-only cast",
+          "rationale": "Designer decision 2026-10-28. Matches Sprint 7's settled content-pack shape, so Sprint 7 adds loading from files without changing the rules (ADR-062)."
+        },
+        {
+          "decision": "Characters gain a name field",
+          "rationale": "The TypeScript NPC type has none; Sprint 7's character design includes it. Part of the designer-approved new-game setup (Group 2 item 1, 2026-10-28)."
+        },
+        {
+          "decision": "Drop currentDialogueNode, conversationLog, narrativeState, saveSlot, and the dialogue and scene types and error codes",
+          "rationale": "Designer decision 2026-10-28: they served only the retired engines (saveSlot was never written). Sprint 7 brings its own conversation state."
+        },
+        {
+          "decision": "Changing an unknown character's relationship is refused with NPC_NOT_FOUND instead of silently ignored",
+          "rationale": "Results-as-values: a silent no-op hides content mistakes. Nothing in today's build calls these updaters (their writers were the retired engines). Shown to the designer in Group 2 (2026-10-28) under 'smaller things I'll handle unless you object'; no objection."
+        },
+        {
+          "decision": "Requirements and conditions on characters come from Sprint 7's shared condition system, not a characters-only one",
+          "rationale": "Designer-approved 2026-10-28; avoids two condition systems."
+        },
+        {
+          "decision": "Saves keep only character state and pair it with the current catalog on load",
+          "rationale": "Sprint 7's settled rule: content is authoritative for fixed traits, so content fixes reach existing saves. Details in T11."
+        }
+      ],
+      "producer_notes": "Port the live updaters from `src/state/stateUpdaters.ts` (updatePlayerPersonality, applyPersonalityAdjustment, updateNPCAffection, updateNPCTrust, updateNPCRelationship, updateCombatState) and the factory from `src/state/gameState.ts`, keeping the clamp expressions (`Math.Max(-100, Math.Min(100, value + change))`). Do not port the narrative, dialogue, conversation, or saveSlot code or types. Never iterate `GameState.Characters`; walk `CharacterCatalog` in order and look state up by id. NewGame creates a CharacterState for every catalog entry, in catalog order. A missing StartingPersonality means `PersonalityRules.CreateDefault()`. `CombatState` and `ReactionProgress` types come from T5; if T5 is not done yet, this task waits for it (dependency added). Keep error messages in the TypeScript wording where a TypeScript equivalent exists (e.g. NPC_NOT_FOUND text from `src/session/operations/npc.ts`). Mark any extension point with a one-line comment only; do not add placeholder fields."
+    },
+    {
+      "id": "T4",
+      "title": "Fight lineup and team synergy",
+      "domain": "code/engine",
+      "experience_slices": [
+        "ES-2"
+      ],
+      "description": "Choosing which companions go into a fight, and team synergy: the Well Rounded and Bond paradigms that boost the party based on the player's and companions' personalities. The lineup refusal that existed only for the retired scene engine goes with it, unless the designer keeps it.",
+      "acceptance_criteria": [
+        "The lineup accepts and refuses the same choices as today, including no changes during combat, unless the designer changed it on purpose",
+        "Synergy gives the same bonus as today (which paradigm, which stat, how much) for the same player and companion personalities",
+        "Choosing a lineup produces a new state and leaves the previous one unchanged",
+        "Synergy is worked out from the player and the current lineup only, never stored, and gives no bonus when no lineup is chosen",
+        "Bonuses are defined in content (scoring rule, threshold, stat, step, value) and the content chooses 'best only' or 'all that qualify'; with the test content's two bonuses and 'best only', results match today's paradigm, stat, multiplier, and match quality",
+        "With 'all that qualify', every qualifying bonus is returned in content order",
+        "Applying a single ×1.10 bonus to a stat gives exactly today's `Math.round(stat * 1.10)`; flat, additive-percent, and multiplier steps combine in that order with one rounding at the end; a stat with no bonus is left untouched",
+        "The lineup size comes from content; a lineup of the wrong size, with an unknown character, or with a duplicate is refused with TEAM_COMPOSITION_INVALID and today's messages; a character without combat stats is refused the same way"
+      ],
+      "dependencies": [
+        "T3"
+      ],
+      "decisions": [
+        {
+          "tier": "USER",
+          "description": "Review of the lineup and synergy concepts and intent: change now, set aside for its own sprint, or keep as is",
+          "rationale": "Discovery brief: the designer reviews each system as it moves."
+        }
+      ],
+      "technical_approach": "Two parts in `AncientOrder.Rules.Party`, plus a small general stat-bonus pipeline. (1) Lineup: `LineupRules.Set(content, state, ImmutableArray<string> ids, now)` returns `Result<GameState>` and refuses, in the TypeScript order, with TEAM_COMPOSITION_INVALID: combat active ('Cannot change team during combat'), wrong size (\"Team must contain exactly {N} NPCs\"), unknown id ('Invalid NPC ID: {id}', checked against the catalog), a character with no combat stats (new: '{id} has no combat stats', since the lineup is who fights, per T8), duplicate ('Duplicate NPC ID: {id}', the first repeated id). The narrative-scene refusal is dropped with the narrative state. The lineup can never be cleared back to empty, as today. (2) Synergy: bonuses are content. `SynergyBonusDefinition` = Name, Rule (`Coverage`, today's Well Rounded scoring; `Alignment`, today's Bond scoring), Threshold, Stat, Step, Value; `SynergySettings` = the bonuses in priority order plus `Resolution` (`BestOnly` | `AllThatQualify`); `GameContent` gains `Synergy`. `SynergyCalculator.Evaluate(settings, player, companions)` scores each bonus with today's math. Coverage: the pool is player plus companions, the max per trait in trait order, any max under the threshold fails, quality = sum of maxes / (6 × threshold). Alignment: per companion in the order given, its top two traits by value (stable: trait order on ties); ratio = (player's two) / (companion's two), skipping a zero sum; best ratio over companions; qualifies at best ≥ threshold / 100; quality = best ratio. BestOnly returns the highest quality, with ties going to the earlier bonus; AllThatQualify returns all qualifying bonuses in content order. `Synergy.Current(content, state)` feeds the player and `CharacterRules.InLineup` (lineup order) into Evaluate, so the bonus always reflects the current personality and lineup and is never stored. (3) Stat bonuses: `StatModifier(Stat, Step, Value, Source)` with `Step` ∈ {Flat, AddPercent, Multiply}; `StatModifiers.Apply(baseValue, modifiers)` = JsMath.Round(((base + Σflat) × (1 + Σaddpercent)) × Π multiply), computed only when the stat has at least one modifier, and leaving it untouched otherwise. Synergy results convert to StatModifiers; fight setup (T8) applies them, and later gear and buffs use the same pipeline. The test content mirrors today exactly: Well Rounded (Coverage, 25, Power, Multiply, 1.10), Bond (Alignment, 80, Speed, Multiply, 1.10), BestOnly.",
+      "interfaces": "Receives T3's GameContent, GameState, CharacterRules, and T2's Personality; uses T5's combat stat enum (`CombatStat`, which must cover at least Power and Speed) for bonus targets. Produces `LineupRules`, `SynergyBonusDefinition`, `SynergyRule`, `SynergySettings`, `SynergyResolution`, `SynergyResult` (Name, Stat, Step, Value, MatchQuality), `SynergyCalculator`, `Synergy.Current`, `StatModifier`, `StatStep`, `StatModifiers`. Consumed by T8 (fight setup turns `Synergy.Current` into StatModifiers on every player-side combatant), T9 (the session's lineup operation and the synergy it reports with each snapshot), and T11 (lineup ids are saved and checked against the catalog on load).",
+      "files": [
+        {
+          "path": "rules/AncientOrder.Rules/Party/LineupRules.cs",
+          "purpose": "Set the fight lineup with today's refusals; size from content"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Party/Synergy/SynergyBonusDefinition.cs",
+          "purpose": "Content definition of one bonus, plus the SynergyRule enum"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Party/Synergy/SynergySettings.cs",
+          "purpose": "Bonuses in priority order plus the resolution setting; validation (unique names, positive threshold, known stat)"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Party/Synergy/SynergyCalculator.cs",
+          "purpose": "Coverage and Alignment scoring with today's math; BestOnly and AllThatQualify resolution"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Party/Synergy/Synergy.cs",
+          "purpose": "Current(content, state): synergy for the player plus the current lineup, worked out on demand"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/Stats/StatModifier.cs",
+          "purpose": "StatModifier record and StatStep enum"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/Stats/StatModifiers.cs",
+          "purpose": "Apply: flat, then additive percent, then multipliers, one JS-style rounding at the end"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Content/GameContent.cs",
+          "purpose": "Modify: add Synergy settings and their validation"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "Synergy comes from the player plus the chosen lineup, worked out on demand and reported with each snapshot",
+          "rationale": "Designer decision 2026-10-28: 'the bonus should be instantly evident based on the current configuration'. Today synergy uses every character and the lineup has no effect on play. Matches ADR-026's intent for swappable parties."
+        },
+        {
+          "decision": "Bonuses become content; 'best only' or 'all that qualify' is a content setting; the test content keeps today's best only",
+          "rationale": "Designer decision 2026-10-28: exact conditions are later content work, and overlapping bonuses may have value. ADR-062: systems support the options without committing; the test setting proves parity."
+        },
+        {
+          "decision": "Stat bonuses go through one pipeline with explicit steps (flat, additive percent, multiply) and one rounding at the end",
+          "rationale": "Designer-approved after research 2026-10-28: the common RPG convention (Path of Exile 'increased' vs 'more'); gear and buffs later reuse it. A single ×1.10 bonus reproduces today's result exactly. Which step each bonus uses is a balance decision for combat tuning."
+        },
+        {
+          "decision": "Keep today's scoring math (Well Rounded uses the average coverage, uncapped); correct ADR-026's description",
+          "rationale": "Designer decision 2026-10-28: keep behavior; ADR-026 described the minimum coverage capped at 1.0, which the code never did."
+        },
+        {
+          "decision": "Lineup size comes from content instead of a hard-coded 2; duplicate check generalized to any repeated id",
+          "rationale": "Hard-coded party size removed with the hard-coded roster; for size 2 the messages and outcomes match today. Designer decision 2026-10-28 (Group 2 item 1: the lineup size is part of the content handed in)."
+        },
+        {
+          "decision": "The lineup refuses a character with no combat stats",
+          "rationale": "Follows from the designer's decision that the lineup is who fights, with combat stats from content (Group 4 item 2, 2026-10-28); characters such as townsfolk may have no combat stats. Today every character could join; with the test cast (all fighters) no carried-over result changes."
+        }
+      ],
+      "producer_notes": "Port the scoring from `src/narrative/synergyCalculator.ts` (evaluateWellRounded lines 46–71, evaluateBond 95–132, calculateSynergy 154–195), keeping the exact expression order: Coverage quality is `maxValues.Sum() / (6 * threshold)` with the sum taken in trait order; Alignment is `(player[t1] + player[t2]) / (npc[t1] + npc[t2])` and compares `best < threshold / 100`. The top-two sort must be stable (OrderByDescending over the trait order). The 'paradigm type by name' lookup is replaced by the explicit Rule field. StatModifiers.Apply must produce bit-identical results to `Math.round(stat * 1.10)` for one Multiply 1.10 modifier: with no Flat or AddPercent present the expression is `((base + 0) * (1 + 0)) * 1.10`, which IEEE keeps exact; add a test that checks this for every integer stat 1–500 and a spread of fractional stats. Do not round a stat that has no modifiers (today unsynergized stats are not rounded). Session-level input checks for the lineup (array of strings, at most 64 characters each, exactly N items → VALIDATION_ERROR) belong to T9."
+    },
+    {
+      "id": "T5",
+      "title": "Combat data and damage math",
+      "domain": "code/engine",
+      "experience_slices": [
+        "ES-3"
+      ],
+      "description": "The combatant and combat-state data, plus the calculations combat rests on: damage and stat formulas, energy gain and spending, elemental paths, defense selection and outcomes (ADR-053), and reaction progression (ADR-054).",
+      "acceptance_criteria": [
+        "For the same inputs and rolls, every calculation gives the same result as the TypeScript build, unless the designer changed it on purpose",
+        "Calculations never change the data they are given",
+        "Rolls can be supplied from outside, so any outcome can be reproduced exactly",
+        "Every combat type is immutable; a knocked-out combatant is marked by its KO flag with stamina 0, never by a −Infinity sentinel",
+        "Buff kinds are a fixed set of typed stats, not free strings"
+      ],
+      "dependencies": [
+        "T1"
+      ],
+      "decisions": [
+        {
+          "tier": "USER",
+          "description": "Review of the combat math's concepts and intent (formulas, energy, elemental paths, defense, reaction progression): change now, set aside for its own sprint, or keep as is",
+          "rationale": "Discovery brief: the designer reviews each system as it moves."
+        }
+      ],
+      "technical_approach": "A direct port, in `AncientOrder.Rules.Combat`, of the combat types (`src/types/combat.ts`, except the AI types, which go to T6, and the group-action types, which go to T7) and the pure combat math: `formulas.ts`, `defense.ts`, `elementalPaths.ts`, `energy.ts`, `reactionProgression.ts`. String unions become enums: ElementalPath, ActionType, CombatPhase, DefenseType, AscensionLevel, CombatStatus. `CombatStat` (Rank, MaxStamina, Power, Speed) names the numeric stats a StatModifier can target (T4). `Buff.type` strings become a `BuffStat` enum taken from today's BUFF_STAT_MAP keys. Records: ReactionSkills (block, dodge, parry, each SR, SMR, FMR), ReactionProgress, Buff (Stat, Source, Modifier), Combatant, CombatAction, DefenseResult, AttackResult, ActionResult, RoundResult, CombatState. CombatState also carries `Dice` (T1's DiceState): the fight's own dice, saved with the fight, so reloading a mid-fight save replays the same luck (designer decision 2026-10-28). The constants (ACTION_PRIORITY, ENERGY_GAINS, ASCENSION_THRESHOLDS, ASCENSION_STARTING_SEGMENTS, ASCENSION_ACCUMULATION_BONUS, the XP table and rate steps, MAX_CHAIN_DEPTH, the 0.1 path and Crushing Blow modifiers, 0.3 evade regen, 20 roll scale) live in one `CombatConstants` class with the TypeScript values. Every formula takes its rolls as plain double arguments, exactly where the TypeScript calls `rollFn()`; the round code (T7) draws them from IRollSource in today's order. Everything plays exactly as today for the same rolls. All the review findings are set aside, unchanged, for the combat balance review (see design_decisions), except the Crushing Blow fix, which lives at its call site in T7. Not ported because it has no effect today: `resetRoundEnergy` and `getStartingSegments` (no callers), `Buff.duration` (never counts down), `DebuffEffect` and the debuff list argument (always empty), and the unused target-power parameter of `calculateBaseDamage`; each goes in the port record.",
+      "interfaces": "Produces the combat types and math used by T6 (perception reads Combatant and CombatState), T7 (the round pipeline calls Formulas, Defense, ElementalPaths, Energy, ReactionProgression), T8 (builds Combatants and CombatState; writes ReactionProgress back), T3 (GameState holds `CombatState?` and `ImmutableDictionary<string, ReactionProgress>` keyed by combatant id), T4 (CombatStat for StatModifier targets), and T11 (combat state is saved mid-fight, as today).",
+      "files": [
+        {
+          "path": "rules/AncientOrder.Rules/Combat/CombatEnums.cs",
+          "purpose": "ElementalPath, ActionType, CombatPhase, DefenseType, AscensionLevel, CombatStatus, CombatStat, BuffStat"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/CombatConstants.cs",
+          "purpose": "All combat constants with the TypeScript values"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/ReactionSkills.cs",
+          "purpose": "ReactionSkills and per-defense skill records"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/Combatant.cs",
+          "purpose": "Combatant record (optional ReactionProgress, explicit IsKO) and Buff"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/CombatState.cs",
+          "purpose": "CombatState, CombatAction, and the result records (DefenseResult, AttackResult, ActionResult, RoundResult)"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/Formulas.cs",
+          "purpose": "Port of formulas.ts: Rank KO, Blindside, Crushing Blow thresholds and checks, base damage (0.25 rounding), defense damage, evade regen, energy gain, ascension"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/Defense.cs",
+          "purpose": "Port of defense.ts: ResolveDefense, EffectiveReactionSkills (buff folding clamped to [0,1])"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/ElementalPaths.cs",
+          "purpose": "Port of elementalPaths.ts: path table, preferred and forced defense, buff and debuff application once per (stat, source)"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/Energy.cs",
+          "purpose": "Port of energy.ts: AddEnergySegments, CheckAscensionAdvance, spending"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/ReactionProgression.cs",
+          "purpose": "Port of reactionProgression.ts: XP awards, rank from XP, rates per rank rounded to 4 decimals"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "Port the combat math exactly as it plays today; set aside every balance finding for a combat balance review in the combat sprint",
+          "rationale": "Designer decision 2026-10-28, so fights can be felt in Godot before rules change. Set aside: energy meaning both this round's segments and the total gained (spending can lower ascension); level 2–3 round-start energy never applied; no 1–5 cap on Special segments and enemies spending all (fractional) energy; defenseless targets gaining reaction energy but no XP; a fully mitigated hit counting as an attacker failure; path buffs boosting the signature defense rather than the one used; action paths never dodging or parrying normal attacks; Rank KO firing whether or not the hit lands; Crushing Blow's −0.10 lasting the whole fight; the natural-20 defense rule (bugs.md, deferred 2026-05-31); the AI items listed in T6."
+        },
+        {
+          "decision": "Crushing Blow eligibility and threshold use the attack's action power (the spreadsheet's O: Special-boosted, 0.25-rounded), not base power; implemented at the call site in T7",
+          "rationale": "Designer decision 2026-10-28: match the combat spreadsheet (Math!AF uses O). Differs from today only for Special attacks forced into a block; every current fixture power is a whole number, so normal attacks are unchanged."
+        },
+        {
+          "decision": "Code with no effect today is not ported",
+          "rationale": "resetRoundEnergy and getStartingSegments have no callers, Buff.duration is never counted down, and DebuffEffect is always empty. The energy items return with the combat balance review if wanted."
+        },
+        {
+          "decision": "KO is an explicit flag, not stamina −Infinity; buff kinds are an enum",
+          "rationale": "Typed C# idiom; same outcomes."
+        }
+      ],
+      "producer_notes": "Port line by line, keeping every double expression's operation order: `((aR - tR) * 3) / 10`, `roll / 20 >= 1 - threshold`, `roll <= SR * 20`, `raw * (1 - SMR)`, `maxStamina * 0.3`, base damage `JsMath.Round(x / 0.25) * 0.25`, rates `JsMath.Round(x * 10000) / 10000`. Defense succeeds on low rolls, the checks on high rolls (keep the convention; do not reconcile it with the spreadsheet). Elemental path buffs and debuffs apply once per (BuffStat, source), as today. Where the TypeScript replaces a combatant inside a party array, keep its position (arrays are ordered). `Combatant.ArchetypeId` is nullable: the player's own fighter has none (T8). The pipeline-level behavior (`pipeline.ts`, `counterChain.ts`, `groupAction.ts`, `roundManager.ts`, `declaration.ts`) belongs to T7, not this task. Comments describing the set-aside findings are not needed in code; the port record carries them."
+    },
+    {
+      "id": "T6",
+      "title": "How enemies decide what to do",
+      "domain": "code/engine",
+      "experience_slices": [
+        "ES-3"
+      ],
+      "description": "Enemy and AI decision-making: what a combatant perceives about the fight, the factors it weighs, how each archetype profile scores its options, and how ties are broken.",
+      "acceptance_criteria": [
+        "Given the same fight situation, each archetype profile picks the same action and target as today, unless the designer changed it on purpose",
+        "Ties are broken the same way as today",
+        "A combatant whose archetype has no profile is handled the same way as today",
+        "Every archetype in content is either scored (with a decision profile) or basic (attack the first living opponent, today's fallback); content naming an unknown archetype, or a profile missing a base score or a factor weight, is refused with VALIDATION_ERROR",
+        "An error inside enemy decision-making is reported as an error (the session turns it into INTERNAL_ERROR and leaves the game unchanged), never silently replaced by the basic behavior",
+        "Tie-breaks use the combatant's own elemental path",
+        "With the test content (today's three profiles as scored archetypes and today's unmatched archetypes declared basic), every enemy decides exactly as today"
+      ],
+      "dependencies": [
+        "T5",
+        "T3"
+      ],
+      "decisions": [
+        {
+          "tier": "USER",
+          "description": "Review of the enemy decision-making concepts and intent: change now, set aside for its own sprint, or keep as is",
+          "rationale": "Discovery brief: the designer reviews each system as it moves."
+        },
+        {
+          "tier": "USER",
+          "description": "Where archetype decision profiles come from, now that the built-in ones are tied to the cast that isn't carried over (Elena, Lars, Kade)",
+          "rationale": "ADR-062: creative data moves into content as systems reach it."
+        }
+      ],
+      "technical_approach": "A port of `src/combat/behaviorTree/` into `AncientOrder.Rules.Combat.Ai`, with archetypes moved into content. (1) Content: `ArchetypeDefinition` = Id plus Behavior, which is either `Basic` or `Scored(DecisionProfile)`. `DecisionProfile` = base scores for all five action types plus a weight for each of the seven factors (no elemental path). `ArchetypeCatalog` keeps content order plus a frozen lookup by id, and `GameContent` gains `Archetypes`. Validation (VALIDATION_ERROR): unique ids; a scored profile must define every action type's base score and every factor weight (today a missing weight silently counts as 0); every character's ArchetypeId (T3) must name a defined archetype. T8 adds the same check for encounter combatants. Sprint 7 will add its reaction leanings to the same archetype record. (2) Deciding: `EnemyDecisions.Decide(combatant, combatState, archetypes, config)` returns a CombatAction. Basic gives today's stub (`stubBehaviorTree`, roundManager.ts:79–88): ATTACK the first living opponent. Scored runs today's evaluator exactly. Perception (perception.ts) covers self stamina %, energy, rank, and path; allies and enemies with their KO flags, sorted as today; lowest ally %; team and enemy averages; speed and rank deltas. Candidates: ATTACK and SPECIAL at each living enemy (SPECIAL only with energy > 0), DEFEND at each living ally except self, EVADE and GROUP with no target (GROUP only when `config.GroupActionsEnabled`). Score = baseScore[type] + rankCoefficient × Σ(weight[f] × factor_f[type]), summed in today's FACTORS order, with rankCoefficient = max(0.2, rank / 10). Selection takes the highest score, with ties by exact equality, resolved by PATH_TIEBREAK for the combatant's own path and then the lowest target stamina %. SPECIAL spends all current energy, as today. (3) Failure handling: an unknown archetype at decision time is a bug (content validation prevents it), so it throws rather than falling back; the catch-all in `_runPhase1AIDecision` is not ported, so a real bug surfaces as INTERNAL_ERROR through the session. All AI tuning findings are set aside for the combat balance review.",
+      "interfaces": "Receives T5's Combatant, CombatState, CombatAction, and enums, and T3's GameContent and CharacterDefinition.ArchetypeId. Produces `ArchetypeDefinition`, `ArchetypeBehavior` (Basic or Scored), `DecisionProfile`, `ArchetypeCatalog`, `CombatPerception` and the perception records, the seven `IScoringFactor` implementations and their ordered list, `RankCoefficient`, `TieBreaking` (with PATH_TIEBREAK), `EnemyDecisions.Decide`, and `EvaluatorConfig`. Consumed by T7 (phase 1 of each round asks Decide for every living enemy, in enemy-party order) and T8 (encounter validation checks combatant archetypes against the catalog).",
+      "files": [
+        {
+          "path": "rules/AncientOrder.Rules/Combat/Ai/ArchetypeDefinition.cs",
+          "purpose": "Archetype record, Basic or Scored behavior, DecisionProfile"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/Ai/ArchetypeCatalog.cs",
+          "purpose": "Archetypes in content order plus a frozen lookup; validation"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/Ai/Perception.cs",
+          "purpose": "Port of perception.ts"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/Ai/Factors/ScoringFactors.cs",
+          "purpose": "IScoringFactor and the ordered factor list (ownStamina, allyInDanger, targetVulnerability, energyAvailability, speedAdvantage, roundPhase, teamBalance)"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/Ai/Factors/*.cs",
+          "purpose": "One file per factor, ported from factors/*.ts"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/Ai/RankCoefficient.cs",
+          "purpose": "Port of rankCoefficient.ts"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/Ai/TieBreaking.cs",
+          "purpose": "Port of tieBreaking.ts (PATH_TIEBREAK, ResolveTie)"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/Ai/EnemyDecisions.cs",
+          "purpose": "Decide: Basic or Scored evaluation (port of evaluator.ts and the stub)"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Content/GameContent.cs",
+          "purpose": "Modify: add Archetypes; check every character's ArchetypeId exists"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "Decision profiles become content, as archetype records keyed by archetype id; characters and encounter combatants point to an archetype; Elena's, Lars's, and Kade's profiles move to the test content",
+          "rationale": "Designer decision 2026-10-28; ADR-062. One archetype record will also carry Sprint 7's reaction leanings."
+        },
+        {
+          "decision": "Explicit Basic behavior replaces the silent fallback; unknown archetypes and missing weights are refused at content load; the catch-all is removed",
+          "rationale": "Designer decision 2026-10-28. Today every enemy in the demo encounter (archetype 'enemy') and two misspelled test archetypes (kade_bold_outlaw, lars_cautious_merchant) silently use the stub, and any evaluator bug is hidden the same way. Declaring those archetypes Basic in the test content keeps every fight identical."
+        },
+        {
+          "decision": "Tie-breaks use the combatant's own elemental path; profiles no longer carry a path",
+          "rationale": "Designer-approved 2026-10-28: one source of truth. Changes behavior only when the two disagree, e.g. encounter_test's enemy-side Elena (combatant path Earth, profile path Light); recorded in the port record."
+        },
+        {
+          "decision": "AI tuning findings set aside for the combat balance review",
+          "rationale": "Designer decision 2026-10-28: the speed-advantage jump at zero, a critical ally lowering the DEFEND score through targetVulnerability, rank influence uncapped above 10, and exact-equality ties are kept as today."
+        },
+        {
+          "decision": "Character archetype ids in the test cast use the archetype record ids (elena_loyal_scout, lars_scheming_merchant, kade_rogue_outlaw)",
+          "rationale": "Unifies today's two archetype notions: the NPC display labels ('Loyal Scout') and the combat profile ids. Recorded as a changed test expectation. Follows from the designer's decision that characters and encounter enemies point to one archetype record (Group 3 item 1, 2026-10-28)."
+        }
+      ],
+      "producer_notes": "Port factor math with today's bracket cuts and interpolation endpoints exactly (ownStamina, speedAdvantage, targetVulnerability, and the others in factors/*.ts); sum the score in FACTORS order; compare scores with exact `==` as today. Sorts are stable (OrderBy/ThenBy); perception sorts as the TypeScript does (perception.ts:53, 85). The scoring factors are code, not content; only base scores and weights are content. Do not carry PATH_TIEBREAK's wrong comment (it mislabels the action and reaction paths; the code is right). `EvaluatorConfig.GroupActionsEnabled` stays as a switch; T7 sets it false in play (enemies don't choose GROUP until the combat balance review), and the evaluator tests may set it true to carry over today's GROUP-candidate tests."
+    },
+    {
+      "id": "T7",
+      "title": "Round resolution",
+      "domain": "code/engine",
+      "experience_slices": [
+        "ES-3"
+      ],
+      "description": "How a combat round plays out: declaring orders, counter chains, group actions, resolving actions in order, moving through the round's phases, and ending the fight in victory or defeat.",
+      "acceptance_criteria": [
+        "Declaring orders accepts and refuses the same orders as today, including orders limited to the player's own party with bounded energy (ADR-060), unless the designer changed it on purpose",
+        "For the same combat state, orders, and rolls, a round resolves in the same order with the same outcomes as today",
+        "A fight ends in victory or defeat under the same conditions as today",
+        "Resolving a round never changes the state it is given",
+        "Actions tied on priority and speed each draw one roll in queue order and resolve highest roll first; equal rolls keep queue order; the same rolls always give the same order",
+        "A fighter gets at most one order per round; a second order for the same fighter is rejected with a reason, as other invalid orders are",
+        "Enemies never choose a group attack; a knocked-out guard does not intercept an attack; group attacks use the target's buffed block rates",
+        "Each round record holds the end-of-round fighters without earlier history, and records every counter-attack exchange and every Evade recovery",
+        "Crushing Blow eligibility and threshold use the attack's action power (Special-boosted, rounded to 0.25)"
+      ],
+      "dependencies": [
+        "T6"
+      ],
+      "decisions": [
+        {
+          "tier": "USER",
+          "description": "Review of round resolution's concepts and intent (orders, counter chains, group actions, phases, fight end): change now, set aside for its own sprint, or keep as is",
+          "rationale": "Discovery brief: the designer reviews each system as it moves."
+        }
+      ],
+      "technical_approach": "A port of `declaration.ts`, `pipeline.ts`, `counterChain.ts`, `groupAction.ts`, and `roundManager.ts` into `AncientOrder.Rules.Combat`, with the approved changes. `RoundManager.RunRound(combatState, playerOrders, archetypes)` draws every roll from the fight's own dice (`SeededRolls.FromState(combatState.Dice)`) and returns the new CombatState with `Dice` advanced, so a fight resumed from a save replays the same luck. The overload `RunRound(combatState, playerOrders, archetypes, IRollSource rolls)` is the test seam: it uses the given rolls and leaves `Dice` unchanged. Both keep today's phases in order. P1: `EnemyDecisions.Decide` for each living enemy in enemy-party order, with `GroupActionsEnabled = false`, so enemies never choose GROUP; no catch-all. P2 (the discarded visual info) is not ported. P3: player orders validated in order by `Declarations.Validate`, which keeps today's checks and order (fighter exists and isn't KO; known type; target rules per type; stamina > 0; SPECIAL needs energy > 0; GROUP needs every living ally at maxEnergy, otherwise it falls back to ATTACK on the same target), plus the new rule that a second order for a fighter already holding one is rejected. An accepted GROUP removes the living allies' orders, as today. P4: the queue is enemy actions then player actions, ordered by `Pipeline.Order`: priority (GROUP 0, DEFEND 1, ATTACK/SPECIAL 2, EVADE 3), then effective speed descending (GROUP uses its team's average non-KO speed), then the new tie rule. Every action sharing its priority and speed with another draws one roll, in queue order, before resolution; higher rolls go first; equal rolls keep queue order. The sort is stable. P5: actions resolve one by one with today's roll order per attack: Rank KO (if eligible), Blindside (if eligible), defense (always), Crushing Blow (if Block and action power > target power), then one roll per counter exchange; GROUP takes one roll. Changes inside resolution: (a) Crushing Blow uses action power (`rawDamage`, the spreadsheet's O) for eligibility and threshold; (b) the DEFEND intercept skips knocked-out interceptors; (c) GROUP resolves its forced Block against `Defense.EffectiveReactionSkills(target)`. Post-round, victory and defeat are checked as today (defeat wins when all players are KO), and the round record is `RoundResult(Round, Actions, Snapshot)`, where Snapshot is the end-of-round CombatState with an empty RoundHistory. `ActionResult` gains `CounterExchanges` (each exchange's attacker, defender, defense, outcome, damage) and `EvadeRecovery` (stamina regained). Outcomes are otherwise exactly today's. KO is the explicit flag (T5).",
+      "interfaces": "Receives T5's combat types and math, T6's `EnemyDecisions` and `ArchetypeCatalog`, and an `IRollSource`. Produces `Declarations` (Validate, the GROUP→ATTACK fallback), `Pipeline` (Order, ResolveAction), `CounterChain`, `GroupAction` (with `GroupActionConfig`, damage multiplier 1.5), `RoundManager.RunRound`, and the extended `ActionResult`/`RoundResult`. Consumed by T10 (the session's declare and advance-round operations) and T8 (fight end detection through CombatState.Status).",
+      "files": [
+        {
+          "path": "rules/AncientOrder.Rules/Combat/Declarations.cs",
+          "purpose": "Port of declaration.ts plus the one-order-per-fighter rule"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/Pipeline.cs",
+          "purpose": "Port of pipeline.ts: Order (new tie rule), ResolveAction, attack resolution with the Crushing Blow, intercept, and recording changes"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/CounterChain.cs",
+          "purpose": "Port of counterChain.ts; returns the exchanges so they are recorded"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/GroupAction.cs",
+          "purpose": "Port of groupAction.ts; forced Block against buffed block rates"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/RoundManager.cs",
+          "purpose": "Port of roundManager.ts: RunRound phases, enemy decisions without GROUP, history without nesting"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/CombatState.cs",
+          "purpose": "Modify (from T5): ActionResult gains CounterExchanges and EvadeRecovery; add GroupActionDeclaration, GroupActionConfig, BlockDefenseResult"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "Speed ties are broken by one roll per tied action, highest first, queue order on equal rolls",
+          "rationale": "Designer decision 2026-10-28. Today `rollFn() - rollFn()` inside the sort comparator depends on V8's sort call sequence and cannot be reproduced. Constant-roll tests give today's results unchanged."
+        },
+        {
+          "decision": "One order per fighter per round",
+          "rationale": "Designer decision 2026-10-28. Today two Specials from one fighter both spend energy and both get the boost, and a GROUP leader can also attack."
+        },
+        {
+          "decision": "Enemies do not choose GROUP until the combat balance review designs enemy group attacks",
+          "rationale": "Designer decision 2026-10-28. Today an enemy GROUP has no target, does nothing, and drains its team's energy, skipping the energy gate."
+        },
+        {
+          "decision": "A knocked-out guard no longer intercepts; GROUP blocks use buffed rates",
+          "rationale": "Designer decision 2026-10-28: today a KO'd defender absorbs the attack, and GROUP alone ignores path buffs."
+        },
+        {
+          "decision": "Round records keep the end-of-round state without earlier history, and record counter exchanges and Evade recovery",
+          "rationale": "Designer decision 2026-10-28. Today each record embeds every earlier record, so a fight's record roughly doubles in size each round and a long fight could not be saved. Combat screens need the missing events. No outcome changes."
+        },
+        {
+          "decision": "Crushing Blow uses action power",
+          "rationale": "Designer decision 2026-10-28 (Group 3): match the combat spreadsheet."
+        },
+        {
+          "decision": "Set aside for the combat balance review: Crushing Blow regardless of block success, Rank KO through any defense, group attacks giving no energy or XP and always forcing a Block, the minimal counter chain",
+          "rationale": "Designer decision 2026-10-28."
+        }
+      ],
+      "producer_notes": "Port the resolution code line by line from `pipeline.ts` `_resolveAttack` (347–579) and keep every roll draw in today's order and conditions; the tie draws happen once, after the queue is built and before any action resolves. Rolls come from the IRollSource passed in; never create one. Keep `_resolveDefendIntercept`'s 'first DEFEND in queue order whose target matches' rule, but skip KO'd interceptors (fall through to the next matching DEFEND, then to the original target). Visual info (`buildVisualInfo`) and the unused phase values (VISUAL_INFO, PC_DECLARATION, ACTION_RESOLUTION) and `GroupResolutionResult` are not ported; `_getPathType` uses ElementalPaths. MAX_CHAIN_DEPTH stays 10 with silent truncation. Where a carried-over test feeds a roll sequence through a speed tie, the expected results may shift because of the tie rule; record each such test."
+    },
+    {
+      "id": "T8",
+      "title": "Setting up a fight from the party and an encounter",
+      "domain": "code/engine",
+      "experience_slices": [
+        "ES-3",
+        "ES-2"
+      ],
+      "description": "Turning the player, the fight lineup, and an encounter into a fight, with team synergy applied to the party. Also writes a fight's lasting results, such as reaction progress, back into the game state. Encounters are handed in rather than built into the rules.",
+      "acceptance_criteria": [
+        "For the same player, lineup, and encounter, a fight starts with the same combatants and stats as today, including the synergy bonus",
+        "A fight's lasting results are written back to the game state as they are today",
+        "The rules library has no encounter built in",
+        "The player's side is the player (when the content gives the player combat stats) followed by the lineup in lineup order, each built from its content combat profile and seeded with its reaction progress by character id; encounters supply only the enemies",
+        "Starting a fight without a full lineup is refused with TEAM_COMPOSITION_INVALID; starting one during a fight is refused with COMBAT_ALREADY_ACTIVE; an unknown encounter with ENCOUNTER_NOT_FOUND",
+        "Content whose encounter names an unknown archetype, repeats a fighter id, or reuses a character's id for an enemy is refused with VALIDATION_ERROR",
+        "Test content with no player combat stats, a lineup of 3, and today's demo player-party stats on Elena, Lars, and Kade starts a fight identical to today's encounter_demo, apart from fighter ids"
+      ],
+      "dependencies": [
+        "T4",
+        "T7"
+      ],
+      "decisions": [
+        {
+          "tier": "USER",
+          "description": "Review of fight setup's concepts and intent: change now, set aside for its own sprint, or keep as is",
+          "rationale": "Discovery brief: the designer reviews each system as it moves."
+        },
+        {
+          "tier": "USER",
+          "description": "Where encounters come from until Sprint 7 content packs exist",
+          "rationale": "Encounters are content (ADR-062); the TypeScript build's encounter file is fixture data."
+        }
+      ],
+      "technical_approach": "A port of `src/combat/sync.ts` into `AncientOrder.Rules.Combat.FightSetup`, with the player's side now built from the player and the lineup. (1) Content: `EncounterDefinition` = Id, Name, Enemies (`ImmutableArray<CombatantConfig>`); `CombatantConfig` keeps today's fields (id, name, archetype, rank, stamina, power, speed, elementalPath, reactionSkills, optional ascensionLevel). `GameContent` gains `Encounters` (content order plus a frozen lookup). Validation: unique encounter ids; unique fighter ids within an encounter; no enemy id equal to a character id; every enemy archetype defined in the archetype catalog (T6). (2) `FightSetup.Start(content, state, encounterId, ulong diceSeed, now)` returns `Result<GameState>`. In today's order, it refuses ENCOUNTER_NOT_FOUND for an unknown id (\"Encounter '{id}' not found in registry\"), COMBAT_ALREADY_ACTIVE ('A combat encounter is already active') if a fight is on, and TEAM_COMPOSITION_INVALID ('Choose a full lineup before starting a fight') when the lineup isn't full or a member has no combat profile. The player's side, in order: the player, if `Settings.PlayerCombat` is set (id = player id, name = player name, no archetype), then each lineup character (id = character id, name, archetype id, its `CombatProfile`). Each becomes a Combatant exactly as `_configToCombatant` does today (stamina = maxStamina = profile stamina; energy = ASCENSION_STARTING_SEGMENTS[level]; maxEnergy = that value, or 3 when it is 0; no buffs), then is seeded from `state.ReactionProgress[id]` (zero progress if absent), which replaces its reaction skills with rank-derived rates (ADR-054). Enemies are built from the encounter's configs with their literal reaction skills and no progress. Synergy: `Synergy.Current(content, state)` (T4) becomes StatModifiers applied with `StatModifiers.Apply` to every player-side combatant, after seeding, as today. The CombatState starts at round 1, phase AI_DECISION, empty queue and history, status active, with `Dice = DiceState.FromSeed(diceSeed)`, and is stored on GameState through `GameStateUpdates.WithCombat`. (3) `FightSetup.Sync(state, combat, now)` stores the CombatState and copies each player-side combatant's reaction progress into `GameState.ReactionProgress` by id (enemies never). `FightSetup.End(state, now)` clears the combat; the conversation-log entry is gone with the log, and the session keeps the last result (T10). Nothing else persists between fights, as today.",
+      "interfaces": "Receives T3's GameContent, GameState, CharacterRules, and CombatProfile; T4's Synergy.Current and StatModifiers; T5's Combatant, CombatState, ReactionProgression; T6's ArchetypeCatalog (encounter validation); T7's RoundManager outcomes (CombatState.Status). Produces `EncounterDefinition`, `CombatantConfig`, `EncounterCatalog`, and `FightSetup.Start/Sync/End`. Consumed by T10 (start encounter, sync after each round, end on victory or defeat) and T11 (a saved mid-fight game keeps its CombatState).",
+      "files": [
+        {
+          "path": "rules/AncientOrder.Rules/Combat/Encounters/EncounterDefinition.cs",
+          "purpose": "Encounter content (enemies only) and CombatantConfig"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/Encounters/EncounterCatalog.cs",
+          "purpose": "Encounters in content order plus a frozen lookup; validation"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Combat/FightSetup.cs",
+          "purpose": "Start (player side from player plus lineup, enemies from the encounter, reaction progress seeding, synergy), Sync, End"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Content/GameContent.cs",
+          "purpose": "Modify: add Encounters and their cross-checks"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "The player's side is the player plus the chosen lineup, with combat stats from content; encounters list only enemies; a fight needs a full lineup",
+          "rationale": "Designer decision 2026-10-28. Today the player's side comes entirely from the encounter file and the lineup has no effect. Content can omit the player's combat stats and use a lineup of 3 to reproduce today's companion-only fights, so whether the player character fights stays a content decision (ADR-062)."
+        },
+        {
+          "decision": "Reaction progress is keyed by character id (or player id)",
+          "rationale": "Follows from fighters being characters; XP now follows a character across fights instead of an encounter-specific id like player_elena."
+        },
+        {
+          "decision": "Encounters are content; encounter_demo and encounter_test move to the test content",
+          "rationale": "ADR-062; T8 decision on encounter source."
+        },
+        {
+          "decision": "Stamina still resets between fights",
+          "rationale": "Set aside for the combat balance review (designer decision 2026-10-28)."
+        }
+      ],
+      "producer_notes": "Port `initCombatState`, `_configToCombatant`, `_seedReactionProgress`, the harvest, and `endCombat` from `src/combat/sync.ts`, keeping the order: build, seed, then apply synergy. Apply StatModifiers only to stats that have a modifier (today unsynergized stats are not rounded). The player-side Combatant has no archetype (nullable ArchetypeId); AI never runs for the player's side. Do not import synergy settings from fixtures (today `sync.ts` imports DEFAULT_PARADIGMS from `src/fixtures`); they come from content."
+    },
+    {
+      "id": "T9",
+      "title": "Game session core",
+      "domain": "code/engine",
+      "experience_slices": [
+        "ES-4"
+      ],
+      "description": "The C# game session, carried over from ADR-057. It holds the one active game, returns every result as a success or a refusal, publishes immutable snapshots with change notification, and checks input. It offers the game, player, personality, lineup, character, and synergy operations.",
+      "acceptance_criteria": [
+        "Every operation returns a success or a refusal with the same error codes as today; an unexpected error becomes an internal error and leaves the game unchanged",
+        "A refused or read-only operation leaves the snapshot unchanged and notifies no one, and a changing operation notifies exactly once",
+        "Malformed input is refused with a validation error, as today",
+        "Each operation gives the same results as today for the same inputs, unless the designer changed it on purpose",
+        "A listener that throws does not undo or fail the change: the operation still returns its result, every other listener is still notified, and the exception goes to the session's listener-error hook",
+        "Each snapshot carries a version number that increases by one per change, and the current synergy for the player and lineup",
+        "Listing characters and looking one up both read the live game when one is active, and the content's starting values otherwise",
+        "Every text id passed to the session is refused with VALIDATION_ERROR when it is null or longer than 64 characters"
+      ],
+      "dependencies": [
+        "T3",
+        "T4"
+      ],
+      "decisions": [
+        {
+          "tier": "USER",
+          "description": "Review of the session's concepts and intent (single entry point, results as values, snapshots): change now, set aside for its own sprint, or keep as is",
+          "rationale": "Discovery brief: the designer reviews each system as it moves."
+        }
+      ],
+      "technical_approach": "A port of `src/session/` (gameSession.ts, sessionState.ts, outcome.ts, result.ts, validation.ts, and the game, player, and npc operations) into `AncientOrder.Rules.Session`, keeping ADR-057's design. `GameSession` is the library's only mutable object. It is constructed with a `GameContent` and `GameSessionOptions` (`TimeProvider`, System by default; `IIdSource`; `ISeedSource`; `Action<Exception>? OnListenerError`; T12 adds the save store). It holds one `SessionSnapshot` record: Version (long), Game (`GameState?`), PendingOrders (`ImmutableArray<CombatAction>`), LastCombatOutcome (`CombatOutcome?`: status and round), Synergy (`ImmutableArray<SynergyResult>`, from `Synergy.Current`, empty without a game). Every operation is a pure function `(SessionContext, SessionSnapshot, input) → Outcome<T>(Next, Result<T>)`, where SessionContext bundles content, clock, ids, and seeds. `GameSession.Run` calls it inside a try/catch; any exception becomes INTERNAL_ERROR ('An unexpected error occurred') with the snapshot unchanged. If `Next` is a different instance from the current snapshot, the session commits: Version + 1, Synergy recomputed, the snapshot stored, then each subscriber is called once, in subscription order, each inside its own try/catch, with failures passed to OnListenerError. Reads and refusals return the same instance, so nothing is committed or notified; an operation that changes nothing (e.g. clearing already-empty orders) also returns the same instance. `Subscribe(Action<SessionSnapshot>)` returns an `IDisposable` that unsubscribes. Operations here, refusing in today's order (input checks, then game presence, then rules): NewGame (from content; clears orders and last outcome), GetState, GetPlayer, GetPersonality, AdjustPersonality (at least one delta, finite numbers; out-of-range deltas are squeezed into range by the adjuster, as today), SetLineup (exactly N ids, each a non-null string of at most 64 characters, using today's 'npcIds…' message wording; then `LineupRules.Set`), ListCharacters, GetCharacter (live game when active, content starting values otherwise; NPC_NOT_FOUND `NPC not found: \"{id}\"`), GetSynergy. The combat operations are T10; the save operations are T12. Not ported: the six scene operations and two dialogue operations (retired engines).",
+      "interfaces": "Receives T3 (GameContent, GameState, CharacterRules, GameStateUpdates), T4 (LineupRules, Synergy), and T1's Result, RuleError, TimeProvider, IIdSource, ISeedSource. Produces `GameSession`, `GameSessionOptions`, `SessionSnapshot`, `CombatOutcome`, `Outcome<T>`, `SessionContext`, and `SessionValidation`. Consumed by T10 (adds the combat operations to the same session), T12 (save operations), T13 (the Godot smoke run drives the session), and every future Godot screen, which reads snapshots and calls operations, never the rules directly.",
+      "files": [
+        {
+          "path": "rules/AncientOrder.Rules/Session/GameSession.cs",
+          "purpose": "The session: holds the snapshot, runs operations, commits, notifies with isolated listeners"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Session/GameSessionOptions.cs",
+          "purpose": "Clock, id source, seed source, listener-error hook (T12 adds the save store)"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Session/SessionSnapshot.cs",
+          "purpose": "SessionSnapshot and CombatOutcome records"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Session/Outcome.cs",
+          "purpose": "Outcome<T> (next snapshot plus result) and refusal helpers"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Session/SessionValidation.cs",
+          "purpose": "Input checks with today's messages: adjustment deltas, lineup ids, id length (64), null strings"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Session/Operations/GameOperations.cs",
+          "purpose": "NewGame, GetState"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Session/Operations/PlayerOperations.cs",
+          "purpose": "GetPlayer, GetPersonality, AdjustPersonality, SetLineup"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Session/Operations/CharacterOperations.cs",
+          "purpose": "ListCharacters, GetCharacter, GetSynergy"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "Keep ADR-057's session: single entry point, results as values, one immutable snapshot, one notification per change",
+          "rationale": "Carried over by the discovery brief; reconfirmed after the 2026-10-28 research (suits a turn-based rules engine: exact replay, cheap tests)."
+        },
+        {
+          "decision": "A throwing listener is isolated and reported through a hook",
+          "rationale": "Designer-approved 2026-10-28. Today a throwing listener makes the operation throw after the snapshot has already changed."
+        },
+        {
+          "decision": "Character list and lookup both read the live game, or content starting values without a game",
+          "rationale": "Designer-approved 2026-10-28. Today listNpcs ignores the live game while getNpc prefers it, contrary to ADR-042's intent."
+        },
+        {
+          "decision": "Snapshots carry a version counter and the current synergy",
+          "rationale": "Designer-approved 2026-10-28: screens can detect change cheaply, and the bonus is always visible for the current lineup (Group 2)."
+        },
+        {
+          "decision": "One 64-character limit on every text id",
+          "rationale": "Designer-approved 2026-10-28; today the limits are 64, 128, or none depending on the operation."
+        },
+        {
+          "decision": "Scene and dialogue operations are not ported; the synergy operation stays",
+          "rationale": "Retired engines (Group 2 decision); synergy now reports the player plus lineup."
+        },
+        {
+          "decision": "Error codes keep today's names (TEAM_COMPOSITION_INVALID, NPC_NOT_FOUND) while C# operation names say Lineup and Character",
+          "rationale": "Same error codes as today is an acceptance criterion; names in code follow the new concepts."
+        }
+      ],
+      "producer_notes": "Port the operations from `src/session/operations/` and the checks from `src/session/validation.ts`, keeping the exact messages the TypeScript tests assert ('No active game', 'npcIds must contain exactly {N} items', 'npcIds/{i} must be string', 'npcIds/{i} must NOT have more than 64 characters', 'Invalid NPC ID: {id}', 'Cannot change team during combat'). Checks that a typed C# API makes impossible (body must be object, unknown trait keys) are not ported; null strings from callers are refused instead. The TypeScript deep-freeze of content has no C# counterpart because content records are immutable. INTERNAL_ERROR carries no raw exception in the result; the exception goes to OnListenerError only for listener failures, and the session does not log anything itself. The session is not thread-safe; Godot calls it from the main thread."
+    },
+    {
+      "id": "T10",
+      "title": "Session combat operations",
+      "domain": "code/engine",
+      "experience_slices": [
+        "ES-4",
+        "ES-3"
+      ],
+      "description": "Session operations for combat: starting an encounter, declaring orders, advancing a round, and reading the combat view, round history, and fight result.",
+      "acceptance_criteria": [
+        "Each combat operation gives the same results and refusals as today, unless the designer changed it on purpose",
+        "Pending orders and the last fight result are kept and cleared at the same moments as today",
+        "A whole fight can be played from start to victory or defeat through the session alone",
+        "Each fight's dice are seeded from the session's seed source when it starts, and a fight resumed from a save rolls exactly the dice it would have rolled without the save",
+        "A second order for a fighter in one declaration is rejected with a reason, like other invalid orders"
+      ],
+      "dependencies": [
+        "T8",
+        "T9"
+      ],
+      "decisions": [],
+      "technical_approach": "The combat operations of `src/session/operations/combat.ts`, added to T9's session in `Session/Operations/CombatOperations.cs`, refusing in today's order. StartEncounter(id): id check (non-null, at most 64 characters), GAME_NOT_FOUND, then `FightSetup.Start` with a seed from the session's ISeedSource (ENCOUNTER_NOT_FOUND, COMBAT_ALREADY_ACTIVE, the lineup refusals); success clears pending orders and the last outcome. DeclareOrders(orders): shape checks (at most 10 orders; non-null combatant ids of at most 64 characters; target id null or a string; energy segments only on SPECIAL), GAME_NOT_FOUND, NO_ACTIVE_COMBAT ('No active combat encounter'). Then each order in turn: it must belong to a player-side fighter; a SPECIAL's segments must be a whole number from 1 to the fighter's current energy; a second order for the same fighter is rejected; then `Declarations.Validate` with the GROUP→ATTACK fallback. Accepted orders replace the pending list. A non-empty declaration with nothing accepted is refused with COMBAT_INVALID_DECLARATION 'All declarations were invalid', with one detail per rejected order (path `actions/{i}`, reason). An empty list clears the orders. AdvanceRound(): GAME_NOT_FOUND, NO_ACTIVE_COMBAT; `RoundManager.RunRound` with the pending orders and the fight's own dice; `FightSetup.Sync`; on victory or defeat, `FightSetup.End` and LastCombatOutcome = (status, round); pending orders are always cleared. GetCombatView() returns the player-facing view of the fight (fighters, round, phase, status, the player's pending orders; enemy decisions hidden, as today). GetRoundHistory(). GetCombatResult() returns 'active' with the round, else the last outcome, else NO_ACTIVE_COMBAT.",
+      "interfaces": "Receives T8 (FightSetup), T7 (RoundManager, Declarations), T6 (the archetype catalog from content), T9 (session plumbing, snapshot, validation). Produces `CombatOperations` (StartEncounter, DeclareOrders, AdvanceRound, GetCombatView, GetRoundHistory, GetCombatResult) and `CombatView`. Consumed by the future combat screens (Sprint 8) and by T13's smoke run.",
+      "files": [
+        {
+          "path": "rules/AncientOrder.Rules/Session/Operations/CombatOperations.cs",
+          "purpose": "StartEncounter, DeclareOrders, AdvanceRound, GetCombatView, GetRoundHistory, GetCombatResult"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Session/CombatView.cs",
+          "purpose": "The player-facing view of a fight (no enemy decisions)"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Session/SessionValidation.cs",
+          "purpose": "Modify: order-list shape checks with today's messages ('actions/{i}…')"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Session/GameSession.cs",
+          "purpose": "Modify (from T9): public methods delegating to the combat operations"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "Reloading a mid-fight save replays the same dice",
+          "rationale": "Designer decision 2026-10-28 ('same dice'): each fight's dice live in its CombatState and are saved with it, stopping reload-to-reroll and letting any fight be replayed exactly. Today live fights use Math.random and cannot be replayed."
+        },
+        {
+          "decision": "One order per fighter per round is enforced at declaration",
+          "rationale": "Designer decision 2026-10-28 (Group 4)."
+        }
+      ],
+      "producer_notes": "Port `declareActions`, `checkPlayerOrder`, `startEncounter`, `advanceRound`, and the view functions from `src/session/operations/combat.ts`, keeping messages the tests assert. The orders and the last outcome are session state, not game state: they are not saved (as today) and a load clears them (T12). Never construct a roll source inside an operation; fights draw from their own Dice (T7), and only fight seeds come from ISeedSource."
+    },
+    {
+      "id": "T11",
+      "title": "Save format and checks",
+      "domain": "code/engine",
+      "experience_slices": [
+        "ES-5"
+      ],
+      "description": "The versioned save format, carried over from ADR-058. Each save records its version, slot, time saved, and player name. It includes checks that refuse damaged, oversized, or wrong-format saves, and a way to upgrade older versions of the format when loading. The format starts fresh, and browser saves from the TypeScript build are not read.",
+      "acceptance_criteria": [
+        "A saved game loads back to an identical game state",
+        "Damaged, oversized, or wrong-format saves are refused with a clear reason and are never partly loaded",
+        "Loading has a step that upgrades saves from earlier versions of the format, proven with a test save marked as an earlier version, even though no earlier version exists yet",
+        "A save made under one OS language setting re-saves to identical bytes when loaded under another (tested with en-US, sv-SE, tr-TR)",
+        "A save made mid-fight loads with the fight's dice intact, and the next rounds resolve exactly as they would have without saving",
+        "Loading against changed content always succeeds when the save itself is sound: characters no longer in content are dropped (and removed from the lineup), new characters start at their starting relationships, an unfitting lineup is cleared, and each adjustment is listed in the load report",
+        "A game whose save would exceed 2,000,000 UTF-8 bytes is refused at save time with VALIDATION_ERROR and nothing is written"
+      ],
+      "dependencies": [
+        "T3"
+      ],
+      "decisions": [
+        {
+          "tier": "USER",
+          "description": "Review of the save format's concepts and intent: change now, set aside for its own sprint, or keep as is",
+          "rationale": "Discovery brief: the designer reviews each system as it moves."
+        }
+      ],
+      "technical_approach": "A fresh save format in `AncientOrder.Rules.Saves`, carrying over ADR-058's envelope, versioning, and never-throwing parse, with its own records separate from the rules state. (1) Format records (`Saves/Format/`): `SaveEnvelope` {format 'ancient-order-save', version 1, kind 'manual', slot, savedAt (Unix ms), playerName, game}; `SavedGame` {timestamp, player {id, name, personality}, characters [{id, affection, trust}] in catalog order, lineup [ids], reactionProgress [{id, block, dodge, parry}] sorted by id (ordinal), combat (a full mirror of CombatState, including its dice as four unsigned integers, or null)}. Every collection is a JSON array in a defined order (no maps), enums are written as strings, property names are camelCase, and the JSON is indented. Serialization uses a System.Text.Json source-generated context (`SaveJsonContext`). (2) Writing: `SaveFormat.Write(slot, kind, game, now)` checks the game the way today's save does (VALIDATION_ERROR 'Game state is invalid: …'), maps it to the format records, serializes it to UTF-8, and refuses anything over 2,000,000 bytes ('Save is too large to write ({n} bytes, limit 2000000)'). (3) Reading: `SaveFormat.Read(bytes, content)` never throws and keeps today's order: size ('save too large'), JSON ('invalid JSON'), object, format tag ('wrong format tag'), then version. A version above current gives 'unsupported version X'; a version below current runs the upgrade steps in sequence. Then the collected value checks (at most 10 reasons, each at most 200 characters): kind, slot 1–10, savedAt finite, playerName, player personality valid (T2), unique character ids, affection and trust within −100..100, finite non-negative XP, and combat round ≥ 1, valid phase and status, fighters' stamina within 0..max, dice present and not all zero. (4) Upgrades: `SaveUpgrades` is an ordered list of steps (each from version n to n+1, working on the JSON object before mapping). The production list is empty because version 1 is the first; tests pass in a test-only step from a synthetic version 0. (5) Reconciliation: `SaveReconciler` pairs the saved state with the current content. Saved characters missing from the catalog are dropped; catalog characters missing from the save start with their starting affection and trust. The lineup is cleared if a member is gone, lacks combat stats, is duplicated, or the lineup size has changed. Reaction progress is kept even for absent ids, so it returns if the character comes back. A saved fight is restored as saved. The result is the GameState plus a `LoadReport` listing each adjustment.",
+      "interfaces": "Receives T3's GameState, GameContent, and CharacterCatalog; T2's PersonalityRules.Validate; T5's combat records and T1's DiceState (mirrored in the format). Produces `SaveFormat` (Write, Read), `SaveEnvelope` and the format records, `SaveJsonContext`, `SaveUpgrades`, `SaveReconciler`, `LoadReport`, `SaveConstants` (format tag, current version, 2,000,000-byte limit, slots 1–10). Consumed by T12's save store.",
+      "files": [
+        {
+          "path": "rules/AncientOrder.Rules/Saves/Format/SaveEnvelope.cs",
+          "purpose": "Envelope and SavedGame records"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Saves/Format/SavedCombat.cs",
+          "purpose": "Save records mirroring CombatState (fighters, buffs, queue, history, dice)"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Saves/Format/SaveJsonContext.cs",
+          "purpose": "Source-generated System.Text.Json context: camelCase, string enums, indented"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Saves/SaveMapper.cs",
+          "purpose": "GameState ⇄ format records, with every collection in a defined order"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Saves/SaveFormat.cs",
+          "purpose": "Write (check, map, serialize, size limit) and Read (never throws: size, JSON, tag, version, upgrades, checks, map, reconcile)"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Saves/SaveUpgrades.cs",
+          "purpose": "Ordered upgrade steps (empty in production) and the runner"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Saves/SaveReconciler.cs",
+          "purpose": "Pairs saved state with current content and produces the LoadReport"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Saves/SaveConstants.cs",
+          "purpose": "Format tag, current version, size limit, slot range"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "A fresh format (version 1) with its own records, separate from the rules state",
+          "rationale": "ADR-063 and the brief: browser saves are not carried over. Separate records (designer-approved after the 2026-10-28 research) fix the culture-dependent ordering found in the spike and make versioning safe: renaming a rules field cannot silently change the file."
+        },
+        {
+          "decision": "Saves hold only what changes in play; fixed character details always come from current content",
+          "rationale": "Designer decision 2026-10-28 (Group 2), matching Sprint 7's settled rule."
+        },
+        {
+          "decision": "Loading against changed content reconciles instead of refusing",
+          "rationale": "Designer decision 2026-10-28: content changes constantly during development; a sound save always loads, and the report lists what was adjusted."
+        },
+        {
+          "decision": "Size is checked on write as well as on read, in UTF-8 bytes",
+          "rationale": "Designer decision 2026-10-28. Today a too-large save is written and then shows as damaged, and the 'bytes' limit counts UTF-16 characters."
+        },
+        {
+          "decision": "A mid-fight save carries the fight's dice",
+          "rationale": "Designer decision 2026-10-28 (Group 5, same dice)."
+        },
+        {
+          "decision": "Loading checks more than today (relationship ranges, unique ids, XP, fighter stamina, dice)",
+          "rationale": "Designer-approved 2026-10-28: a broken file is refused instead of half-working."
+        },
+        {
+          "decision": "The envelope's slot is not compared with the slot it was loaded from",
+          "rationale": "Kept as today (designer-approved 2026-10-28): desktop players copy save files between slots for backups."
+        }
+      ],
+      "producer_notes": "Never serialize rules records directly: map to and from the format records only, so the culture-dependent and ordering problems cannot reach the file. Doubles round-trip exactly with System.Text.Json's default number handling; do not format numbers with culture. The reasons' wording follows `src/persistence/saveFormat.ts` and `saveStore.ts` where a TypeScript equivalent exists. Pending orders and the last fight outcome are not saved, as today. Mid-conversation state is Sprint 7's addition through a version bump and an upgrade step."
+    },
+    {
+      "id": "T12",
+      "title": "Save slots on disk",
+      "domain": "code/engine",
+      "experience_slices": [
+        "ES-5",
+        "ES-4"
+      ],
+      "description": "Ten save slots that the game session can save to, load from, list, and delete. They sit behind storage that can be swapped out: files on the player's machine, in a folder chosen by whatever runs the rules, plus in-memory storage for tests.",
+      "acceptance_criteria": [
+        "Slots 1–10 can be saved to, loaded from, listed, and deleted through the session, with the same refusals as today (invalid slot, empty slot, no active game)",
+        "Saves are kept as files and survive closing and restarting the program",
+        "Loading a slot starts it as a fresh active game, as today",
+        "Swapping where saves are stored needs no change to the save rules",
+        "Save operations are asynchronous and never block the caller on disk access; their results arrive on the caller's thread",
+        "A crash or failure while writing never damages the save already in that slot",
+        "Disk-full and unreadable-storage failures are refused with STORAGE_ERROR ('Not enough storage space to save', 'Save storage is unavailable')"
+      ],
+      "dependencies": [
+        "T9",
+        "T11"
+      ],
+      "decisions": [
+        {
+          "tier": "USER",
+          "description": "Review of save slots' concepts and intent (ten manual slots, room for autosaves later): change now, set aside for its own sprint, or keep as is",
+          "rationale": "Discovery brief: the designer reviews each system as it moves."
+        }
+      ],
+      "technical_approach": "Storage and slots in `AncientOrder.Rules.Saves`, plus the session's save operations. (1) `ISaveBackend` = `ReadAsync(key)` (bytes, or null when absent), `WriteAsync(key, bytes)`, `RemoveAsync(key)`, all returning `ValueTask`, with a CancellationToken. `FileSaveBackend(string folder)` stores each key as `{folder}/{key}.json`. It creates the folder on first write. It writes to `{key}.json.tmp`, flushes, then `File.Move(tmp, final, overwrite: true)`, so the old save survives any failure mid-write; a leftover .tmp is ignored and overwritten next time. It maps IOException disk-full results (ERROR_DISK_FULL, ERROR_HANDLE_DISK_FULL, ENOSPC) to STORAGE_ERROR 'Not enough storage space to save' and every other I/O or permission failure to STORAGE_ERROR 'Save storage is unavailable'. `MemorySaveBackend` serves tests and is the session's default. The rules never choose the folder: whatever runs them passes it in (Godot passes `user://saves`, T13). (2) `SaveStore` (port of saveStore.ts) over a backend and the content. Keys are `manual-01`…`manual-10`, with `auto-…` reserved. Operations: `SaveAsync(slot, game)`, `LoadAsync(slot)` (SAVE_NOT_FOUND 'No save found in slot X.'; damaged gives VALIDATION_ERROR 'Save file in slot X is corrupted: …'), `ListAsync()` (all ten slots: slot, exists, status empty/saved/corrupted, metadata slot/savedAt/playerName; a damaged slot has exists = false), `DeleteAsync(slot)` (SAVE_NOT_FOUND when empty; damaged slots can be deleted). Invalid slots give INVALID_SLOT 'Invalid slot number: X. Must be between 1 and 10.'. (3) Session operations on T9's GameSession, returning `ValueTask<Result<T>>`: SaveToSlot (slot check 'Slot must be an integer between 1 and 10', then GAME_NOT_FOUND, then save; returns slot, timestamp, playerName); LoadFromSlot (slot check, load; on success commits a fresh session snapshot with the loaded game, clearing pending orders and the last outcome, and returns the load report); ListSlots; DeleteSlot (returns slot and deleted = true). The save operation serializes the snapshot as it is when called. Load commits against the snapshot current when the read finishes and replaces the game, which is today's intended behavior.",
+      "interfaces": "Receives T11's SaveFormat, LoadReport, and constants; T9's GameSession, Outcome, and options (this task adds `GameSessionOptions.Saves`, a SaveStore over a backend, defaulting to MemorySaveBackend). Produces `ISaveBackend`, `FileSaveBackend`, `MemorySaveBackend`, `SaveStore`, `SlotInfo`, `SaveMetadata`, and the four session save operations. Consumed by T13 (Godot constructs `FileSaveBackend` with the globalized `user://saves` path) and future save and load screens.",
+      "files": [
+        {
+          "path": "rules/AncientOrder.Rules/Saves/ISaveBackend.cs",
+          "purpose": "Swappable raw storage interface"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Saves/FileSaveBackend.cs",
+          "purpose": "Files in a folder handed in; write to temp then replace; I/O failures mapped to STORAGE_ERROR"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Saves/MemorySaveBackend.cs",
+          "purpose": "In-memory backend for tests and the default"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Saves/SaveStore.cs",
+          "purpose": "Ten manual slots: save, load, list, delete with today's refusals"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Session/Operations/SaveOperations.cs",
+          "purpose": "SaveToSlot, LoadFromSlot, ListSlots, DeleteSlot on the session"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Session/GameSession.cs",
+          "purpose": "Modify (from T9): async run path for save operations that commits on the caller's context"
+        },
+        {
+          "path": "rules/AncientOrder.Rules/Session/GameSessionOptions.cs",
+          "purpose": "Modify (from T9): add `Saves` (a SaveStore over an ISaveBackend), defaulting to MemorySaveBackend"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "Save operations stay asynchronous",
+          "rationale": "Designer decision 2026-10-28: a slow disk never freezes the game, Steam Cloud and console save systems are asynchronous, and it matches today's async save operations, so screens need no rework later."
+        },
+        {
+          "decision": "Saves are written to a temporary file and swapped into place",
+          "rationale": "Designer-approved 2026-10-28: browser storage was atomic, plain files are not; a crash mid-save must not damage the existing save."
+        },
+        {
+          "decision": "Slot files are named manual-01…manual-10, leaving room for autosaves",
+          "rationale": "Designer-approved 2026-10-28; ADR-058's 'auto' kind stays reserved."
+        }
+      ],
+      "producer_notes": "Do not use `ConfigureAwait(false)` on any await whose continuation touches the session (it must resume on the caller's context, Godot's main thread); suppress CA2007 for the session code with a one-line reason, while backend internals may use it. Map `IOException.HResult` values 0x80070070 and 0x80070027 (and ENOSPC on Linux, errno 28) to the disk-full message. The rules library may use System.IO; it must not reference Godot. `File.Move` with overwrite replaces atomically on the same volume, so keep the temp file in the same folder."
+    },
+    {
+      "id": "T13",
+      "title": "Godot project connected to the rules",
+      "domain": "code/godot",
+      "experience_slices": [
+        "ES-6"
+      ],
+      "description": "A Godot 4.7 (.NET) project in the repo that uses the rules library and has no UI. A headless run proves Godot can drive the game session, with saves going to the game's own save folder on the player's machine. One command builds the project and runs every C# test.",
+      "acceptance_criteria": [
+        "The project opens in the Godot 4.7.2 (.NET) editor and builds with no errors, using the rules library",
+        "A headless run from the command line starts a new game through the session, saves and loads a slot in the game's own save folder, and reports success",
+        "One command builds the Godot project and runs every C# test",
+        "The project instructions explain how to open, build, and verify the Godot project, and say that the TypeScript build is the frozen reference",
+        "The smoke run picks a lineup, starts a fight, plays a round, saves mid-fight, loads, and finds the game identical, using only clearly marked stand-in content, and saves only under `user://smoke/saves`, which it empties before and after",
+        "`./verify.ps1` imports the Godot project when `godot/.godot` is missing, runs the smoke scene headless with a timeout, and fails with a clear message when the Godot executable cannot be found",
+        "The rules library still references no Godot assembly after the Godot project is added"
+      ],
+      "dependencies": [
+        "T9",
+        "T10",
+        "T12"
+      ],
+      "decisions": [],
+      "technical_approach": "A Godot 4.7.2 (.NET) project in `godot/`, set up as the 2026-10-26 spike proved. It has `project.godot` (name 'Ancient Order', features 4.7 and C#, `[dotnet] project/assembly_name=\"AncientOrder\"`, `project/solution_directory=\"../\"`, main scene `res://main.tscn`) and `AncientOrder.csproj` (`Sdk=\"Godot.NET.Sdk/4.7.2\"`, net10.0, Nullable, EnableDynamicLoading, a ProjectReference to `../rules/AncientOrder.Rules/AncientOrder.Rules.csproj`), added to `AncientOrder.sln`. The main scene is an empty root node: there is no UI and nothing playable. The composition root, `GameHost`, shows how future screens will reach the rules: it builds `GameContent`, a `FileSaveBackend` on `ProjectSettings.GlobalizePath(\"user://saves\")`, and the `GameSession`, and wires OnListenerError to `GD.PushError`. The smoke scene, `res://smoke/smoke.tscn` with `SmokeRun.cs`, builds its own session with the stand-in content and a FileSaveBackend on `user://smoke/saves` (emptied before and after). It plays NewGame, SetLineup, StartEncounter, DeclareOrders, AdvanceRound, SaveToSlot(1), LoadFromSlot(1); compares the loaded game with the saved one through the save format's bytes; then DeleteSlot(1). It prints each step and calls `GetTree().Quit(0)` on success, or `Quit(1)` with the failing step and reason. The stand-in content (`godot/StandIn/StandInContent.cs`) is marked STAND-IN at the top of the file and on every name. It holds a player with combat stats, two companions with combat stats, one scored and one basic archetype, the two synergy bonuses, and one encounter, and it exists only to prove the wiring; Sprint 7's content packs replace it. `verify.ps1` gains steps 4 and 5. It finds Godot from `$env:GODOT`, else `$env:LOCALAPPDATA\\Programs\\Godot\\Godot_v4.7.2-stable_mono_win64\\Godot_v4.7.2-stable_mono_win64_console.exe`, else it fails with instructions. If `godot/.godot` is missing it runs `--headless --path godot --import`, then `--headless --path godot res://smoke/smoke.tscn` with a 180-second timeout, and fails on a non-zero exit. CLAUDE.md's Technical Stack and commands describe the Godot project, `./verify.ps1`, and opening `godot/project.godot` in the Godot 4.7.2 (.NET) editor, and say the TypeScript build (`npm run dev`, `npm run verify`) is the frozen, playable reference. key_facts.md records the smoke folder and the verify steps.",
+      "interfaces": "Receives T9, T10, and T12's GameSession, operations, and FileSaveBackend, plus T3, T4, T6, and T8's content records (to build the stand-in content). Produces the Godot project, `GameHost` (the composition root future screens build on), the smoke scene, the verify steps, and the updated project instructions.",
+      "files": [
+        {
+          "path": "godot/project.godot",
+          "purpose": "Godot 4.7 (.NET) project settings: name, C# feature, assembly name, solution directory, main scene"
+        },
+        {
+          "path": "godot/AncientOrder.csproj",
+          "purpose": "Godot.NET.Sdk/4.7.2, net10.0, referencing the rules library"
+        },
+        {
+          "path": "godot/main.tscn",
+          "purpose": "Empty main scene (no UI)"
+        },
+        {
+          "path": "godot/GameHost.cs",
+          "purpose": "Composition root: content, file saves at user://saves, the session, listener errors to GD.PushError"
+        },
+        {
+          "path": "godot/StandIn/StandInContent.cs",
+          "purpose": "Clearly marked STAND-IN content proving the wiring; replaced by Sprint 7 content packs"
+        },
+        {
+          "path": "godot/smoke/smoke.tscn",
+          "purpose": "Headless smoke scene"
+        },
+        {
+          "path": "godot/smoke/SmokeRun.cs",
+          "purpose": "Drives the session through new game, lineup, fight, round, save, load, compare, delete; exits 0 or 1"
+        },
+        {
+          "path": "godot/*.uid",
+          "purpose": "Godot-generated uid files, committed"
+        },
+        {
+          "path": "AncientOrder.sln",
+          "purpose": "Modify: add godot/AncientOrder.csproj"
+        },
+        {
+          "path": "verify.ps1",
+          "purpose": "Modify: Godot import if needed, then the smoke run with a timeout"
+        },
+        {
+          "path": "CLAUDE.md",
+          "purpose": "Modify: Godot project, open/build/verify commands, TypeScript build as the frozen reference"
+        },
+        {
+          "path": "docs/project_notes/key_facts.md",
+          "purpose": "Modify: smoke save folder and verify steps under Godot toolchain"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "The smoke run saves to user://smoke/saves, never the real save folder",
+          "rationale": "Designer-approved 2026-10-28: verification must never touch a player's saves."
+        },
+        {
+          "decision": "The smoke run exercises a fight and a mid-fight save, not only a new game",
+          "rationale": "Proves the whole chain (session, combat, dice, file saves) under Godot's .NET runtime, at negligible cost."
+        },
+        {
+          "decision": "Stand-in content lives in the Godot project as C# until Sprint 7 adds content packs",
+          "rationale": "ADR-062: stand-in content proves the systems; no content loader exists in this branch's scope."
+        },
+        {
+          "decision": "Desktop export is not tested in this branch",
+          "rationale": "Export templates are not installed; export is out of scope. Retargeting .NET is a one-property change if the export step later objects to net10.0."
+        }
+      ],
+      "producer_notes": "Running Godot from bash fails with the `godot` command (godot.cmd); call the console executable by full path, as verify.ps1 does. A fresh checkout needs `--import` before a headless run. Godot builds the csproj itself into `godot/.godot/mono/temp/bin/Debug`. Keep every Godot type out of `rules/`; the Godot project depends on the rules, never the reverse. Do not add UI, input, or rendering. Do not edit any TypeScript build file."
+    },
+    {
+      "id": "T14",
+      "title": "Carried-over tests: personality, game state, and lineup",
+      "domain": "test/engine",
+      "experience_slices": [
+        "ES-1",
+        "ES-2"
+      ],
+      "description": "The TypeScript tests for personality, game state, the fight lineup, and team synergy, carried over to C#.",
+      "acceptance_criteria": [
+        "Every TypeScript test for these systems is either carried over and passing, or listed in the port record as changed or dropped with the reason",
+        "Automated tests prove the personality limits, fixed archetypes, and unchanged previous states hold"
+      ],
+      "dependencies": [
+        "T2",
+        "T3",
+        "T4",
+        "T6"
+      ],
+      "decisions": [],
+      "technical_approach": "xUnit v3 in `rules/AncientOrder.Rules.Tests`, run by `dotnet test` from the repo root (or `./verify.ps1`). One C# test file per TypeScript test file, keeping each TypeScript `describe`/`it` name as the C# test class and method display name, so the port record can match them one to one. Source files and their fate: `src/personality/personalitySystem.test.ts` (39 tests) carried over; `src/state/gameState.test.ts` (17) carried over, with roster-specific cases (lines 69–84) rewritten against the test cast and timestamp cases driven by an explicit `now`; `src/state/npcs.test.ts` (24, almost all checking the hard-coded templates' data) dropped and replaced by catalog tests; `src/state/stateUpdaters.test.ts` (85): the live blocks are carried over (updatePlayerPersonality 6, applyPersonalityAdjustment 6, updateNPCAffection 9, updateNPCTrust 6, updateNPCRelationship 6, updateCombatState 6, updateTeamComposition 11 moved to the lineup tests, updateTimestamp 4 adapted to `now`), and the retired blocks are dropped (addConversationEntry 5, processDialogueChoice 10, initializeNarrative 8, updateNarrativeState 4, clearNarrative 4); unknown-character cases change from 'state unchanged, no error' to an NPC_NOT_FOUND refusal; `src/narrative/synergyCalculator.test.ts` (19) carried over against the test content. New tests cover the deliberate changes and the new structure (listed under files).",
+      "interfaces": "Exercises T2's PersonalityRules, T3's GameContent, CharacterCatalog, CharacterRules, and GameStateUpdates, and T4's LineupRules, SynergyCalculator, Synergy.Current, and StatModifiers. Session-level tests for these operations (e.g. `src/session/operations/player.test.ts` team locks) belong to T17.",
+      "files": [
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Fixtures/TestCast.cs",
+          "purpose": "Elena, Lars, Kade as test-only CharacterDefinitions in that order, with the exact TypeScript ids, personalities, and starting relationships (Lars trust −20), archetype ids elena_loyal_scout, lars_scheming_merchant, kade_rogue_outlaw (T6), and CombatProfiles with today's encounter_demo player-party stats (player_elena, player_lars, player_kade)"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Fixtures/TestArchetypes.cs",
+          "purpose": "Today's three profiles as Scored archetypes (elena_loyal_scout, lars_scheming_merchant, kade_rogue_outlaw, same numbers); 'enemy', 'kade_bold_outlaw', 'lars_cautious_merchant', 'warrior', 'scout', 'mage' as Basic; part of TestContent"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Fixtures/TestContent.cs",
+          "purpose": "Test GameContent: player 'Kael', default personality, lineup size 2, the test cast, the test archetypes, today's two synergy bonuses with BestOnly; T16 adds the encounters"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Personality/PersonalitySystemTests.cs",
+          "purpose": "Carried over from personalitySystem.test.ts"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Personality/PersonalityInvariantTests.cs",
+          "purpose": "New: 100,000+ seeded random adjustments always sum to 100 within 0.001 and stay in 5–35; regression case default + logic 21.35"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/State/GameStateTests.cs",
+          "purpose": "Carried over from gameState.test.ts, plus new-game-from-content cases (settings, starting relationships, default personality)"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/State/StateUpdatesTests.cs",
+          "purpose": "Carried over from the live blocks of stateUpdaters.test.ts"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Characters/CharacterCatalogTests.cs",
+          "purpose": "New: content validation refusals, content order kept, lookup by id; replaces npcs.test.ts"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Characters/CharacterRulesTests.cs",
+          "purpose": "New: Get/All/InLineup, NPC_NOT_FOUND refusals, fixed traits unreachable by any update"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Party/LineupRulesTests.cs",
+          "purpose": "Carried over from the updateTeamComposition block, plus combat lock and content-defined size"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Party/SynergyCalculatorTests.cs",
+          "purpose": "Carried over from synergyCalculator.test.ts"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Party/SynergyLineupTests.cs",
+          "purpose": "New: only the lineup counts, no lineup means no bonus, AllThatQualify returns every qualifying bonus"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Combat/Stats/StatModifiersTests.cs",
+          "purpose": "New: single ×1.10 equals Math.round(stat * 1.10) bit for bit; step order; one rounding; untouched without modifiers"
+        }
+      ],
+      "producer_notes": "Expected values come from the TypeScript tests verbatim; where a test changes, keep the TypeScript name and add a one-line comment saying why, and add the test to `docs/project_notes/port_record.md` (format `file › title`, under its system) as changed or dropped with its reason. To check JS-equivalent expected values for new parity tests, the TypeScript build can be run read-only (it is frozen; never edit it). Compare states with StateAssert.Equivalent. Tests may use System.Random or System.Linq freely; the banned-API list applies to the rules assembly only. Do not test the TypeScript's hard-coded roster data, retired engines, or framework internals.",
+      "design_decisions": [
+        {
+          "decision": "One C# test file per TypeScript test file, keeping TypeScript test names as display names; expected values copied verbatim",
+          "rationale": "Lets the port record and its accounting test (T19) match every TypeScript test one to one (Group 1, designer-approved)."
+        },
+        {
+          "decision": "Elena, Lars, and Kade live only in the test content",
+          "rationale": "Designer decision 2026-10-28 (Group 2): the library has no characters built in."
+        },
+        {
+          "decision": "A randomized invariant test (at least 100,000 seeded adjustments) guards the personality limits",
+          "rationale": "The 99.99% bug went unnoticed because no test exercised the sum invariant at the bounds."
+        }
+      ]
+    },
+    {
+      "id": "T15",
+      "title": "Carried-over tests: combat math and enemy decisions",
+      "domain": "test/engine",
+      "experience_slices": [
+        "ES-3"
+      ],
+      "description": "The TypeScript tests for combat math (formulas, energy, elemental paths, defense, reaction progression) and enemy decision-making, carried over to C#.",
+      "acceptance_criteria": [
+        "Every TypeScript test for these systems is either carried over and passing, or listed in the port record as changed or dropped with the reason",
+        "Tests that depend on rolls use fixed rolls and give the same expected results as the TypeScript tests"
+      ],
+      "dependencies": [
+        "T5",
+        "T6",
+        "T14"
+      ],
+      "decisions": [],
+      "technical_approach": "xUnit v3 in `rules/AncientOrder.Rules.Tests/Combat`, one C# file per TypeScript file, with the TypeScript describe/it names kept as display names. Rolls are passed as literals, as the TypeScript tests do (ADR-023). Sources, with approximate test counts: formulas.test.ts (87), energy.test.ts (40), elementalPaths.test.ts (32), defense.test.ts (30), reactionProgression.test.ts (18), behaviorTree/evaluator.test.ts (22), perception.test.ts (18), factors/factors.test.ts (45), profiles/profiles.test.ts (24), rankCoefficient.test.ts (9), tieBreaking.test.ts (14). Expected changes: energy tests for `resetRoundEnergy` and `getStartingSegments` are dropped (not ported); profiles.test.ts becomes tests of the test content's archetypes, with the profile path assertions dropped (paths now come from the combatant); evaluator tests that rely on an unknown archetype falling back to the stub change to expect an error, or to use a Basic archetype; any tie-break test whose combatant path differs from its old profile path is updated and recorded. New tests cover the archetype content rules and the Basic behavior.",
+      "interfaces": "Exercises T5's Formulas, Defense, ElementalPaths, Energy, ReactionProgression, and combat records, and T6's ArchetypeCatalog, Perception, the factors, RankCoefficient, TieBreaking, and EnemyDecisions.",
+      "files": [
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Fixtures/TestCombatants.cs",
+          "purpose": "Shared combatant builders mirroring the TypeScript test fixtures (e.g. defense.test.ts:26)"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Combat/FormulasTests.cs",
+          "purpose": "Carried over from formulas.test.ts"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Combat/EnergyTests.cs",
+          "purpose": "Carried over from energy.test.ts, minus the unported functions"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Combat/ElementalPathsTests.cs",
+          "purpose": "Carried over from elementalPaths.test.ts"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Combat/DefenseTests.cs",
+          "purpose": "Carried over from defense.test.ts"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Combat/ReactionProgressionTests.cs",
+          "purpose": "Carried over from reactionProgression.test.ts"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Combat/Ai/EnemyDecisionsTests.cs",
+          "purpose": "Carried over from evaluator.test.ts, plus Basic behavior and unknown-archetype-is-an-error cases"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Combat/Ai/PerceptionTests.cs",
+          "purpose": "Carried over from perception.test.ts"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Combat/Ai/FactorsTests.cs",
+          "purpose": "Carried over from factors.test.ts"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Combat/Ai/ArchetypeCatalogTests.cs",
+          "purpose": "Replaces profiles.test.ts: test archetype data, plus validation refusals (unknown id, missing weight or base score, duplicate id, character naming an unknown archetype)"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Combat/Ai/RankCoefficientTests.cs",
+          "purpose": "Carried over from rankCoefficient.test.ts"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Combat/Ai/TieBreakingTests.cs",
+          "purpose": "Carried over from tieBreaking.test.ts"
+        }
+      ],
+      "producer_notes": "The test archetypes and cast come from T14's fixtures. Expected numbers are copied from the TypeScript tests verbatim; never recompute them in C#. Floating-point assertions use exact equality wherever the TypeScript uses toBe, and a tolerance only where it uses toBeCloseTo, with the same precision. Every dropped or changed test goes in the port record with its reason. The pipeline, counter-chain, group-action, round, declaration, sync, and integration tests belong to T16.",
+      "design_decisions": [
+        {
+          "decision": "One C# test file per TypeScript test file, keeping TypeScript test names as display names; expected values copied verbatim",
+          "rationale": "Lets the port record and its accounting test (T19) match every TypeScript test one to one (Group 1, designer-approved)."
+        },
+        {
+          "decision": "Rolls are injected as literals, as in the TypeScript tests",
+          "rationale": "ADR-023; keeps every expected value identical."
+        }
+      ]
+    },
+    {
+      "id": "T16",
+      "title": "Carried-over tests: round resolution and fight setup",
+      "domain": "test/engine",
+      "experience_slices": [
+        "ES-3"
+      ],
+      "description": "The TypeScript tests for declaring orders, counter chains, group actions, round resolution, fight setup, and the combat integration tests, carried over to C#.",
+      "acceptance_criteria": [
+        "Every TypeScript test for these systems is either carried over and passing, or listed in the port record as changed or dropped with the reason",
+        "Full fights from the integration tests play out to the same results with the same rolls"
+      ],
+      "dependencies": [
+        "T7",
+        "T8",
+        "T14",
+        "T15"
+      ],
+      "decisions": [],
+      "technical_approach": "xUnit v3 in `rules/AncientOrder.Rules.Tests/Combat`, one C# file per TypeScript file, with describe/it names kept as display names and rolls injected as `FixedRolls` sequences or constants, as in the TypeScript (e.g. FIXED_ROLL, ROLL_LOW/MID/HIGH). Sources, with approximate test counts: declaration.test.ts (34), counterChain.test.ts (13), groupAction.test.ts (24), pipeline.test.ts (40), roundManager.test.ts (33), sync.test.ts (42), integration.test.ts (16, five full-fight scenarios using the real Elena, Lars, and Kade profiles, now the test archetypes). The TypeScript tests use archetype 'test' to get the stub AI; the C# tests declare a Basic archetype 'test' instead. Expected changes, each recorded: tests that feed roll sequences through speed ties (new tie rule); tests that read nested history from `stateSnapshot`; GROUP tests against a buffed target (buffed rates now apply); tests relying on a KO'd interceptor; enemy GROUP tests (enemies no longer choose GROUP); sync tests that build the player's side from an encounter's playerParty (rewritten to build it from the player and the lineup, with test content variants reproducing each TypeScript encounter's player party, and fighter ids becoming character ids); the endCombat conversation-log assertions (dropped). New tests cover each deliberate change.",
+      "interfaces": "Exercises T7's Declarations, Pipeline, CounterChain, GroupAction, and RoundManager, and T8's EncounterCatalog and FightSetup. Session-level combat tests (`src/session/combat.test.ts`, `src/session/operations/combat.test.ts`) belong to T17.",
+      "files": [
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Fixtures/TestEncounters.cs",
+          "purpose": "encounter_demo and encounter_test as enemies-only encounters with today's enemy stats; plus test content variants whose characters carry today's player-party stats (Elena, Lars, Kade for the demo; warrior, scout, mage for encounter_test) with lineup size 3 and no player combat stats"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Combat/DeclarationsTests.cs",
+          "purpose": "Carried over from declaration.test.ts, plus one-order-per-fighter cases"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Combat/CounterChainTests.cs",
+          "purpose": "Carried over from counterChain.test.ts, plus recorded exchanges"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Combat/GroupActionTests.cs",
+          "purpose": "Carried over from groupAction.test.ts, plus buffed-rate cases"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Combat/PipelineTests.cs",
+          "purpose": "Carried over from pipeline.test.ts, plus tie-rule, KO'd interceptor, and Crushing Blow action-power cases"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Combat/RoundManagerTests.cs",
+          "purpose": "Carried over from roundManager.test.ts, plus non-nested history, Evade recovery recording, and no-enemy-GROUP cases"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Combat/FightSetupTests.cs",
+          "purpose": "Carried over from sync.test.ts and rewritten for the player-plus-lineup side; refusals; reaction progress by character id; demo-fight parity"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Combat/CombatIntegrationTests.cs",
+          "purpose": "Carried over from integration.test.ts: the five full fights play out to the same results"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Combat/RoundHistorySizeTests.cs",
+          "purpose": "New: a 30-round fight's serialized history grows linearly with rounds"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Fixtures/TestContent.cs",
+          "purpose": "Modify (from T14): add encounter_demo and encounter_test"
+        }
+      ],
+      "producer_notes": "Copy expected values from the TypeScript tests verbatim. When a deliberate change alters a test's expectation, keep the TypeScript name, change only what the change requires, comment the reason in one line, and list the test in the port record. Do not drop a test because it is hard to port; a test may only be dropped because its subject was retired or deliberately changed.",
+      "design_decisions": [
+        {
+          "decision": "One C# test file per TypeScript test file, keeping TypeScript test names as display names; expected values copied verbatim",
+          "rationale": "Lets the port record and its accounting test (T19) match every TypeScript test one to one (Group 1, designer-approved)."
+        },
+        {
+          "decision": "Test content variants reproduce each TypeScript encounter's player party through the lineup",
+          "rationale": "Group 4 moved the player's side to the player plus lineup; the variants keep the full-fight tests' parity."
+        },
+        {
+          "decision": "A round-history size test guards linear growth",
+          "rationale": "Group 4 fix for history that doubled each round."
+        }
+      ]
+    },
+    {
+      "id": "T17",
+      "title": "Carried-over tests: game session",
+      "domain": "test/engine",
+      "experience_slices": [
+        "ES-4"
+      ],
+      "description": "The TypeScript tests for the game session, including its input checks and the session-level end-to-end tests, carried over to C#.",
+      "acceptance_criteria": [
+        "Every TypeScript test for the session is either carried over and passing, or listed in the port record as changed or dropped with the reason",
+        "Tests prove refusals leave the snapshot unchanged and changes notify exactly once",
+        "An end-to-end test plays a whole fight through the session"
+      ],
+      "dependencies": [
+        "T9",
+        "T10",
+        "T12",
+        "T14"
+      ],
+      "decisions": [],
+      "technical_approach": "xUnit v3 in `rules/AncientOrder.Rules.Tests/Session`, one C# file per TypeScript file, with describe/it names kept as display names. Sessions are built with the test content, a FakeTimeProvider, a fixed id source, a fixed seed source, and the in-memory save store. Kept: src/session/combat.test.ts (8), gameSession.test.ts (11), validation.test.ts (18, with checks a typed API makes impossible dropped), operations/combat.test.ts (31), operations/player.test.ts (11, minus the narrative-lock test), operations/protoKeys.test.ts (3: 'constructor' and similar ids are simply unknown ids, still refused with the same message); tests/session.combat-e2e.test.ts (26, encounter_demo fights to completion), session.sprint1.test.ts (the personality invariants and combat-state checks; roster tests rewritten against the test cast), session.sprint4.test.ts (personality and combat lock; character live-versus-content tests rewritten for the new rule). Dropped (retired engines or meaningless in C#): narrativeDialogue.test.ts (5), operations/dialogue.test.ts (15), operations/narrative.test.ts (20), contentFreeze.test.ts (4, content records are immutable by type), the sprint1 dialogue sections, and the sprint4 narrative-lock test. The quickFight helper becomes a C# helper producing quick-win and quick-loss test content (stamina 1 or 5000), with a 60-round cap. Save-operation tests belong to T18.",
+      "interfaces": "Exercises T9's GameSession (operations, snapshot, version, synergy, subscribe and unsubscribe, listener isolation, INTERNAL_ERROR) and T10's combat operations end to end.",
+      "files": [
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Support/TestSessions.cs",
+          "purpose": "Builds sessions with test content, fake clock, fixed ids and seeds, in-memory saves"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Support/QuickFight.cs",
+          "purpose": "Port of tests/helpers/quickFight.ts: quick-win and quick-loss content and fightToEnd (60-round cap)"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Session/GameSessionTests.cs",
+          "purpose": "Carried over from gameSession.test.ts, plus version, synergy-in-snapshot, and listener-isolation cases"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Session/SessionValidationTests.cs",
+          "purpose": "Carried over from validation.test.ts, plus the 64-character id rule and null strings"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Session/PlayerOperationsTests.cs",
+          "purpose": "Carried over from operations/player.test.ts and protoKeys.test.ts"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Session/CharacterOperationsTests.cs",
+          "purpose": "New: list and lookup with and without a game; synergy follows the lineup"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Session/CombatOperationsTests.cs",
+          "purpose": "Carried over from operations/combat.test.ts and session/combat.test.ts, plus one-order-per-fighter and same-dice cases"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Session/SessionEndToEndTests.cs",
+          "purpose": "Carried over from tests/session.combat-e2e, sprint1, and sprint4: whole fights through the session alone; a fight is replayed exactly from its seed and orders"
+        }
+      ],
+      "producer_notes": "The TypeScript e2e determinism tests only checked composition and round count, because live fights were random; with same-dice fights, the C# versions can also assert that two runs from the same seed and orders end identically. Do not port tests of retired operations. Record every dropped or changed test in the port record.",
+      "design_decisions": [
+        {
+          "decision": "One C# test file per TypeScript test file, keeping TypeScript test names as display names; expected values copied verbatim",
+          "rationale": "Lets the port record and its accounting test (T19) match every TypeScript test one to one (Group 1, designer-approved)."
+        },
+        {
+          "decision": "End-to-end fights also assert exact replay from seed and orders",
+          "rationale": "Group 5 same-dice decision makes live fights reproducible; the TypeScript tests could only check composition."
+        }
+      ]
+    },
+    {
+      "id": "T18",
+      "title": "Carried-over tests: saves",
+      "domain": "test/engine",
+      "experience_slices": [
+        "ES-5"
+      ],
+      "description": "The TypeScript tests for the save format, its checks, save slots, and session save operations, carried over to C#, plus tests that saves kept as files survive a restart.",
+      "acceptance_criteria": [
+        "Every TypeScript test for saves is either carried over and passing, or listed in the port record as changed or dropped with the reason",
+        "Automated tests prove saves kept as files load back identically after the program restarts",
+        "Damaged and oversized saves are tested to be refused cleanly"
+      ],
+      "dependencies": [
+        "T10",
+        "T11",
+        "T12",
+        "T14",
+        "T17"
+      ],
+      "decisions": [],
+      "technical_approach": "xUnit v3 in `rules/AncientOrder.Rules.Tests/Saves`, one C# file per TypeScript file, with describe/it names kept as display names. Sources: src/persistence/backends.test.ts (9: the web-storage adapter tests become file-backend tests with the same failure messages), saveStore.smoke.test.ts (4), saveStore.test.ts (46: round trip, slots, the damaged-save matrix, oversize, prototype keys; the older-save normalization tests at 400–431 become upgrade-step tests), persistence/validation.test.ts (39: cases whose check survives in the new format are carried over; the narrative phases and the dialogue and saveSlot field checks are dropped), src/session/operations/saves.test.ts (27, minus the mid-conversation resume test, which depended on dialogue), tests/session.saves.test.ts (14: the trust-persistence test is rewritten to set trust through CharacterRules instead of the retired dialogue). File tests use a fresh temporary folder per test and delete it afterwards. 'Survives a restart' means a new FileSaveBackend and a new GameSession on the same folder load the save back to an equivalent game.",
+      "interfaces": "Exercises T11's SaveFormat, SaveUpgrades, and SaveReconciler, and T12's FileSaveBackend, MemorySaveBackend, SaveStore, and the session save operations.",
+      "files": [
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Support/TempFolder.cs",
+          "purpose": "Creates and cleans up a unique temporary save folder per test"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Saves/SaveBackendTests.cs",
+          "purpose": "Carried over from backends.test.ts for the memory and file backends, plus the temp-then-replace safety and the disk-full message"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Saves/SaveStoreTests.cs",
+          "purpose": "Carried over from saveStore.test.ts and saveStore.smoke.test.ts"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Saves/SaveFormatTests.cs",
+          "purpose": "Carried over from persistence/validation.test.ts; plus size on write in UTF-8 bytes, culture-independent bytes (en-US, sv-SE, tr-TR), and the upgrade pipeline with a synthetic version-0 save"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Saves/SaveReconcilerTests.cs",
+          "purpose": "New: dropped characters, new characters, lineup cleared for each reason, XP kept, saved fight restored, report contents"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/Session/SaveOperationsTests.cs",
+          "purpose": "Carried over from operations/saves.test.ts and tests/session.saves.test.ts; plus restart survival with files and mid-fight same-dice resume"
+        }
+      ],
+      "producer_notes": "Expected messages come from the TypeScript tests verbatim where the check still exists. The culture test sets CultureInfo.CurrentCulture and CurrentUICulture inside the test and restores them in a finally block. Simulate a mid-write failure with a backend wrapper that throws after writing the temp file, then assert the old save still loads. Record every dropped or changed test in the port record.",
+      "design_decisions": [
+        {
+          "decision": "One C# test file per TypeScript test file, keeping TypeScript test names as display names; expected values copied verbatim",
+          "rationale": "Lets the port record and its accounting test (T19) match every TypeScript test one to one (Group 1, designer-approved)."
+        },
+        {
+          "decision": "File tests use a real temporary folder per test, and a new backend and session to prove restart survival",
+          "rationale": "Saves are now files on disk (ES-5); in-memory tests alone cannot prove persistence or crash-safe writes."
+        },
+        {
+          "decision": "Save bytes are checked under en-US, sv-SE, and tr-TR",
+          "rationale": "Guards the culture-dependent ordering bug found in the 2026-10-28 spike."
+        }
+      ]
+    },
+    {
+      "id": "T19",
+      "title": "Port record",
+      "domain": "docs/record",
+      "experience_slices": [
+        "ES-7"
+      ],
+      "description": "One document, organized by system, recording the move from the TypeScript build to C#. It also covers any creative ideas that came up during review.",
+      "acceptance_criteria": [
+        "Every deliberate difference from the TypeScript build is listed with the system, what changed, and why",
+        "Every TypeScript test not carried over unchanged is listed with the reason",
+        "Every larger change the designer set aside is listed as future work for its own sprint",
+        "Creative ideas raised during the branch are logged as open creative questions, not settled",
+        "A test fails if any TypeScript test in the in-scope files is neither matched by a C# test of the same name nor listed in the port record"
+      ],
+      "dependencies": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "T5",
+        "T6",
+        "T7",
+        "T8",
+        "T9",
+        "T10",
+        "T11",
+        "T12",
+        "T13",
+        "T14",
+        "T15",
+        "T16",
+        "T17",
+        "T18"
+      ],
+      "decisions": [],
+      "technical_approach": "One Markdown document, `docs/project_notes/port_record.md`, kept with project memory because it outlives the branch, plus a test that keeps it honest. Structure: a short header (what the record is; the TypeScript build is frozen at the commit this branch started from), then one section per system in this order: Build and conventions; Personality; Characters and game state; Lineup and synergy; Combat math; Enemy decisions; Round resolution; Fight setup; Game session; Saves; Godot project. Each system section has four parts: Deliberate differences (each with what changed, why, and the decision date, taken from each task's design_decisions); Tests changed (TypeScript file › test name → what changed and why); Tests dropped (TypeScript file › test name → reason: retired engine, removed hard-coded data, unported dead code, or a check a typed API makes impossible); Set aside (what, for which sprint). Two cross-cutting sections follow. 'Combat balance review (combat sprint)' consolidates every set-aside combat and AI item. 'Open creative questions' logs each question without settling it: whether the player character fights alongside the companions and how large the lineup is; the synergy bonuses' values, which step each uses, and whether they stack. A last section, 'Notes for Sprint 7', records whether content is authored as JSON files or in Godot's editor as resources converted on load (the catalog supports either), and that the condition system is built once there. Design seeds the deliberate differences and set-aside lists; each test task (T14–T18) appends its changed and dropped tests as it goes; this task completes and checks the document last. `PortRecordTests.EveryTypeScriptTestIsAccounted` reads the in-scope TypeScript test files (the files named in T14–T18) from the repo, extracts each `it(`/`test(` title (a whole `it.each` counts as one entry under its template title), and collects the C# test display names from the test assembly by reflection. It passes only if every TypeScript title is either a C# display name or listed in the port record, and it reports the unaccounted titles otherwise.",
+      "interfaces": "Receives every task's design_decisions and the test tasks' changed or dropped lists. Produces the port record, which the combat sprint (balance review), Sprint 7 (content and conditions notes), and the designer's creative work (open questions) read; and the accounting test in the test suite run by verify.ps1.",
+      "files": [
+        {
+          "path": "docs/project_notes/port_record.md",
+          "purpose": "The port record: per-system differences, changed and dropped tests, set-aside work, combat balance review, open creative questions, Sprint 7 notes"
+        },
+        {
+          "path": "rules/AncientOrder.Rules.Tests/PortRecord/PortRecordTests.cs",
+          "purpose": "Fails if a TypeScript test is neither carried over by name nor listed in the record"
+        }
+      ],
+      "design_decisions": [
+        {
+          "decision": "The record lives at docs/project_notes/port_record.md, organized by system, with consolidated combat-balance and open-creative-question lists",
+          "rationale": "Designer-approved 2026-10-28: it outlives the branch and feeds the combat sprint and the creative work."
+        },
+        {
+          "decision": "An automated check that every TypeScript test is accounted for",
+          "rationale": "Designer-approved 2026-10-28: turns ES-7's 'every test accounted for' from a promise into a test."
+        },
+        {
+          "decision": "Creative questions are logged, never settled",
+          "rationale": "ADR-062."
+        }
+      ],
+      "producer_notes": "Seed the deliberate differences and set-aside lists from the design_decisions in tasks.json; do not invent new ones. Each entry names the decision date. The accounting test finds the repo root by walking up from the test assembly to the folder containing AncientOrder.sln, reads TypeScript files read-only, and must not fail because a TypeScript title contains quotes or template placeholders; match titles exactly after trimming. Listing a test in the record uses the form `file › title` so the test can parse it."
+    }
+  ],
+  "open_questions": [
+    "Resolved in design (2026-10-28): characters come from content (read-only catalog plus per-game state, T3); archetype decision profiles are content archetype records (T6); encounters are content listing only enemies (T8).",
+    "Resolved in design (2026-10-28): state and refusals that only served the retired scene and dialogue engines are dropped (T3, T4)."
+  ]
+}

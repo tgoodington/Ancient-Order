@@ -2,7 +2,7 @@
   "version": "11.0",
   "pipeline": "enuncia",
   "initialized": true,
-  "active_context": "sprint-6",
+  "active_context": "godot-foundation",
   "trunk": {
     "status": "complete",
     "display_name": "Sprint 1 + Sprint 2",
@@ -34,7 +34,9 @@
             "name": "behavior_tree_ai_system",
             "display_name": "Behavior Tree AI System",
             "status": "completed",
-            "plan_tasks": [17],
+            "plan_tasks": [
+              17
+            ],
             "spec_file": "design_spec_behavior_tree_ai_system.md",
             "flagged_reason": "No spec exists. Node types, evaluation model, archetype profiles, and integration pattern all require design decisions with lasting consequences."
           },
@@ -42,7 +44,9 @@
             "name": "group_action_type",
             "display_name": "Group Action Type",
             "status": "completed",
-            "plan_tasks": [18],
+            "plan_tasks": [
+              18
+            ],
             "spec_file": "design_spec_group_action_type.md",
             "flagged_reason": "Completely undefined in all reference documentation. Targeting rules, synergy mechanics, priority resolution need invention."
           }
@@ -212,7 +216,11 @@
           "specialists": [
             {
               "name": "game-backend-engine",
-              "tasks": ["T1", "T2", "T3"],
+              "tasks": [
+                "T1",
+                "T2",
+                "T3"
+              ],
               "status": "completed",
               "stage": "done",
               "stage1_path": "scratch/game-backend-engine-stage1.md",
@@ -282,7 +290,14 @@
           "specialists": [
             {
               "name": "frontend-component",
-              "tasks": ["T1", "T2", "T3", "T4", "T5", "T6"],
+              "tasks": [
+                "T1",
+                "T2",
+                "T3",
+                "T4",
+                "T5",
+                "T6"
+              ],
               "status": "completed",
               "stage": "done",
               "stage1_path": "scratch/frontend-component-stage1.md",
@@ -330,8 +345,78 @@
           "completed_at": "2026-10-25T11:52:26.000Z"
         }
       }
+    },
+    "sprint-7": {
+      "display_name": "Sprint 7",
+      "created_from": "sprint-6",
+      "created_at": "2026-10-25T12:38:02.666Z",
+      "purpose": "Sprint 7: Town and conversation systems — a walkable town and a conversation system built from content, carrying all five demo mechanics, with stand-in content; real story/dialogue/characters are decided outside the pipeline and plugged in later. Combat UI stays in Sprint 8 (ADR-055)",
+      "status": "design",
+      "track": "full",
+      "workflow": {
+        "discovery": {
+          "started": true,
+          "completed": true,
+          "completed_at": "2026-10-26T14:02:24.372Z"
+        },
+        "compose": {
+          "started": true,
+          "completed": true,
+          "completed_at": "2026-10-26T14:24:05.798Z"
+        },
+        "design": {
+          "started": true,
+          "completed": false,
+          "completed_at": null
+        },
+        "execute": {
+          "started": false,
+          "completed": false,
+          "completed_at": null
+        },
+        "verify": {
+          "started": false,
+          "completed": false,
+          "completed_at": null
+        }
+      }
+    },
+    "godot-foundation": {
+      "display_name": "Godot Foundation",
+      "created_from": "sprint-6",
+      "created_at": "2026-10-26T15:31:39.000Z",
+      "purpose": "Move the game from TypeScript and Phaser to Godot 4.7 (.NET) with C# (ADR-063): set up the Godot project, port the rules engine and its tests to a platform-neutral C# library, and carry the session and saves over.",
+      "status": "complete",
+      "track": "full",
+      "workflow": {
+        "discovery": {
+          "started": true,
+          "completed": true,
+          "completed_at": "2026-10-26T17:27:03.348Z"
+        },
+        "compose": {
+          "started": true,
+          "completed": true,
+          "completed_at": "2026-10-26T17:42:45.061Z"
+        },
+        "design": {
+          "started": true,
+          "completed": true,
+          "completed_at": "2026-10-28T15:06:51.862Z"
+        },
+        "execute": {
+          "started": true,
+          "completed": true,
+          "completed_at": "2026-10-28T16:20:49.598Z"
+        },
+        "verify": {
+          "started": true,
+          "completed": true,
+          "completed_at": "2026-10-28T18:50:26.491Z"
+        }
+      }
     }
   },
-  "last_handoff": "2026-10-25T11:52:26.000Z",
+  "last_handoff": "2026-10-28T18:50:26.491Z",
   "last_handoff_transition": "verify_to_complete"
 }

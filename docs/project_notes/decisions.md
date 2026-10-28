@@ -753,6 +753,8 @@ User <-> Waldo (Haiku)             User <-> Architect (Opus)
 
 **Related Design Spec:** `design_spec_team_synergy_system.md`
 
+**Correction (2026-10-28):** The code never used the "minimum coverage, capped at 1.0" score described above. Well Rounded scores the *average* of the trait maxima divided by the threshold, uncapped (1.0–1.4 when it qualifies), so it nearly always beats Bond when both qualify. The designer chose to keep the code's behavior (godot-foundation design). Synergy now also comes from the player plus the chosen lineup, not every character (ADR-066).
+
 ---
 
 ### ADR-027: Party Members Are Neutral Warriors (2026-02-24)
@@ -1559,3 +1561,147 @@ Per-rank step grows by +15 (100, 115, … 235). Rank 11 (1675 XP) is the cap; co
 
 **Consequences:**
 - A UI test guards the names-only buttons (`TeamSelector.test.tsx`).
+
+### ADR-062: Pipeline Builds Systems; Creative Work Happens Outside It (2026-10-26)
+
+**Context:**
+- Sprint 7 discovery kept stalling on story questions, such as whether to rework Act 1 and how team recruitment should work in Ironhold. The designer spent a weekend on it and concluded those questions don't belong in a build pipeline.
+
+**Decision:**
+- Enuncia pipeline sprints build game systems only. Story, dialogue, characters (who they are, how they join), town and scene layouts, and art are decided outside the pipeline (e.g. `/intuition-meander`) and plugged in as content.
+- Systems are content-agnostic. They support every creative option still open without committing to any of them. A new story, town, character, or conversation is a content change, not a code change.
+- Each sprint ships clearly marked stand-in content that exercises every mechanic.
+- Pipeline skills don't ask creative questions. Creative ideas that come up during pipeline work are logged as open creative questions.
+- Creative hand-off: the designer hands over decisions, and Claude converts them into content files. The two refine them together.
+
+**Alternatives Considered:**
+- Settle story and characters inside each sprint's discovery → Rejected by the designer: it blocked systems work on creative questions that need their own space.
+
+**Consequences:**
+- Recorded in `CLAUDE.md` so every session and skill applies it without rehashing.
+- Engine data that is creative in nature (for example, the hard-coded NPC roster) moves into content as systems reach it.
+- Existing story content (`act1_demo.json`, the Sprint 3 test scene graph, placeholder greetings) has no standing. Whether any of it survives is a creative question.
+
+### ADR-063: Move the Game to Godot 4.7 with C# (2026-10-26)
+
+**Context:**
+- During Sprint 7 design the designer set the long-term visual direction: a top-down 3D isometric overworld in the style of Divinity: Original Sin 2, with combat staged more 2D-ish, closer to Final Fantasy 7.
+- Phaser 4 (ADR-059) is 2D-only. Staying in TypeScript would mean a web 3D library (Three.js ranked first) and building the engine layer ourselves (level pipeline, lighting, tools), with an unproven ceiling for that look.
+- The designer expects both people working in an editor (designer or artists) and Claude building from files.
+- No reliable way exists to run the TypeScript rules engine inside Godot or Unity (the Godot TypeScript bindings are not production-ready), so either engine means rewriting the rules in C#.
+
+**Decision:**
+- The game moves to **Godot 4.7 (.NET build; 4.7.2 is the current stable, 18 Aug 2026), written in C#**. Chosen by the designer. Stay on the 4.7 maintenance line and take point releases; move to 4.8 deliberately, checking its .NET SDK minimum first.
+- The rules engine is rewritten as a plain C# library that does not depend on Godot and is tested with `dotnet test`, keeping the platform-neutral, fast-test model of ADR-056.
+- Game logic stays independent of rendering. Positions are continuous world coordinates on a ground plane; movement is free walking with click-to-move.
+- Godot scenes and UI replace the React HUD and the Phaser stage. The Equinox look carries over as a design.
+- The Sprint 7 design decisions made so far (content packs in JSON, one conversation format with archetype reactions, free walking with conditional people and spots) carry over: `docs/project_notes/branches/sprint-7/design_notes.md`.
+
+**Alternatives Considered:**
+- Stay in TypeScript with Three.js (or Babylon.js) → No rewrite, but the engine layer and level tooling would be ours to build, and the 3D ceiling is unverified.
+- Unity 6 → The designer knows it; mature 3D tools and asset store; an official Claude Code plugin (Sept 2026) lets Claude drive a live Editor through the Unity CLI. Not chosen by the designer.
+- Godot with GDScript → Web export works and setup is simplest, but the rules and tests would run inside Godot, with weaker typing and no immutable records. Not chosen by the designer.
+
+**Consequences:**
+- Supersedes ADR-055's "stay in TypeScript" and in-browser runtime, ADR-056 (one Vite/TypeScript package), and ADR-059 (Phaser 4). The Electron/Tauri packaging question goes away (Godot exports desktop builds natively).
+- ADR-057 (session with result values and immutable snapshots) and ADR-058 (versioned saves over a swappable backend) carry over as design into C#.
+- No web build for pitching: Godot 4 cannot export C# projects to the web (official 4.7 docs). Pitch with a desktop build or video. Desktop builds include the .NET runtime.
+- Console ports would go through Godot's third-party porting partners; their C# support is unverified.
+- Sprint 7 (town and conversations) is paused after design groups 1–3 and resumes on Godot after a foundation sprint (project setup, rules rewrite, saves). Sprint 8 (combat UI) moves back accordingly.
+- The TypeScript code and its ~1,000 tests are the specification for the rewrite.
+
+### ADR-064: C# Rules Conventions — Explicit Order, Own Dice, JS-Identical Math (2026-10-28)
+
+**Context:**
+- The godot-foundation branch ports the rules to a plain C# library (ADR-063) and must play exactly as the TypeScript build for the same rolls.
+- A spike showed System.Text.Json reloads an `ImmutableSortedDictionary` with the culture-sensitive default comparer, so key order (and re-saved bytes) changed with the OS language. TypeScript iterates objects in insertion order, which id-sorted order would also change.
+- Microsoft's docs do not promise that a seeded `System.Random` gives the same sequence across .NET versions.
+
+**Decision:**
+- Order is always explicit: ordered lists where order matters, lookup-only maps never iterated, no sorted dictionaries; culture-sensitive string APIs are build errors.
+- The library's own dice: xoshiro256** seeded through SplitMix64, with a golden-sequence test.
+- Doubles stay (parity); rounding matches JavaScript (halves up); sorts are stable; operation order is kept; transcendental, fused, and vector math are banned in the rules (a metadata-scan test enforces the banned list).
+- Refusals are `Result` values; rolls, clock, ids, and seeds are handed in; the rules library has zero dependencies.
+
+**Alternatives Considered:**
+- Sorted dictionaries for determinism → Rejected: the spike above.
+- Integer or fixed-point math (suggested by research) → Rejected: would change results throughout combat and break parity.
+- Round half to even → Rejected: today's game rounds halves up.
+
+**Consequences:**
+- Authoritative list: T1 in `docs/project_notes/branches/godot-foundation/tasks.json`.
+- Whether RyuJIT ever fuses `a*b+c` implicitly could not be sourced; the carried-over tests pin exact values and would catch it.
+
+### ADR-065: Characters and Archetypes as Content; One Characters Module (2026-10-28)
+
+**Context:**
+- The hard-coded NPC roster is not carried over (ADR-062). The designer asked for a character "controller" that tracks every character and grows into the full game without rework.
+- Godot's docs note a loaded Resource is one shared copy, so fixed definitions and per-game state must be separate.
+
+**Decision:**
+- A read-only character catalog from content (id, name, archetype, fixed personality, starting relationships, optional combat stats) plus per-game character state (affection, trust) in the game state.
+- One pure characters module owns every character read and change, behind the game session. No stateful controller object.
+- Archetypes are content records keyed by id, each either Scored (decision profile) or Basic (attack the first living opponent); Sprint 7 adds reaction leanings to the same record. Unknown archetypes and missing weights are refused at content load; the AI's silent fallback and catch-all are gone.
+- Character requirements and conditions come from Sprint 7's shared condition system.
+
+**Alternatives Considered:**
+- A stateful controller holding and editing the character list → Rejected: a second source of truth beside the session snapshot, and listeners would miss its changes.
+- Mutable observable repositories (the Chickensoft pattern common in Godot C#) → Not chosen: ADR-057's single immutable snapshot suits a turn-based rules engine (exact replay, cheap tests).
+
+**Consequences:**
+- Saves hold only character state and pair it with the current catalog on load (ADR-068).
+- Elena, Lars, and Kade become a test-only cast.
+
+### ADR-066: Content-Defined Synergy and One Stat-Bonus Pipeline (2026-10-28)
+
+**Context:**
+- Synergy used every character, not the chosen lineup, so the lineup had no effect on play. The designer wants the bonus "instantly evident based on the current configuration" and sees possible value in overlapping bonuses.
+
+**Decision:**
+- Synergy is worked out on demand from the player plus the lineup and reported with every session snapshot; it is never stored.
+- Bonuses are content (scoring rule, threshold, stat, step, value); "best only" or "all that qualify" is a content setting. Test content keeps today's two bonuses and best-only.
+- Every stat bonus goes through one pipeline: flat, then additive percent (summed), then multipliers, rounded once at the end. A single ×1.10 reproduces today exactly.
+- Today's scoring math is kept (see the ADR-026 correction).
+
+**Alternatives Considered:**
+- Ad hoc multipliers per feature → Rejected: gear and buffs would each reinvent stacking.
+
+**Consequences:**
+- Which step each bonus uses, and whether bonuses stack, are content and balance decisions for combat tuning.
+
+### ADR-067: The Player's Side Comes From the Player and the Lineup; Fights Carry Their Own Dice (2026-10-28)
+
+**Context:**
+- The player's side of a fight came entirely from the encounter file. Live fights used `Math.random` and could not be replayed, and speed ties were broken inside the sort comparator in a way C# cannot reproduce.
+
+**Decision:**
+- The player's side is the player (when content gives the player combat stats) plus the lineup, with combat stats from content; encounters list only enemies; a fight needs a full lineup.
+- Each fight's dice live in its combat state and are saved with it: reloading a mid-fight save replays the same luck (designer decision: "same dice").
+- Speed ties draw one roll per tied action, highest first, queue order on equal rolls.
+- Fixed now: one order per fighter per round; enemies don't choose group attacks until the combat balance review; a knocked-out guard no longer intercepts; group attacks use buffed block rates; round history no longer nests (it doubled in size each round) and records counter exchanges and Evade recovery; Crushing Blow uses action power, as the combat spreadsheet does.
+
+**Alternatives Considered:**
+- Fresh dice on reload (today) → Not chosen by the designer.
+- Enemy group attacks fixed now → Deferred to the combat balance review.
+
+**Consequences:**
+- Whether the player character fights stays a content decision: omitting the player's combat stats with a lineup of 3 reproduces today's companion-only fights.
+- Every other combat finding is set aside, unchanged, for the combat balance review listed in `docs/project_notes/port_record.md`.
+
+### ADR-068: Fresh Save Format With Reconciliation, Asynchronous and Crash-Safe Files (2026-10-28)
+
+**Context:**
+- Browser saves are not carried over (ADR-063). Saves now live as files on the player's machine, and content changes constantly during development.
+
+**Decision:**
+- A fresh format, version 1, with its own save records separate from the rules state, every collection in a defined order, and an upgrade step for older versions.
+- Loading always reconciles against current content: missing characters are dropped (and removed from the lineup), new ones start at their starting relationships, an unfitting lineup is cleared; a load report lists each adjustment.
+- The size limit (2,000,000 UTF-8 bytes) is checked on write as well as on read.
+- Save operations stay asynchronous; files are written to a temp file and swapped in; slots are `manual-01`…`manual-10`, leaving room for autosaves.
+
+**Alternatives Considered:**
+- Serializing rules records directly → Rejected: the culture and ordering problems, and renaming a field would silently change the file.
+- Synchronous saves → Not chosen: a slow disk would freeze the game, and Steam Cloud and console save systems are asynchronous.
+
+**Consequences:**
+- Mid-conversation saves arrive with Sprint 7 through a version bump and an upgrade step.

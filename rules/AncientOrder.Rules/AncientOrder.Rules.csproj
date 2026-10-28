@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsAotCompatible>true</IsAotCompatible>
+    <RootNamespace>AncientOrder.Rules</RootNamespace>
+  </PropertyGroup>
+
+  <!-- The rules library must stay dependency-free (ADR-063). Items the SDK adds itself are ignored. -->
+  <Target Name="GuardRulesDependencyFree" BeforeTargets="Restore;BeforeBuild;ResolveAssemblyReferences;CoreCompile">
+    <ItemGroup>
+      <_RulesForbiddenPackage Include="@(PackageReference)" Condition="'%(PackageReference.IsImplicitlyDefined)' != 'true'" />
+      <_RulesForbiddenProject Include="@(ProjectReference)" Condition="'%(ProjectReference.IsImplicitlyDefined)' != 'true'" />
+      <_RulesForbiddenReference Include="@(Reference)" Condition="'%(Reference.IsImplicitlyDefined)' != 'true' and '%(Reference.FrameworkReferenceName)' == '' and '%(Reference.ExternallyResolved)' != 'true'" />
+    </ItemGroup>
+    <PropertyGroup>
+      <_RulesForbidden>@(_RulesForbiddenPackage->'PackageReference %(Identity)');@(_RulesForbiddenProject->'ProjectReference %(Identity)');@(_RulesForbiddenReference->'Reference %(Identity)')</_RulesForbidden>
+    </PropertyGroup>
+    <Error Condition="'@(_RulesForbiddenPackage)@(_RulesForbiddenProject)@(_RulesForbiddenReference)' != ''"
+           Code="AORULES001"
+           Text="The rules library must stay dependency-free (no Godot, no rendering, no packages). Remove: $(_RulesForbidden)" />
+  </Target>
+
+</Project>
