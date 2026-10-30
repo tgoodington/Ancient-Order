@@ -1,0 +1,34 @@
+{
+  "towns": [
+    {
+      "id": "checkville",
+      "name": "STAND-IN Checkville",
+      "ground": [[[0, 0], [40, 0], [40, 40], [0, 40]]],
+      "start": [2, 2],
+      "obstacles": [
+        { "id": "wall", "footprint": [[18, 0], [22, 0], [22, 30], [18, 30]], "height": 3 }
+      ],
+      "people": [
+        {
+          "character": "standin_companion_a",
+          "placements": [{ "at": [6, 6], "facing": 90 }],
+          "opens": [{ "conversation": "standin_talk" }]
+        }
+      ],
+      "spots": [
+        {
+          "id": "standin_zone",
+          "area": { "polygon": [[34, 35], [38, 35], [38, 39], [34, 39]] },
+          "trigger": "walkOver",
+          "opens": [{ "conversation": "standin_talk" }]
+        },
+        {
+          "id": "standin_post",
+          "area": { "circle": { "center": [30, 35], "radius": 1 } },
+          "trigger": "interact",
+          "opens": [{ "conversation": "standin_talk" }]
+        }
+      ]
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using AncientOrder.Rules.Combat;
+using AncientOrder.Rules.Party;
 using AncientOrder.Rules.Saves;
 using AncientOrder.Rules.State;
 using AncientOrder.Rules.Tests.Fixtures;
@@ -39,8 +40,8 @@ public class SaveReconcilerTests
     [Fact(DisplayName = "an unchanged content loads with an empty report")]
     public void Unchanged_content_has_an_empty_report()
     {
-        var game = PlayedGame(Content);
-        var loaded = Load(game, Content, Content);
+        var game = PlayedGame(SaveFixtures.Content);
+        var loaded = Load(game, SaveFixtures.Content, SaveFixtures.Content);
         StateAssert.Equivalent(game, loaded.Game);
         Assert.True(loaded.Report.IsEmpty);
         Assert.True(LoadReport.Empty.IsEmpty);
@@ -49,31 +50,32 @@ public class SaveReconcilerTests
     [Fact(DisplayName = "drops characters no longer in the content and keeps the others as saved")]
     public void Drops_characters_no_longer_in_content()
     {
-        var loaded = Load(PlayedGame(Content) with { Lineup = [] }, Content, WithoutKade);
+        var loaded = Load(PlayedGame(SaveFixtures.Content) with { Lineup = [] }, SaveFixtures.Content, WithoutKade);
         Assert.Equal(2, loaded.Game.Characters.Count);
         Assert.False(loaded.Game.Characters.ContainsKey(TestCast.KadeId));
         Assert.Equal(new CharacterState(12.5, 40), loaded.Game.Characters[TestCast.ElenaId]);
         Assert.Equal(new CharacterState(-30, 7.25), loaded.Game.Characters[TestCast.LarsId]);
 
-        var adjustment = Assert.Single(loaded.Report.Adjustments);
-        Assert.Equal(LoadAdjustmentKind.CharacterDropped, adjustment.Kind);
+        Assert.Equal([LoadAdjustmentKind.CharacterDropped, LoadAdjustmentKind.PartyMemberDropped], loaded.Report.Adjustments.Select(a => a.Kind));
+        var adjustment = loaded.Report.Adjustments[0];
         Assert.Equal(TestCast.KadeId, adjustment.Id);
         Assert.Equal("npc_outlaw_kade is no longer in the content and was dropped.", adjustment.Message);
+        Assert.Equal(new[] { TestCast.ElenaId, TestCast.LarsId }, loaded.Game.Party);
     }
 
-    [Fact(DisplayName = "a dropped character in the lineup clears the lineup and both adjustments are reported")]
-    public void Dropped_lineup_member_clears_the_lineup()
+    [Fact(DisplayName = "a dropped character in the lineup is removed from the party and the lineup one by one")]
+    public void Dropped_lineup_member_is_removed()
     {
-        var game = PlayedGame(Content) with { Lineup = [TestCast.ElenaId, TestCast.KadeId] };
-        var loaded = Load(game, Content, WithoutKade);
-        Assert.Empty(loaded.Game.Lineup);
+        var game = PlayedGame(SaveFixtures.Content) with { Lineup = [TestCast.ElenaId, TestCast.KadeId] };
+        var loaded = Load(game, SaveFixtures.Content, WithoutKade);
+        Assert.Equal([TestCast.ElenaId], loaded.Game.Lineup);
 
-        Assert.Equal(2, loaded.Report.Adjustments.Length);
-        Assert.Equal(LoadAdjustmentKind.CharacterDropped, loaded.Report.Adjustments[0].Kind);
-        var cleared = loaded.Report.Adjustments[1];
-        Assert.Equal(LoadAdjustmentKind.LineupCleared, cleared.Kind);
-        Assert.Null(cleared.Id);
-        Assert.Equal("The lineup was cleared: npc_outlaw_kade is no longer in the content.", cleared.Message);
+        Assert.Equal(
+            [LoadAdjustmentKind.CharacterDropped, LoadAdjustmentKind.PartyMemberDropped, LoadAdjustmentKind.LineupMemberDropped],
+            loaded.Report.Adjustments.Select(a => a.Kind));
+        var removed = loaded.Report.Adjustments[2];
+        Assert.Equal(TestCast.KadeId, removed.Id);
+        Assert.Equal("npc_outlaw_kade is no longer in the content and was removed from the lineup.", removed.Message);
     }
 
     [Fact(DisplayName = "adds characters new in the content at their starting relationships")]
@@ -81,7 +83,7 @@ public class SaveReconcilerTests
     {
         var savedUnder = WithoutLars;
         var game = PlayedGame(savedUnder);
-        var loaded = Load(game, savedUnder, Content);
+        var loaded = Load(game, savedUnder, SaveFixtures.Content);
 
         Assert.Equal(3, loaded.Game.Characters.Count);
         Assert.Equal(new CharacterState(0, -20), loaded.Game.Characters[TestCast.LarsId]);
@@ -95,13 +97,13 @@ public class SaveReconcilerTests
         Assert.Equal([TestCast.ElenaId, TestCast.KadeId], loaded.Game.Lineup);
     }
 
-    [Fact(DisplayName = "reports additions in content order, then drops in saved order, then the lineup")]
+    [Fact(DisplayName = "reports additions in content order, then drops in saved order, then the party, then the lineup")]
     public void Report_order()
     {
         var savedUnder = ContentOf(TestCast.Kade, TestCast.Elena);
-        var game = PlayedGame(Content) with
+        var game = PlayedGame(SaveFixtures.Content) with
         {
-            Characters = PlayedGame(Content).Characters.Remove(TestCast.LarsId),
+            Characters = PlayedGame(SaveFixtures.Content).Characters.Remove(TestCast.LarsId),
             Lineup = [TestCast.KadeId, TestCast.ElenaId],
         };
         var loadedUnder = ContentOf(TestCast.Lars, TestCast.Elena);
@@ -111,7 +113,8 @@ public class SaveReconcilerTests
             [
                 (LoadAdjustmentKind.CharacterAdded, TestCast.LarsId),
                 (LoadAdjustmentKind.CharacterDropped, TestCast.KadeId),
-                (LoadAdjustmentKind.LineupCleared, null),
+                (LoadAdjustmentKind.PartyMemberDropped, TestCast.KadeId),
+                (LoadAdjustmentKind.LineupMemberDropped, TestCast.KadeId),
             ],
             loaded.Report.Adjustments.Select(a => (a.Kind, a.Id)));
     }
@@ -119,42 +122,47 @@ public class SaveReconcilerTests
     [Fact(DisplayName = "keeps a lineup that still fits the content")]
     public void Keeps_a_fitting_lineup()
     {
-        var game = PlayedGame(Content);
-        var loaded = Load(game, Content, Content);
+        var game = PlayedGame(SaveFixtures.Content);
+        var loaded = Load(game, SaveFixtures.Content, SaveFixtures.Content);
         Assert.Equal([TestCast.ElenaId, TestCast.LarsId], loaded.Game.Lineup);
         Assert.DoesNotContain(loaded.Report.Adjustments, a => a.Kind == LoadAdjustmentKind.LineupCleared);
     }
 
-    [Fact(DisplayName = "clears a lineup that names a character with no combat stats")]
-    public void Clears_a_lineup_with_no_combat_stats()
+    [Fact(DisplayName = "removes a lineup member with no combat stats and keeps the others")]
+    public void Removes_a_lineup_member_with_no_combat_stats()
     {
         var noCombat = ContentOf(TestCast.Elena with { Combat = null }, TestCast.Lars, TestCast.Kade);
-        var loaded = Load(PlayedGame(Content), Content, noCombat);
-        Assert.Empty(loaded.Game.Lineup);
+        var loaded = Load(PlayedGame(SaveFixtures.Content), SaveFixtures.Content, noCombat);
+        Assert.Equal([TestCast.LarsId], loaded.Game.Lineup);
         var adjustment = Assert.Single(loaded.Report.Adjustments);
-        Assert.Equal(LoadAdjustmentKind.LineupCleared, adjustment.Kind);
-        Assert.Equal("The lineup was cleared: npc_scout_elena has no combat stats.", adjustment.Message);
+        Assert.Equal(LoadAdjustmentKind.LineupMemberDropped, adjustment.Kind);
+        Assert.Equal("npc_scout_elena has no combat stats and was removed from the lineup.", adjustment.Message);
     }
 
-    [Fact(DisplayName = "clears a lineup that names the same character twice")]
-    public void Clears_a_lineup_with_a_repeat()
+    [Fact(DisplayName = "removes the second mention of a character named twice in the lineup")]
+    public void Removes_a_repeat()
     {
-        var game = PlayedGame(Content) with { Lineup = [TestCast.ElenaId, TestCast.ElenaId] };
-        var loaded = Load(game, Content, Content);
-        Assert.Empty(loaded.Game.Lineup);
-        Assert.Equal("The lineup was cleared: npc_scout_elena appears more than once.", Assert.Single(loaded.Report.Adjustments).Message);
+        var game = PlayedGame(SaveFixtures.Content) with { Lineup = [TestCast.ElenaId, TestCast.ElenaId] };
+        var loaded = Load(game, SaveFixtures.Content, SaveFixtures.Content);
+        Assert.Equal([TestCast.ElenaId], loaded.Game.Lineup);
+        Assert.Equal("npc_scout_elena appears more than once and was removed from the lineup.", Assert.Single(loaded.Report.Adjustments).Message);
     }
 
-    [Fact(DisplayName = "clears a lineup whose size no longer matches the content")]
+    [Fact(DisplayName = "removes a lineup member who is not in the party")]
+    public void Removes_a_member_outside_the_party()
+    {
+        var game = PlayedGame(SaveFixtures.Content) with { Party = [TestCast.ElenaId, TestCast.KadeId] };
+        var loaded = Load(game, SaveFixtures.Content, SaveFixtures.Content);
+        Assert.Equal([TestCast.ElenaId], loaded.Game.Lineup);
+        Assert.Equal("npc_merchant_lars is not in the party and was removed from the lineup.", Assert.Single(loaded.Report.Adjustments).Message);
+    }
+
+    [Fact(DisplayName = "clears a lineup larger than the content's max")]
     public void Clears_a_lineup_of_the_wrong_size()
     {
-        var size3 = TestContent.Create(new GameSettings("Kael", 3), TestCast.All);
-        var loaded = Load(PlayedGame(Content), Content, size3);
-        Assert.Empty(loaded.Game.Lineup);
-        Assert.Equal("The lineup was cleared: the lineup size has changed.", Assert.Single(loaded.Report.Adjustments).Message);
 
-        var tooMany = PlayedGame(Content) with { Lineup = [TestCast.ElenaId, TestCast.LarsId, TestCast.KadeId] };
-        var tooManyLoaded = Load(tooMany, Content, Content);
+        var tooMany = PlayedGame(SaveFixtures.Content) with { Lineup = [TestCast.ElenaId, TestCast.LarsId, TestCast.KadeId] };
+        var tooManyLoaded = Load(tooMany, SaveFixtures.Content, SaveFixtures.Content);
         Assert.Empty(tooManyLoaded.Game.Lineup);
         Assert.Equal(LoadAdjustmentKind.LineupCleared, Assert.Single(tooManyLoaded.Report.Adjustments).Kind);
     }
@@ -162,8 +170,8 @@ public class SaveReconcilerTests
     [Fact(DisplayName = "never clears an empty lineup")]
     public void Empty_lineup_is_left_alone()
     {
-        var size3 = TestContent.Create(new GameSettings("Kael", 3), TestCast.All);
-        var loaded = Load(PlayedGame(Content) with { Lineup = [] }, Content, size3);
+        var size3 = TestContent.Create(new GameSettings("Kael", new LineupLimits(3, 3)) { StartingParty = [.. TestCast.All.Select(c => c.Id)] }, TestCast.All);
+        var loaded = Load(PlayedGame(SaveFixtures.Content) with { Lineup = [] }, SaveFixtures.Content, size3);
         Assert.Empty(loaded.Game.Lineup);
         Assert.True(loaded.Report.IsEmpty);
     }
@@ -175,8 +183,8 @@ public class SaveReconcilerTests
             .WithComparers(StringComparer.Ordinal)
             .Add(TestCast.KadeId, new ReactionProgress(215, 4, 0))
             .Add(TestSessions.Hero, new ReactionProgress(1, 2, 3));
-        var game = PlayedGame(Content) with { ReactionProgress = progress };
-        var loaded = Load(game, Content, WithoutKade);
+        var game = PlayedGame(SaveFixtures.Content) with { ReactionProgress = progress };
+        var loaded = Load(game, SaveFixtures.Content, WithoutKade);
         Assert.Equal(new ReactionProgress(215, 4, 0), loaded.Game.ReactionProgress[TestCast.KadeId]);
         Assert.Equal(new ReactionProgress(1, 2, 3), loaded.Game.ReactionProgress[TestSessions.Hero]);
         Assert.Equal(2, loaded.Game.ReactionProgress.Count);
@@ -187,8 +195,8 @@ public class SaveReconcilerTests
     {
         var game = FightGame(2);
         var loaded = Load(game, LongFightContent, WithoutLars);
-        Assert.Empty(loaded.Game.Lineup);
-        Assert.Equal(LoadAdjustmentKind.LineupCleared, loaded.Report.Adjustments[^1].Kind);
+        Assert.Equal([TestCast.ElenaId], loaded.Game.Lineup);
+        Assert.Equal(LoadAdjustmentKind.LineupMemberDropped, loaded.Report.Adjustments[^1].Kind);
         Assert.NotNull(loaded.Game.Combat);
         StateAssert.Equivalent(game.Combat, loaded.Game.Combat);
         Assert.Equal(game.Combat!.Dice, loaded.Game.Combat!.Dice);
@@ -197,8 +205,8 @@ public class SaveReconcilerTests
     [Fact(DisplayName = "keeps the player, the timestamp, and the envelope details")]
     public void Keeps_player_and_envelope()
     {
-        var game = PlayedGame(Content) with { Player = PlayedGame(Content).Player with { Name = "Kira", Personality = TestPersonality.Of(30, 10, 10, 20, 10, 20) } };
-        var bytes = WriteOk(game, Content, 6, 777);
+        var game = PlayedGame(SaveFixtures.Content) with { Player = PlayedGame(SaveFixtures.Content).Player with { Name = "Kira", Personality = TestPersonality.Of(30, 10, 10, 20, 10, 20) } };
+        var bytes = WriteOk(game, SaveFixtures.Content, 6, 777);
         var loaded = ReadOk(bytes, WithoutKade);
         Assert.Equal(game.Player, loaded.Game.Player);
         Assert.Equal(1_234, loaded.Game.Timestamp);
@@ -212,10 +220,20 @@ public class SaveReconcilerTests
     {
         var other = Renamed(TestCast.Elena, "npc_new_one");
         var content = ContentOf(other);
-        var loaded = Load(PlayedGame(Content), Content, content);
+        var loaded = Load(PlayedGame(SaveFixtures.Content), SaveFixtures.Content, content);
         Assert.Equal([other.Id], loaded.Game.Characters.Keys);
         Assert.Equal(
-            [LoadAdjustmentKind.CharacterAdded, LoadAdjustmentKind.CharacterDropped, LoadAdjustmentKind.CharacterDropped, LoadAdjustmentKind.CharacterDropped, LoadAdjustmentKind.LineupCleared],
+            [
+                LoadAdjustmentKind.CharacterAdded,
+                LoadAdjustmentKind.CharacterDropped,
+                LoadAdjustmentKind.CharacterDropped,
+                LoadAdjustmentKind.CharacterDropped,
+                LoadAdjustmentKind.PartyMemberDropped,
+                LoadAdjustmentKind.PartyMemberDropped,
+                LoadAdjustmentKind.PartyMemberDropped,
+                LoadAdjustmentKind.LineupMemberDropped,
+                LoadAdjustmentKind.LineupMemberDropped,
+            ],
             loaded.Report.Adjustments.Select(a => a.Kind));
     }
 

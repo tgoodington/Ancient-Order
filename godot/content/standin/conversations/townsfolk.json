@@ -1,0 +1,220 @@
+{
+  "conversations": [
+    {
+      "id": "standin_elder_talk",
+      "title": "STAND-IN Talk: Elder",
+      "participants": ["standin_elder", "standin_companion_a", "standin_companion_b"],
+      "start": [{ "step": "again", "when": [{ "type": "seen", "conversation": "standin_elder_talk" }] }],
+      "steps": [
+        {
+          "id": "greeting",
+          "lines": [
+            { "speaker": "standin_elder", "text": "STAND-IN Elder: first greeting. This line shows only on the first visit." },
+            { "speaker": "standin_elder", "text": "STAND-IN clue: the Elder is known to help visitors who are empathetic." }
+          ],
+          "choices": [
+            {
+              "id": "warm",
+              "text": "STAND-IN: answer warmly (personality shift toward empathy; Companion A and Companion B react differently)",
+              "effects": [{ "type": "shift", "empathy": 4 }],
+              "next": [{ "step": "warm_reply" }]
+            },
+            {
+              "id": "cool",
+              "text": "STAND-IN: answer coolly (personality shift toward cunning; the same two react the other way round)",
+              "effects": [{ "type": "shift", "cunning": 4 }],
+              "next": [{ "step": "cool_reply" }]
+            },
+            {
+              "id": "override",
+              "text": "STAND-IN: answer warmly, with a written reaction for Companion B and silence from Companion A",
+              "effects": [{ "type": "shift", "empathy": 4 }],
+              "reactions": [
+                { "character": "standin_companion_b", "text": "STAND-IN reaction: {name} gives a written line that replaces the archetype reaction.", "affection": 2, "trust": 2 },
+                { "character": "standin_companion_a", "silence": true }
+              ],
+              "next": [{ "step": "warm_reply" }]
+            },
+            {
+              "id": "ask",
+              "text": "STAND-IN: ask the Elder for help (always offered; the outcome depends on a hidden empathy condition)",
+              "next": [
+                { "step": "help_given", "when": [{ "type": "trait", "trait": "empathy", "atLeast": 20 }] },
+                { "step": "help_refused" }
+              ]
+            },
+            { "id": "bye", "text": "STAND-IN: say goodbye" }
+          ]
+        },
+        {
+          "id": "warm_reply",
+          "lines": [{ "speaker": "standin_elder", "text": "STAND-IN Elder: reply to a warm answer." }]
+        },
+        {
+          "id": "cool_reply",
+          "lines": [{ "speaker": "standin_elder", "text": "STAND-IN Elder: reply to a cool answer." }]
+        },
+        {
+          "id": "help_given",
+          "lines": [{ "speaker": "standin_elder", "text": "STAND-IN Elder: help given, because your empathy was high enough." }]
+        },
+        {
+          "id": "help_refused",
+          "lines": [{ "speaker": "standin_elder", "text": "STAND-IN Elder: help refused, because your empathy was not high enough yet." }]
+        },
+        {
+          "id": "again",
+          "lines": [
+            { "speaker": "standin_elder", "text": "STAND-IN Elder: second greeting, shown because you have talked here before." },
+            {
+              "speaker": "narrator",
+              "text": "STAND-IN: this extra line appears only because you answered warmly the first time.",
+              "when": [{ "type": "chose", "conversation": "standin_elder_talk", "choice": "warm" }]
+            }
+          ],
+          "choices": [
+            {
+              "id": "favor",
+              "text": "STAND-IN: ask for a favor (trait-gated; opens the gate spot)",
+              "lockedText": "STAND-IN: locked until you are more empathetic.",
+              "requires": [{ "type": "trait", "trait": "empathy", "atLeast": 20 }],
+              "effects": [{ "type": "setFlag", "flag": "standin_gate_open" }],
+              "next": [{ "step": "favor_done" }]
+            },
+            { "id": "smalltalk", "text": "STAND-IN: make small talk (ungated fallback for the favor)" },
+            { "id": "bye_again", "text": "STAND-IN: say goodbye" }
+          ]
+        },
+        {
+          "id": "favor_done",
+          "lines": [{ "speaker": "standin_elder", "text": "STAND-IN Elder: favor granted. A new gate spot now exists in town." }]
+        }
+      ]
+    },
+    {
+      "id": "standin_smith_talk",
+      "title": "STAND-IN Talk: Smith",
+      "participants": ["standin_smith", "standin_companion_a", "standin_companion_b"],
+      "steps": [
+        {
+          "id": "greeting",
+          "lines": [
+            { "speaker": "standin_smith", "text": "STAND-IN Smith: greeting." },
+            {
+              "speaker": "standin_smith",
+              "text": "STAND-IN Smith: I stand here now because of your earlier request.",
+              "when": [{ "type": "flag", "flag": "standin_smith_moved" }]
+            },
+            {
+              "speaker": "narrator",
+              "text": "STAND-IN: the Smith remembers that you spoke warmly to the Elder.",
+              "when": [{ "type": "chose", "conversation": "standin_elder_talk", "choice": "warm" }]
+            }
+          ],
+          "choices": [
+            {
+              "id": "slight",
+              "text": "STAND-IN: nod politely (slight shift toward empathy)",
+              "effects": [{ "type": "shift", "empathy": 2 }]
+            },
+            {
+              "id": "strong",
+              "text": "STAND-IN: speak from the heart (strong shift toward empathy)",
+              "effects": [{ "type": "shift", "empathy": 8 }]
+            },
+            {
+              "id": "move",
+              "text": "STAND-IN: ask the Smith to stand elsewhere (a person moves because of this choice)",
+              "effects": [{ "type": "setFlag", "flag": "standin_smith_moved" }],
+              "next": [{ "step": "moved" }]
+            },
+            {
+              "id": "traveler",
+              "text": "STAND-IN: ask about travelers (a new person appears because of this choice)",
+              "effects": [{ "type": "setFlag", "flag": "standin_recruit_appears" }],
+              "next": [{ "step": "traveler_reply" }]
+            },
+            {
+              "id": "bell",
+              "text": "STAND-IN: ask about the bell (chains into a narrated scene)",
+              "next": [{ "conversation": "standin_scene_chained" }]
+            },
+            { "id": "bye", "text": "STAND-IN: say goodbye" }
+          ]
+        },
+        {
+          "id": "moved",
+          "lines": [{ "speaker": "standin_smith", "text": "STAND-IN Smith: moving to a new spot." }]
+        },
+        {
+          "id": "traveler_reply",
+          "lines": [{ "speaker": "standin_smith", "text": "STAND-IN Smith: a traveler has appeared in town." }]
+        }
+      ]
+    },
+    {
+      "id": "standin_guard_talk",
+      "title": "STAND-IN Talk: Guard",
+      "participants": ["standin_guard"],
+      "steps": [
+        {
+          "id": "greeting",
+          "lines": [
+            {
+              "speaker": "standin_guard",
+              "text": "STAND-IN Guard: cold greeting, shown while the Guard distrusts you.",
+              "when": [{ "type": "relationship", "character": "standin_guard", "measure": "trust", "atMost": -21 }]
+            },
+            {
+              "speaker": "standin_guard",
+              "text": "STAND-IN Guard: milder greeting, shown once the Guard distrusts you less.",
+              "when": [{ "type": "relationship", "character": "standin_guard", "measure": "trust", "atLeast": -20 }]
+            },
+            { "speaker": "standin_guard", "text": "STAND-IN clue: the Guard softens toward anyone who apologizes." }
+          ],
+          "choices": [
+            {
+              "id": "apologize",
+              "text": "STAND-IN: apologize (relationship improves)",
+              "effects": [{ "type": "relationship", "character": "standin_guard", "affection": 10, "trust": 10 }],
+              "next": [{ "step": "apologized" }]
+            },
+            {
+              "id": "pass",
+              "text": "STAND-IN: ask for passage (always offered; the outcome depends on hidden trust)",
+              "next": [
+                { "step": "pass_given", "when": [{ "type": "relationship", "character": "standin_guard", "measure": "trust", "atLeast": -20 }] },
+                { "step": "pass_refused" }
+              ]
+            },
+            { "id": "bye", "text": "STAND-IN: say goodbye" }
+          ]
+        },
+        {
+          "id": "apologized",
+          "lines": [{ "speaker": "standin_guard", "text": "STAND-IN Guard: apology accepted." }]
+        },
+        {
+          "id": "pass_given",
+          "lines": [{ "speaker": "standin_guard", "text": "STAND-IN Guard: passage granted, because trust was high enough." }]
+        },
+        {
+          "id": "pass_refused",
+          "lines": [{ "speaker": "standin_guard", "text": "STAND-IN Guard: passage refused, because trust was not high enough." }]
+        }
+      ]
+    },
+    {
+      "id": "standin_gate_talk",
+      "title": "STAND-IN Talk: Gate",
+      "participants": [],
+      "steps": [
+        {
+          "id": "gate",
+          "lines": [{ "speaker": "narrator", "text": "STAND-IN Gate: this spot exists only because of an earlier choice." }],
+          "choices": [{ "id": "leave", "text": "STAND-IN: step away" }]
+        }
+      ]
+    }
+  ]
+}

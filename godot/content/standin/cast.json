@@ -1,0 +1,119 @@
+{
+  "characters": [
+    {
+      "id": "standin_companion_a",
+      "name": "STAND-IN Companion A",
+      "archetypeId": "standin_archetype_scored",
+      "personality": { "patience": 20, "empathy": 20, "cunning": 10, "logic": 15, "kindness": 20, "charisma": 15 },
+      "startingAffection": 0,
+      "startingTrust": 0,
+      "combat": { "rank": 3, "stamina": 120, "power": 85, "speed": 90, "elementalPath": "light" }
+    },
+    {
+      "id": "standin_companion_b",
+      "name": "STAND-IN Companion B",
+      "archetypeId": "standin_archetype_basic",
+      "personality": { "patience": 12, "empathy": 8, "cunning": 25, "logic": 18, "kindness": 10, "charisma": 27 },
+      "startingAffection": 0,
+      "startingTrust": 0,
+      "combat": { "rank": 3, "stamina": 110, "power": 100, "speed": 100, "elementalPath": "fire" }
+    },
+    {
+      "id": "standin_elder",
+      "name": "STAND-IN Elder",
+      "archetypeId": "standin_archetype_third",
+      "personality": { "patience": 20, "empathy": 20, "cunning": 10, "logic": 15, "kindness": 20, "charisma": 15 },
+      "startingAffection": 30,
+      "startingTrust": 30
+    },
+    {
+      "id": "standin_smith",
+      "name": "STAND-IN Smith",
+      "archetypeId": "standin_archetype_scored",
+      "personality": { "patience": 15, "empathy": 17, "cunning": 17, "logic": 17, "kindness": 17, "charisma": 17 },
+      "startingAffection": 0,
+      "startingTrust": 0
+    },
+    {
+      "id": "standin_merchant",
+      "name": "STAND-IN Merchant",
+      "archetypeId": "standin_archetype_basic",
+      "personality": { "patience": 12, "empathy": 8, "cunning": 25, "logic": 18, "kindness": 10, "charisma": 27 },
+      "startingAffection": -15,
+      "startingTrust": -10,
+      "combat": { "rank": 3, "stamina": 105, "power": 90, "speed": 95, "elementalPath": "earth" }
+    },
+    {
+      "id": "standin_guard",
+      "name": "STAND-IN Guard",
+      "archetypeId": "standin_archetype_third",
+      "personality": { "patience": 18, "empathy": 17, "cunning": 15, "logic": 17, "kindness": 17, "charisma": 16 },
+      "startingAffection": -40,
+      "startingTrust": -30
+    },
+    {
+      "id": "standin_recruit",
+      "name": "STAND-IN Recruit",
+      "archetypeId": "standin_archetype_third",
+      "personality": { "patience": 17, "empathy": 17, "cunning": 16, "logic": 17, "kindness": 17, "charisma": 16 },
+      "startingAffection": 0,
+      "startingTrust": 0,
+      "combat": { "rank": 3, "stamina": 115, "power": 95, "speed": 85, "elementalPath": "water" }
+    }
+  ],
+  "archetypes": [
+    {
+      "id": "standin_archetype_scored",
+      "profile": {
+        "baseScores": { "attack": 0.3, "defend": 0.5, "evade": 0.3, "special": 0.4, "group": 0.2 },
+        "factorWeights": {
+          "ownStamina": 1.0,
+          "allyInDanger": 1.8,
+          "targetVulnerability": 0.5,
+          "energyAvailability": 1.2,
+          "speedAdvantage": 0.3,
+          "roundPhase": 0.8,
+          "teamBalance": 1.4
+        }
+      },
+      "reactions": {
+        "leanings": { "empathy": 1, "kindness": 1, "cunning": -1 },
+        "minimum": 1,
+        "affectionPerPoint": 1,
+        "trustPerPoint": 0.5,
+        "approve": {
+          "slight": "STAND-IN reaction: {name} gives a faint nod (slight approval).",
+          "clear": "STAND-IN reaction: {name} smiles (clear approval).",
+          "strong": "STAND-IN reaction: {name} beams warmly (strong approval)."
+        },
+        "disapprove": {
+          "slight": "STAND-IN reaction: {name} glances away (slight disapproval).",
+          "clear": "STAND-IN reaction: {name} frowns (clear disapproval).",
+          "strong": "STAND-IN reaction: {name} recoils sharply (strong disapproval)."
+        }
+      }
+    },
+    {
+      "id": "standin_archetype_basic",
+      "reactions": {
+        "leanings": { "cunning": 1, "logic": 1, "empathy": -1 },
+        "minimum": 1,
+        "affectionPerPoint": 0.5,
+        "trustPerPoint": 1,
+        "approve": { "clear": "STAND-IN reaction: {name} looks approving." },
+        "disapprove": { "clear": "STAND-IN reaction: {name} looks disapproving." }
+      }
+    },
+    {
+      "id": "standin_archetype_third",
+      "reactions": {
+        "leanings": { "patience": 1, "charisma": -1 },
+        "minimum": 3,
+        "affectionPerPoint": 1,
+        "trustPerPoint": 1,
+        "approve": { "clear": "STAND-IN reaction: {name} seems pleased." },
+        "disapprove": { "clear": "STAND-IN reaction: {name} seems displeased." }
+      }
+    }
+  ]
+}

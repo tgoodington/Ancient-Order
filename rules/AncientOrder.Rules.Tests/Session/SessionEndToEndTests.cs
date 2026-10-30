@@ -771,7 +771,7 @@ public class PlayerTeam
     [Fact(DisplayName = "refuses a wrong number of NPCs — validation rejects a team that is not exactly 2")]
     public void Refuses_a_wrong_number_of_npcs()
     {
-        SessionAssert.Refused(TestSessions.WithGame().SetLineup(["npc_scout_elena"]), ErrorCode.VALIDATION_ERROR);
+        SessionAssert.Refused(TestSessions.WithGame().SetLineup(["npc_scout_elena", "npc_merchant_lars", "npc_outlaw_kade"]), ErrorCode.VALIDATION_ERROR);
     }
 }
 

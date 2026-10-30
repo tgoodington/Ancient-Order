@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using AncientOrder.Rules.Party;
 
 namespace AncientOrder.Rules.Combat;
 
@@ -15,5 +16,11 @@ public sealed record CombatantConfig(
     ReactionSkills ReactionSkills,
     AscensionLevel? AscensionLevel = null);
 
-/// <summary>An encounter is content and lists only the enemies; the player's side comes from the player and the lineup.</summary>
-public sealed record EncounterDefinition(string Id, string Name, ImmutableArray<CombatantConfig> Enemies);
+/// <summary>
+/// An encounter is content and lists the enemies; the player's side comes from the player and the lineup. Lineup, when given, is the
+/// lineup size this fight asks for, in place of the settings limits.
+/// </summary>
+public sealed record EncounterDefinition(string Id, string Name, ImmutableArray<CombatantConfig> Enemies)
+{
+    public LineupLimits? Lineup { get; init; }
+}

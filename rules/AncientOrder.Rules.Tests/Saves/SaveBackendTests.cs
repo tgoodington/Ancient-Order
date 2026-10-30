@@ -253,7 +253,7 @@ public class FileSaveBackendSafety
     public async Task Crash_after_the_temp_file()
     {
         using var temp = new TempFolder();
-        var content = Content;
+        var content = SaveFixtures.Content;
         var files = new FileSaveBackend(temp.Path);
         var game = MakeGame("Old");
         Assert.True((await new SaveStore(files, content).SaveAsync(1, game, 1, Ct)).IsOk);
@@ -297,7 +297,7 @@ public class FileSaveBackendSafety
     {
         using var temp = new TempFolder();
         Directory.CreateDirectory(temp.File("manual-03.json"));
-        var store = new SaveStore(new FileSaveBackend(temp.Path), Content);
+        var store = new SaveStore(new FileSaveBackend(temp.Path), SaveFixtures.Content);
         var load = await store.LoadAsync(3, Ct);
         Assert.Equal(ErrorCode.STORAGE_ERROR, Refused(load, ErrorCode.STORAGE_ERROR).Code);
         Assert.Equal("Save storage is unavailable", load.Error.Message);

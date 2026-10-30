@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using AncientOrder.Rules.Combat;
+using AncientOrder.Rules.Party;
 using AncientOrder.Rules.State;
 
 namespace AncientOrder.Rules.Tests.Fixtures;
@@ -59,10 +60,10 @@ public static class TestEncounters
     public static ImmutableArray<string> TestLineup { get; } = [WarriorId, ScoutId, MageId];
 
     /// <summary>Elena, Lars, and Kade with today's demo stats, lineup size 3, no player combat stats, both encounters.</summary>
-    public static GameContent DemoPartyContent { get; } = TestContent.Create(new GameSettings("Kael", 3), TestCast.All);
+    public static GameContent DemoPartyContent { get; } = TestContent.Create(new GameSettings("Kael", new LineupLimits(3, 3)) { StartingParty = [.. TestCast.All.Select(c => c.Id)] }, TestCast.All);
 
     /// <summary>Warrior, scout, and mage with encounter_test's player-party stats, lineup size 3, no player combat stats, both encounters.</summary>
-    public static GameContent TestPartyContent { get; } = TestContent.Create(new GameSettings("Kael", 3), TestParty);
+    public static GameContent TestPartyContent { get; } = TestContent.Create(new GameSettings("Kael", new LineupLimits(3, 3)) { StartingParty = [.. TestParty.Select(c => c.Id)] }, TestParty);
 
     public static GameState DemoPartyGame() => WithLineup(DemoPartyContent, DemoLineup);
 

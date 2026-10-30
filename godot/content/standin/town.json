@@ -1,0 +1,90 @@
+{
+  "towns": [
+    {
+      "id": "standin_town",
+      "name": "STAND-IN Town",
+      "ground": [[[0, 0], [40, 0], [40, 40], [0, 40]]],
+      "start": [20, 20],
+      "obstacles": [
+        { "id": "standin_building_northwest", "footprint": [[6, 6], [14, 6], [14, 12], [6, 12]], "height": 4, "label": "STAND-IN Building" },
+        { "id": "standin_building_northeast", "footprint": [[26, 6], [34, 6], [34, 12], [26, 12]], "height": 4, "label": "STAND-IN Building" },
+        { "id": "standin_building_southwest", "footprint": [[6, 28], [14, 28], [14, 34], [6, 34]], "height": 4, "label": "STAND-IN Building" },
+        { "id": "standin_building_southeast", "footprint": [[26, 28], [34, 28], [34, 34], [26, 34]], "height": 4, "label": "STAND-IN Building" }
+      ],
+      "people": [
+        {
+          "character": "standin_elder",
+          "placements": [{ "at": [20, 14], "facing": 180 }],
+          "opens": [{ "conversation": "standin_elder_talk" }]
+        },
+        {
+          "character": "standin_smith",
+          "placements": [
+            { "at": [30, 18], "facing": 270, "when": [{ "type": "flag", "flag": "standin_smith_moved" }] },
+            { "at": [20, 26], "facing": 0 }
+          ],
+          "opens": [{ "conversation": "standin_smith_talk" }]
+        },
+        {
+          "character": "standin_merchant",
+          "placements": [{ "at": [10, 20], "facing": 90 }],
+          "opens": [{ "conversation": "standin_merchant_talk" }]
+        },
+        {
+          "character": "standin_guard",
+          "placements": [{ "at": [36, 20], "facing": 270 }],
+          "opens": [{ "conversation": "standin_guard_talk" }]
+        },
+        {
+          "character": "standin_recruit",
+          "placements": [
+            {
+              "at": [36, 26],
+              "facing": 180,
+              "when": [
+                { "type": "flag", "flag": "standin_recruit_appears" },
+                { "type": "not", "condition": { "type": "inParty", "character": "standin_recruit" } }
+              ]
+            }
+          ],
+          "opens": [{ "conversation": "standin_recruit_talk" }]
+        },
+        {
+          "character": "standin_companion_b",
+          "placements": [{ "at": [12, 25], "facing": 0 }],
+          "opens": [{ "conversation": "standin_farewell" }]
+        }
+      ],
+      "spots": [
+        {
+          "id": "standin_market_bell",
+          "name": "STAND-IN Market Bell",
+          "area": { "polygon": [[15, 2], [25, 2], [25, 5], [15, 5]] },
+          "trigger": "walkOver",
+          "opens": [{ "conversation": "standin_scene_walkover", "when": [{ "type": "not", "condition": { "type": "seen", "conversation": "standin_scene_walkover" } }] }]
+        },
+        {
+          "id": "standin_gate",
+          "name": "STAND-IN Gate",
+          "area": { "circle": { "center": [37, 8], "radius": 1 } },
+          "trigger": "interact",
+          "when": [{ "type": "flag", "flag": "standin_gate_open" }],
+          "opens": [{ "conversation": "standin_gate_talk" }]
+        },
+        {
+          "id": "standin_exit",
+          "name": "STAND-IN Exit",
+          "area": { "circle": { "center": [20, 37], "radius": 1.5 } },
+          "trigger": "interact",
+          "opens": [
+            {
+              "handOff": "standin_encounter",
+              "when": [{ "type": "flag", "flag": "standin_exit_ready" }, { "type": "lineupReady" }]
+            },
+            { "conversation": "standin_exit" }
+          ]
+        }
+      ]
+    }
+  ]
+}

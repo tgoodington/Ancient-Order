@@ -1,3 +1,53 @@
 [gd_scene format=3]
 
+[ext_resource type="Script" path="res://ui/ScreenFlow.cs" id="1"]
+[ext_resource type="PackedScene" path="res://town/TownStage.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://ui/components/ErrorBanner.tscn" id="3"]
+
 [node name="Main" type="Node"]
+script = ExtResource("1")
+
+[node name="TownStage" parent="." instance=ExtResource("2")]
+visible = false
+
+[node name="ScreenLayer" type="CanvasLayer" parent="."]
+layer = 1
+
+[node name="ScreenHost" type="Control" parent="ScreenLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="OverlayLayer" type="CanvasLayer" parent="."]
+layer = 2
+
+[node name="OverlayHost" type="Control" parent="OverlayLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TopLayer" type="CanvasLayer" parent="."]
+layer = 3
+
+[node name="ErrorBanner" parent="TopLayer" instance=ExtResource("3")]
+
+[node name="StandInMarker" type="Label" parent="TopLayer"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -240.0
+offset_top = 8.0
+offset_right = -12.0
+grow_horizontal = 0
+mouse_filter = 2
+theme_type_variation = &"StandInWatermark"
+text = "STAND-IN CONTENT"
+horizontal_alignment = 2

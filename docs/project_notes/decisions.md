@@ -1669,6 +1669,8 @@ Per-rank step grows by +15 (100, 115, … 235). Rank 11 (1675 XP) is the cap; co
 **Consequences:**
 - Which step each bonus uses, and whether bonuses stack, are content and balance decisions for combat tuning.
 
+**Amended (2026-10-30):** ADR-075 changes "instantly evident" to mean evident through feel. A felt line describes an active bonus, and showing its numbers is a content switch.
+
 ### ADR-067: The Player's Side Comes From the Player and the Lineup; Fights Carry Their Own Dice (2026-10-28)
 
 **Context:**
@@ -1705,3 +1707,161 @@ Per-rank step grows by +15 (100, 115, … 235). Rank 11 (1675 XP) is the cap; co
 
 **Consequences:**
 - Mid-conversation saves arrive with Sprint 7 through a version bump and an upgrade step.
+
+### ADR-069: Content Packs as Strict JSON Read Into Typed Records (2026-10-29)
+
+**Context:**
+- Sprint 7 needs story, characters, towns, conversations, and fights as content the designer can change daily (ADR-062). The rules library, which has no packages, must load them.
+
+**Decision:**
+- A pack is a folder: a `pack.json` index plus JSON files.
+  - The files are read into typed format records by source-generated System.Text.Json in strict mode, which rejects unknown or duplicate properties and enum names that don't match exactly.
+  - A validation pass then collects every problem with its file and JSON location.
+- Packs are read through `IContentSource`, which has folder, in-memory (tests), and Godot `res://` versions. Godot picks the pack through the project setting `ancient_order/content/pack`.
+- A content check (`tools/AncientOrder.ContentCheck`, plus a verify step) refuses dead ends, broken references, people off the walkable ground, and unset flags. Play refuses a pack that fails it.
+
+**Alternatives Considered:**
+- Reading the raw JSON by hand → Rejected after the designer asked for a best-practice check: typed records plus a validation pass are the standard.
+- Godot resources (`.tres`) → Rejected: the rules library must not depend on Godot.
+
+**Consequences:**
+- Stand-in content moves from C# (`godot/StandIn`) to `godot/content/standin/`.
+- Release export presets must include `*.json`.
+
+### ADR-070: Our Own Conversation Format Instead of Ink or Yarn Spinner (2026-10-29)
+
+**Context:**
+- Conversations must read and change personality, relationships, party, story memory, and the town. All of that happens inside the rules library, deterministically, and must survive a mid-conversation save.
+
+**Decision:**
+- Conversations are JSON in content packs: participants, conditional openings, steps, lines, and choices.
+- A choice can be locked (`requires`) or hidden (`when`). It carries effects and reaction overrides, and its conditional destinations lead to another step or another conversation.
+- Conversations share one condition system with the town.
+
+**Alternatives Considered:**
+- Ink or Yarn Spinner → Rejected; the designer chose the recommendation. Each brings its own runtime and state, which the rules would have to wrap and mirror for saves and conditions. Authoring tools can export to our format later, the way articy:draft exports are used.
+
+**Consequences:**
+- Writers don't edit these files. Claude turns the designer's decisions into them (ADR-062), following `docs/content_guide.md`.
+
+### ADR-071: Reactions Follow the Choice's Written Shift (2026-10-29)
+
+**Decision:**
+- A character's reaction is scored from their archetype's leanings against the shift the choice is written to express. The personality's actual movement after clamping is not used (designer decision A).
+
+**Consequences:**
+- A choice still draws reactions when the player's trait is already at 35%.
+
+### ADR-072: Godot Finds Paths; the Rules Own Position and Walkability (2026-10-29)
+
+**Decision:**
+- Each town's walkable ground and obstacles come from content and live in the rules, behind `IWalkableGround` (implemented by `AuthoredGround`). The rules hold the player's position and accept or refuse every reported move.
+- Godot bakes a navigation mesh from the same polygons at run time and walks the player along its paths (designer decision A).
+- Positions are reported at stops, at walk-over boundaries, and before triggers.
+
+**Consequences:**
+- Real 3D levels will bake from their own geometry through the same wrapper, and their walkability can come from the level's data.
+
+### ADR-073: Save Format Version 2 and Its Reconciliation Rules (2026-10-29)
+
+**Decision:**
+- Version 2 adds:
+  - the party
+  - the town and position
+  - the conversation in progress
+  - story memory, written sorted
+  - the hand-off
+  - a slot summary (town name, situation)
+- Version 1 saves upgrade: the party becomes the old lineup, and the new fields start empty.
+- Loading reconciles in a fixed order: characters, party, each lineup member, town and position, conversation, hand-off. The load report lists every adjustment.
+- If a mid-conversation save's step no longer exists, the conversation restarts at its opening step, and effects already applied stay applied (designer decision A).
+
+**Consequences:**
+- The designer can save before a moment, edit content, and load to see the change.
+- Only the dev tools show the load report (ADR-076).
+
+### ADR-074: Town Camera at a Fixed Angle, Zoom Only (2026-10-29)
+
+**Decision:**
+- The camera is a perspective camera fixed at about 45 degrees yaw and 55 degrees pitch. It follows the player and zooms with the mouse wheel between limits, with no rotation (designer decision A).
+- These values can be tuned in the Godot editor.
+
+**Alternatives Considered:**
+- A rotatable camera → Recommended at the time; the designer did not choose it.
+
+### ADR-075: Intuition Over Numbers — What Players See (2026-10-30)
+
+**Context:**
+- The designer: "Less numbers and logic, more intuition and personality." Numbers break immersion in a game driven by personality.
+
+**Decision:**
+- The rules keep exact numbers, and the screens turn them into cues. Conversations show no numbers.
+- **Reactions are tells.** Each has a direction (warmer, cooler), a strength (slight, clear, strong), a written body-language line, and a lean on the person in the town. Animation will carry tells once art exists (designer decision 1A).
+- **Demeanor.** Each person has a demeanor toward the player (warm, neutral, wary, cold), worked out from affection plus trust against cutoffs set in content. It shows as posture.
+- **Locked choices** show greyed with an in-world line, never a threshold.
+- **Hidden outcomes.** A choice can always be offered while its outcome depends on hidden personality or relationship, with clues in the lines. This is a supported content pattern.
+- **The party readout** is the only place numbers appear, and only for the player and the party. In the world, the readout is combat-ranking technology. Enemies and other characters never get one, and affection and trust are never shown.
+- **Content switches.** Party members' readouts (`display.partyReadouts`) and synergy bonus numbers (`display.synergyNumbers`) can be turned off. A felt line from content describes an active bonus either way. This amends ADR-066: the bonus is "instantly evident" through feel, with numbers optional.
+- **Combat (Sprint 8):**
+  - Enemy health shows in how beaten up an enemy looks.
+  - Targeting shows in which way an enemy faces after giving its orders. That requires enemies to choose targets before the player commits, and may need a second cue when fighters stand close together.
+
+**Alternatives Considered:**
+- Numeric feedback chips ("Empathy +3%", "affection +4") → Rejected by the designer.
+
+**Consequences:**
+- The content check fails a locked choice with no line to show, and any player-facing text that is empty. It warns about a synergy bonus players would not notice, and about digits in conversation text.
+- Open creative questions: what the ranking technology is in the world, and whether the two display switches stay on.
+
+### ADR-076: Dev Tools Are Their Own Area, Designer-Only, Never Shipped (2026-10-30)
+
+**Decision:**
+- Designer tools live in `godot/devtools/`. They start with three: an F3 overlay of the hidden numbers, the load-adjustments notice, and the full list of content problems.
+- They only read snapshots.
+- They are kept out of release builds:
+  - our own `AO_DEVTOOLS` symbol, plus `Compile Remove` in the `ExportRelease` configuration
+  - a run-time `OS.IsDebugBuild()` check at the one call site
+  - a verify step that builds `ExportRelease`, to prove the exclusion works
+
+**Alternatives Considered:**
+- Relying on `#if DEBUG` → Rejected: reports checked on 2026-10-30 show `DEBUG` can stay defined in release exports.
+
+**Consequences:**
+- Later tools (jumping to a conversation, setting flags, editing traits) follow the same rules and are planned separately.
+
+### ADR-077: An In-House Headless Test Runner for Godot Screens (2026-10-29)
+
+**Decision:**
+- The Godot screen tests run in a small runner scene (`godot/tests/TestRunner.tscn`). It finds `[GodotTest]` methods, gives each a fresh scene, and exits with a pass or fail code. Verify runs it headless.
+- Rules tests carry the logic. Screen tests use in-memory packs and saves, and check only that the screens are wired correctly and show the right things.
+
+**Alternatives Considered:**
+- GdUnit4Net or GoDotTest → Rejected: both are built on VSTest, which conflicts with the solution's Microsoft.Testing.Platform runner (research 2026-10-29).
+
+### ADR-078: Screen Behaviour Settled in Sprint 7 Verify (2026-10-30)
+
+**Context:**
+- Verify drove the live Godot build in a real window and the designer played it. Several screen behaviours needed a director call: some the builders had flagged, some the walkthrough found.
+
+**Decision:**
+- **Conversation choices show only their text.** There are no "1." prefixes, and ADR-075's "no numbers" now covers key hints too.
+  - Players take a choice with the mouse, or with Up/Down and Enter. The arrow keys wrap and skip locked choices, which can't take focus.
+  - The 1-9 keys still work, unlabelled.
+- **The conversation panel grows to fit its content, up to about two-thirds of the screen.** Only beyond that does it scroll, with a visible scrollbar. Each step opens at its first new line.
+- **The Esc menu adds Return to Start and Quit.** Each asks first, because unsaved progress is lost.
+- **The start screen shows the game's name.** It reads the project name ("Ancient Order"), not the content pack's name. The stand-in marker in the corner still flags stand-in content.
+- **A full fight lineup refuses a new pick with just "Lineup full".**
+  - The toggles stay enabled, so the lineup can always be changed by taking someone out first.
+  - There's no explanation of how to swap. The designer's rule: less text, and don't explain systems that are common across games.
+
+**Alternatives Considered:**
+- Keeping the number prefixes as key hints → Rejected by the designer.
+- A fixed 40% panel with a scrollbar → Rejected: choices fell below the panel, out of reach of the mouse.
+- Disabling the other toggles when the lineup is full → Rejected: the lineup must always stay changeable as more people join.
+- A swap prompt or an automatic swap → Rejected: more than this needs.
+
+**Consequences:**
+- Left for the UI and scaling pass:
+  - the party screen's lineup and "Together" sections sit below the fold at 1600x900
+  - a tall conversation panel covers the speaker and the avatar, hiding reaction leans; this needs camera framing during conversations
+  - town and screen looks

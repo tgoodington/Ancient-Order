@@ -245,9 +245,9 @@ public class LoadFromSlot
         var second = SessionOver(backend, changed);
         var report = SessionAssert.Ok(await second.LoadFromSlot(1));
         Assert.Equal(
-            [LoadAdjustmentKind.CharacterDropped, LoadAdjustmentKind.LineupCleared],
+            [LoadAdjustmentKind.CharacterDropped, LoadAdjustmentKind.PartyMemberDropped, LoadAdjustmentKind.LineupMemberDropped],
             report.Adjustments.Select(a => a.Kind));
-        Assert.Empty(second.Snapshot.Game!.Lineup);
+        Assert.Equal([TestCast.ElenaId], second.Snapshot.Game!.Lineup);
         Assert.False(second.Snapshot.Game.Characters.ContainsKey(TestCast.LarsId));
 
         var unchanged = SessionAssert.Ok(await SessionOver(backend).LoadFromSlot(1));
@@ -422,7 +422,7 @@ public class FullSessionFlowSaves
         var changed = CharacterRulesTrust(SaveSessions.State(session));
         Assert.Equal(3, changed.Characters[TestCast.ElenaId].Trust);
 
-        Assert.True((await new SaveStore(backend, Content).SaveAsync(2, changed, TestContent.Now, Ct)).IsOk);
+        Assert.True((await new SaveStore(backend, SaveFixtures.Content).SaveAsync(2, changed, TestContent.Now, Ct)).IsOk);
         session.NewGame();
         Assert.Equal(0, SaveSessions.State(session).Characters[TestCast.ElenaId].Trust);
 
@@ -437,7 +437,7 @@ public class FullSessionFlowSaves
 
     private static GameState CharacterRulesTrust(GameState game)
     {
-        var changed = CharacterRules.ChangeTrust(Content, game, TestCast.ElenaId, 3, TestContent.Now);
+        var changed = CharacterRules.ChangeTrust(SaveFixtures.Content, game, TestCast.ElenaId, 3, TestContent.Now);
         return SessionAssert.Ok(changed);
     }
 }

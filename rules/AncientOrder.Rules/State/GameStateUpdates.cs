@@ -1,6 +1,8 @@
 using System.Collections.Immutable;
 using AncientOrder.Rules.Combat;
+using AncientOrder.Rules.Conversations;
 using AncientOrder.Rules.Personality;
+using AncientOrder.Rules.Town;
 
 namespace AncientOrder.Rules.State;
 /// <summary>Every update returns a new state stamped with now.</summary>
@@ -23,7 +25,11 @@ public static class GameStateUpdates
             ImmutableArray<string>.Empty,
             null,
             ImmutableDictionary<string, ReactionProgress>.Empty.WithComparers(StringComparer.Ordinal),
-            now);
+            now)
+        {
+            Party = content.Settings.StartingParty.IsDefault ? [] : content.Settings.StartingParty,
+            Town = content.Towns.TryGet(content.Settings.StartingTown, out var town) ? new TownPresence(town.Id, town.Start) : null,
+        };
     }
 
     public static GameState SetPlayerPersonality(GameState state, AncientOrder.Rules.Personality.Personality personality, long now) =>
@@ -34,4 +40,7 @@ public static class GameStateUpdates
 
     public static GameState WithCombat(GameState state, CombatState? combat, long now) =>
         state with { Combat = combat, Timestamp = now };
+
+    public static GameState WithConversation(GameState state, ActiveConversation? conversation, long now) =>
+        state with { Conversation = conversation, Timestamp = now };
 }

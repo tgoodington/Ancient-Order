@@ -1,0 +1,116 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://ui/menu/GameMenu.cs" id="1"]
+
+[node name="GameMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.5)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(320, 0)
+layout_mode = 2
+
+[node name="Buttons" type="VBoxContainer" parent="Center/Panel"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Center/Panel/Buttons"]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+text = "Menu"
+horizontal_alignment = 1
+
+[node name="Resume" type="Button" parent="Center/Panel/Buttons"]
+layout_mode = 2
+text = "Resume"
+
+[node name="Party" type="Button" parent="Center/Panel/Buttons"]
+layout_mode = 2
+text = "Party"
+
+[node name="Saves" type="Button" parent="Center/Panel/Buttons"]
+layout_mode = 2
+text = "Save and Load"
+
+[node name="ReturnToStart" type="Button" parent="Center/Panel/Buttons"]
+layout_mode = 2
+text = "Return to Start"
+
+[node name="Quit" type="Button" parent="Center/Panel/Buttons"]
+layout_mode = 2
+text = "Quit"
+
+[node name="Confirm" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dim" type="ColorRect" parent="Confirm"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="Center" type="CenterContainer" parent="Confirm"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Panel" type="PanelContainer" parent="Confirm/Center"]
+layout_mode = 2
+
+[node name="Box" type="VBoxContainer" parent="Confirm/Center/Panel"]
+custom_minimum_size = Vector2(440, 0)
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Message" type="Label" parent="Confirm/Center/Panel/Box"]
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="Buttons" type="HBoxContainer" parent="Confirm/Center/Panel/Box"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 2
+
+[node name="Cancel" type="Button" parent="Confirm/Center/Panel/Box/Buttons"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+text = "Cancel"
+
+[node name="Accept" type="Button" parent="Confirm/Center/Panel/Box/Buttons"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+text = "Quit"

@@ -1,0 +1,46 @@
+{
+  "format": "ancient-order-save",
+  "version": 1,
+  "kind": "manual",
+  "slot": 3,
+  "savedAt": 1700000000000,
+  "playerName": "Rin",
+  "game": {
+    "timestamp": 1700000000000,
+    "player": {
+      "id": "player-1",
+      "name": "Rin",
+      "personality": {
+        "patience": 16.67,
+        "empathy": 16.67,
+        "cunning": 16.67,
+        "logic": 16.67,
+        "kindness": 16.67,
+        "charisma": 16.65
+      }
+    },
+    "characters": [
+      {
+        "id": "npc_scout_elena",
+        "affection": 33.5,
+        "trust": -12
+      },
+      {
+        "id": "npc_merchant_lars",
+        "affection": 0,
+        "trust": -20
+      },
+      {
+        "id": "npc_outlaw_kade",
+        "affection": 0,
+        "trust": 0
+      }
+    ],
+    "lineup": [
+      "npc_scout_elena",
+      "npc_merchant_lars"
+    ],
+    "reactionProgress": [],
+    "combat": null
+  }
+}

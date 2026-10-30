@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using AncientOrder.Rules.Common;
 using AncientOrder.Rules.Party;
 using AncientOrder.Rules.Personality;
 using AncientOrder.Rules.State;
@@ -34,7 +35,7 @@ internal static class PlayerOperations
 
     public static Outcome<ImmutableArray<string>> SetLineup(SessionContext context, SessionSnapshot s, ImmutableArray<string?> ids)
     {
-        var invalid = SessionValidation.LineupIds(ids, context.Content.Settings.LineupSize);
+        var invalid = SessionValidation.LineupIds(ids, context.Content.Settings.Lineup.Max);
         if (invalid is not null)
         {
             return Outcome.Refuse<ImmutableArray<string>>(s, invalid);
@@ -43,6 +44,11 @@ internal static class PlayerOperations
         if (s.Game is null)
         {
             return Outcome.NoActiveGame<ImmutableArray<string>>(s);
+        }
+
+        if (s.Game.HandOff is not null)
+        {
+            return Outcome.Refuse<ImmutableArray<string>>(s, ErrorCode.TOWN_NOT_ACTIVE, "The town is complete");
         }
 
         var result = LineupRules.Set(context.Content, s.Game, ids.Select(id => id!).ToImmutableArray(), context.Now());

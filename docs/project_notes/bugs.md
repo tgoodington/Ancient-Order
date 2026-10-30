@@ -136,6 +136,18 @@ The four entries below were found during godot-foundation design (2026-10-28). T
 - **Solution:** Extracted the Math sheet directly from the `.xlsx` (it is a zip; sheet "Math" = `xl/worksheets/sheet7.xml`). Math!O = `MROUND(L + M + N, 0.25)` where L = attacker Power (Attack/Counter), M = Special Power = `Power × (1 + segments/10)`, N = Group term. **Base damage = the attacker's Power stat, rounded to 0.25 — no target-power term.** Target Power only feeds the Crushing Blow threshold (`Math!AF = (O − targetPower)/targetPower`) and the SMR/FMR mitigation lookups, both applied separately. Rewrote `calculateBaseDamage` accordingly (targetPower param kept but vestigial), updated `formulas.test.ts` + `counterChain.test.ts` to Excel-correct values. All 1020 backend tests pass.
 - **Prevention:** When a formula's source is an Excel cell not present in the markdown, extract the cell formula from the `.xlsx` before implementing — never model a "plausible" replacement. ADR-007/ADR-015 require Excel-derived values; a test asserting an unverified formula is not a real contract. Remaining un-audited combat formulas should be spot-checked the same way against the Math sheet.
 
+### 2026-10-30 — Conversation panel hid the speaker's line, then the last choices (sprint-7-godot verify)
+- **Description:** In the live game at 1600x900, the panel opened scrolled to the bottom. The Elder's opening line was out of view, so players saw choices without the line they answer. Fixing the scroll to put the new step's first block at the top then pushed the last choices below the fixed 40%-high panel, with no visible scrollbar. In the Merchant's first talk, "say goodbye" could not be reached by mouse.
+- **Root cause:** A fixed panel height (`HeightShare = 0.4` of a 720-unit base viewport, about 288 units) is too short for a typical step: one or two speaker lines plus 3-5 choices. `Reveal()` also always scrolled to the scrollbar's max.
+- **Solution:** `Reveal()` scrolls the first new block to the top. The panel grows to fit its content up to about two-thirds of the screen, and scrolls with a visible scrollbar only beyond that (director's choice).
+- **Prevention:** All 85 headless screen tests passed while this was broken, because they check wiring, not what fits on screen. Visual layout needs a real-window run with screenshots (the verify walkthrough driver) or a screen test that asserts content rects sit inside the visible scroll rect at the base viewport.
+
+### 2026-10-30 — Godot crashed at startup when Windows audio failed to initialize (environment)
+- **Description:** Partway through a session of repeated bounded game runs, every launch crashed right after Vulkan init with exit -1073741819 (0xC0000005) when the WASAPI audio device failed to initialize. Later plain launches worked again.
+- **Root cause:** A transient Windows audio-device state, not project code.
+- **Solution:** For scripted runs, pass `--audio-driver Dummy`. Otherwise, wait or reset the audio device.
+- **Prevention:** If the game or a scripted run crashes at startup with that exit code, try `--audio-driver Dummy` before debugging the project. Revisit before shipping: a player's broken audio device shouldn't crash the game (Godot engine behaviour; check for a fallback in the export sprint).
+
 ## Prevention Notes
 
 When adding new bugs, think about:

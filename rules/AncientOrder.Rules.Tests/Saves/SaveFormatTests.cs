@@ -221,14 +221,12 @@ public class ValidateGameStateTeamValidationPhase4
         Assert.True(loaded.Report.IsEmpty);
     }
 
-    [Fact(DisplayName = "rejects team with 1 entry")]
-    public void One_entry_is_cleared()
+    [Fact(DisplayName = "keeps a lineup smaller than max (the lineup is picked one at a time)")]
+    public void One_entry_is_kept()
     {
         var loaded = WithLineup(TestCast.ElenaId).Value;
-        Assert.Empty(loaded.Game.Lineup);
-        var adjustment = Assert.Single(loaded.Report.Adjustments);
-        Assert.Equal(LoadAdjustmentKind.LineupCleared, adjustment.Kind);
-        Assert.Contains("lineup size has changed", adjustment.Message, StringComparison.Ordinal);
+        Assert.Equal([TestCast.ElenaId], loaded.Game.Lineup);
+        Assert.True(loaded.Report.IsEmpty);
     }
 
     [Fact(DisplayName = "rejects team with 3 entries")]
@@ -304,7 +302,7 @@ public class SaveFormatRoundTrip
         Assert.DoesNotContain((byte)'\r', bytes);
         var doc = JsonNode.Parse(bytes)!;
         Assert.Equal("ancient-order-save", (string?)doc["format"]);
-        Assert.Equal(1, (int)doc["version"]!);
+        Assert.Equal(2, (int)doc["version"]!);
         Assert.Equal("manual", (string?)doc["kind"]);
     }
 
@@ -446,7 +444,16 @@ public class SaveFormatCultureIndependence
 
 public class SaveFormatSize
 {
-    private static GameState WithName(int length) => MakeGame(new string('a', length));
+    private static GameState Sized(int entries, int nameLength)
+    {
+        var builder = ImmutableDictionary.CreateBuilder<string, ReactionProgress>(StringComparer.Ordinal);
+        for (var i = 0; i < entries; i++)
+        {
+            builder["fighter-" + i.ToString("D8", CultureInfo.InvariantCulture)] = new ReactionProgress(0, 0, 0);
+        }
+
+        return MakeGame(new string('a', nameLength)) with { ReactionProgress = builder.ToImmutable() };
+    }
 
     private static GameState WithManyProgressEntries(int count)
     {
@@ -462,7 +469,7 @@ public class SaveFormatSize
     [Fact(DisplayName = "refuses at save time a game that would exceed 2,000,000 bytes")]
     public void Refuses_an_oversized_game_on_write()
     {
-        var written = SaveFormat.Write(1, SaveConstants.KindManual, WithManyProgressEntries(30_000), Content, 1);
+        var written = SaveFormat.Write(1, SaveConstants.KindManual, WithManyProgressEntries(30_000), SaveFixtures.Content, 1);
         var error = Refused(written);
         Assert.StartsWith("Save is too large to write (", error.Message, StringComparison.Ordinal);
         Assert.EndsWith(", limit 2000000)", error.Message, StringComparison.Ordinal);
@@ -472,7 +479,7 @@ public class SaveFormatSize
     public async Task Writes_nothing_when_too_large()
     {
         var backend = new MemorySaveBackend();
-        var store = new SaveStore(backend, Content);
+        var store = new SaveStore(backend, SaveFixtures.Content);
         await store.SaveAsync(1, MakeGame("Keep"), 1, Ct);
         var before = await backend.ReadAsync(KeyFor(1), Ct);
 
@@ -485,12 +492,17 @@ public class SaveFormatSize
     [Fact(DisplayName = "the write limit counts bytes: the largest save that fits is written and one byte more is refused")]
     public void Write_limit_is_exact()
     {
-        var one = WriteOk(WithName(1)).Length;
-        var fit = 1 + ((SaveConstants.MaxSaveBytes - one) / 2);
-        var biggest = WriteOk(WithName(fit));
+        // Entries (all the same size) get close to the limit; the player name, written twice, fills the last bytes.
+        var empty = WriteOk(Sized(0, 1)).Length;
+        var entry = WriteOk(Sized(2, 1)).Length - WriteOk(Sized(1, 1)).Length;
+        var count = (SaveConstants.MaxSaveBytes - empty) / entry - 2;
+        var rest = SaveConstants.MaxSaveBytes - WriteOk(Sized(count, 1)).Length;
+        var fit = 1 + (rest / 2);
+        Assert.InRange(fit, 1, SaveConstants.MaxPlayerNameLength);
+        var biggest = WriteOk(Sized(count, fit));
         Assert.InRange(biggest.Length, SaveConstants.MaxSaveBytes - 1, SaveConstants.MaxSaveBytes);
 
-        var over = SaveFormat.Write(1, SaveConstants.KindManual, WithName(fit + 1), Content, TestContent.Now);
+        var over = SaveFormat.Write(1, SaveConstants.KindManual, Sized(count, fit + 1), SaveFixtures.Content, TestContent.Now);
         Refused(over);
     }
 
@@ -521,9 +533,9 @@ public class SaveFormatSize
     [Fact(DisplayName = "a slot below 1 or above 10 is refused at write")]
     public void Invalid_slot_on_write()
     {
-        var error = Refused(SaveFormat.Write(0, SaveConstants.KindManual, MakeGame(), Content, 1), ErrorCode.INVALID_SLOT);
+        var error = Refused(SaveFormat.Write(0, SaveConstants.KindManual, MakeGame(), SaveFixtures.Content, 1), ErrorCode.INVALID_SLOT);
         Assert.Equal("Invalid slot number: 0. Must be between 1 and 10.", error.Message);
-        Refused(SaveFormat.Write(11, SaveConstants.KindManual, MakeGame(), Content, 1), ErrorCode.INVALID_SLOT);
+        Refused(SaveFormat.Write(11, SaveConstants.KindManual, MakeGame(), SaveFixtures.Content, 1), ErrorCode.INVALID_SLOT);
     }
 }
 
@@ -566,7 +578,7 @@ public class SaveFormatStrictReading
         Assert.Equal("wrong format tag", Refused(ReadEnvelopeEdited(MakeGame(), e => e["format"] = "other")).Message);
         Assert.Equal("wrong format tag", Refused(ReadEnvelopeEdited(MakeGame(), e => e.Remove("format"))).Message);
         Assert.Equal("wrong format tag", Refused(ReadEnvelopeEdited(MakeGame(), e => e["format"] = 1)).Message);
-        Assert.Equal("unsupported version 2", Refused(ReadEnvelopeEdited(MakeGame(), e => e["version"] = 2)).Message);
+        Assert.Equal("unsupported version 3", Refused(ReadEnvelopeEdited(MakeGame(), e => e["version"] = 3)).Message);
         Assert.Equal("unsupported version \"1\"", Refused(ReadEnvelopeEdited(MakeGame(), e => e["version"] = "1")).Message);
         Assert.Equal("unsupported version undefined", Refused(ReadEnvelopeEdited(MakeGame(), e => e.Remove("version"))).Message);
         Assert.Equal("unsupported version -1", Refused(ReadEnvelopeEdited(MakeGame(), e => e["version"] = -1)).Message);
@@ -681,7 +693,7 @@ public class SaveFormatStrictReading
     {
         var backend = new MemorySaveBackend();
         await backend.WriteAsync(KeyFor(2), WriteOk(MakeGame("Copied"), slot: 1), Ct);
-        var loaded = (await new SaveStore(backend, Content).LoadAsync(2, Ct)).Value;
+        var loaded = (await new SaveStore(backend, SaveFixtures.Content).LoadAsync(2, Ct)).Value;
         Assert.Equal(1, loaded.Slot);
         Assert.Equal("Copied", loaded.Game.Player.Name);
     }
@@ -727,13 +739,13 @@ public class SaveUpgradePipeline
     });
 
     private static Result<LoadedSave> ReadWith(JsonObject doc, params SaveUpgradeStep[] steps) =>
-        SaveFormat.Read(Utf8(doc), Content, [.. steps]);
+        SaveFormat.Read(Utf8(doc), SaveFixtures.Content, [.. steps, .. SaveUpgrades.Steps]);
 
-    [Fact(DisplayName = "the production list has no steps yet and the current version is 1")]
-    public void Production_list_is_empty()
+    [Fact(DisplayName = "the production list has the version 1 to 2 step and the current version is 2")]
+    public void Production_list_has_one_step()
     {
-        Assert.Empty(SaveUpgrades.Steps);
-        Assert.Equal(1, SaveConstants.CurrentVersion);
+        Assert.Equal(1, Assert.Single(SaveUpgrades.Steps).FromVersion);
+        Assert.Equal(2, SaveConstants.CurrentVersion);
     }
 
     [Fact(DisplayName = "upgrades a synthetic version 0 save to the current format")]
@@ -742,24 +754,24 @@ public class SaveUpgradePipeline
         var game = MakeGame() with { Lineup = [TestCast.ElenaId, TestCast.LarsId] };
         var loaded = ReadWith(VersionZero(game), ZeroToOne);
         Assert.True(loaded.IsOk, loaded.IsOk ? string.Empty : loaded.Error.Message);
-        StateAssert.Equivalent(game, loaded.Value.Game);
+        StateAssert.Equivalent(game with { Party = game.Lineup }, loaded.Value.Game);
         Assert.True(loaded.Value.Report.IsEmpty);
     }
 
-    [Fact(DisplayName = "an upgraded save re-saves as version 1, identical to a save made in the current format")]
+    [Fact(DisplayName = "an upgraded save re-saves as version 2, identical to a save made in the current format")]
     public void Upgraded_save_resaves_as_current()
     {
         var game = MakeGame() with { Lineup = [TestCast.ElenaId, TestCast.LarsId] };
         var loaded = ReadWith(VersionZero(game), ZeroToOne).Value;
         var resaved = WriteOk(loaded.Game, slot: loaded.Slot, now: loaded.SavedAt);
-        Assert.Equal(1, (int)JsonNode.Parse(resaved)!["version"]!);
-        Assert.Equal(WriteOk(game, slot: loaded.Slot, now: loaded.SavedAt), resaved);
+        Assert.Equal(2, (int)JsonNode.Parse(resaved)!["version"]!);
+        Assert.Equal(WriteOk(game with { Party = game.Lineup }, slot: loaded.Slot, now: loaded.SavedAt), resaved);
     }
 
     [Fact(DisplayName = "an older save without the step is refused as an unsupported version")]
     public void No_step_means_refused()
     {
-        Assert.Equal("unsupported version 0", Refused(SaveFormat.Read(Utf8(VersionZero(MakeGame())), Content)).Message);
+        Assert.Equal("unsupported version 0", Refused(SaveFormat.Read(Utf8(VersionZero(MakeGame())), SaveFixtures.Content)).Message);
         Assert.Equal("unsupported version 0", Refused(ReadWith(VersionZero(MakeGame()), new SaveUpgradeStep(5, _ => { }))).Message);
     }
 

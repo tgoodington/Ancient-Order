@@ -5,13 +5,13 @@ using AncientOrder.Rules.State;
 
 namespace AncientOrder.Rules.Tests.Fixtures;
 
-/// <summary>Test GameContent: player Kael, default personality, lineup size 2, the test cast, the test archetypes, today's two synergy bonuses (best only). encounter_demo and encounter_test (T16).</summary>
+/// <summary>Test GameContent: player Kael, default personality, lineup limits min = max = 2, the whole test cast as the starting party, the test cast, the test archetypes, today's two synergy bonuses (best only). encounter_demo and encounter_test (T16).</summary>
 public static class TestContent
 {
     public const string PlayerId = "player-1";
     public const long Now = 1_700_000_000_000;
 
-    public static GameSettings Settings { get; } = new("Kael", 2);
+    public static GameSettings Settings { get; } = new("Kael", new LineupLimits(2, 2)) { StartingParty = [.. TestCast.All.Select(c => c.Id)] };
 
     public static SynergySettings Synergy { get; } = new(
         [
@@ -27,7 +27,7 @@ public static class TestContent
         ImmutableArray<EncounterDefinition>? encounters = null)
     {
         var result = GameContent.Create(
-            settings ?? Settings,
+            settings ?? Settings with { StartingParty = [.. (characters ?? TestCast.All).Select(c => c.Id)] },
             characters ?? TestCast.All,
             TestArchetypes.All,
             synergy ?? Synergy,

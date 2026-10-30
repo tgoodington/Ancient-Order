@@ -2,7 +2,7 @@
   "version": "11.0",
   "pipeline": "enuncia",
   "initialized": true,
-  "active_context": "godot-foundation",
+  "active_context": "sprint-7-godot",
   "trunk": {
     "status": "complete",
     "display_name": "Sprint 1 + Sprint 2",
@@ -87,7 +87,7 @@
       "display_name": "Sprint 3",
       "created_from": "trunk",
       "created_at": "2026-02-23T20:15:00Z",
-      "purpose": "Implement Sprint 3: Narrative & State Machine — Act 1 scene progression, choice-tracking & consequence system, team synergy bonus calculations",
+      "purpose": "Implement Sprint 3: Narrative & State Machine \u2014 Act 1 scene progression, choice-tracking & consequence system, team synergy bonus calculations",
       "status": "complete",
       "workflow": {
         "prompt": {
@@ -163,7 +163,7 @@
       "display_name": "Sprint 4",
       "created_from": "sprint-3",
       "created_at": "2026-03-07T00:00:00Z",
-      "purpose": "Sprint 4: Persistence & API Completion — wire missing endpoints, harden state validation, complete backend API surface for frontend handoff",
+      "purpose": "Sprint 4: Persistence & API Completion \u2014 wire missing endpoints, harden state validation, complete backend API surface for frontend handoff",
       "status": "complete",
       "workflow": {
         "prompt": {
@@ -237,7 +237,7 @@
       "display_name": "Sprint 5",
       "created_from": "sprint-4",
       "created_at": "2026-03-16T00:00:00Z",
-      "purpose": "Sprint 5: Frontend React Phase 1 — React project setup, GameStateProvider context, and Equinox HUD component implementation",
+      "purpose": "Sprint 5: Frontend React Phase 1 \u2014 React project setup, GameStateProvider context, and Equinox HUD component implementation",
       "status": "complete",
       "workflow": {
         "prompt": {
@@ -314,7 +314,7 @@
       "display_name": "Sprint 6",
       "created_from": "sprint-5",
       "created_at": "2026-04-19T00:00:00Z",
-      "purpose": "Sprint 6: Self-contained game foundation — engine runs in the client, server retired, local saves, scene renderer set up (town/dialogue moved to Sprint 7, combat UI to Sprint 8; ADR-055)",
+      "purpose": "Sprint 6: Self-contained game foundation \u2014 engine runs in the client, server retired, local saves, scene renderer set up (town/dialogue moved to Sprint 7, combat UI to Sprint 8; ADR-055)",
       "status": "complete",
       "pipeline": "enuncia",
       "track": "full",
@@ -350,7 +350,7 @@
       "display_name": "Sprint 7",
       "created_from": "sprint-6",
       "created_at": "2026-10-25T12:38:02.666Z",
-      "purpose": "Sprint 7: Town and conversation systems — a walkable town and a conversation system built from content, carrying all five demo mechanics, with stand-in content; real story/dialogue/characters are decided outside the pipeline and plugged in later. Combat UI stays in Sprint 8 (ADR-055)",
+      "purpose": "Sprint 7: Town and conversation systems \u2014 a walkable town and a conversation system built from content, carrying all five demo mechanics, with stand-in content; real story/dialogue/characters are decided outside the pipeline and plugged in later. Combat UI stays in Sprint 8 (ADR-055)",
       "status": "design",
       "track": "full",
       "workflow": {
@@ -415,8 +415,43 @@
           "completed_at": "2026-10-28T18:50:26.491Z"
         }
       }
+    },
+    "sprint-7-godot": {
+      "display_name": "Sprint 7 (Godot)",
+      "created_from": "godot-foundation",
+      "created_at": "2026-10-28T19:09:18.000Z",
+      "purpose": "Sprint 7 on Godot: a walkable town and conversation systems built from content, carrying all five demo mechanics, with clearly marked stand-in content. Settled design decisions from branches/sprint-7/design_notes.md carry over; engine-dependent parts (where the game runs, the town on stage, screens) are redone for Godot. Combat UI stays in Sprint 8.",
+      "status": "complete",
+      "track": "full",
+      "workflow": {
+        "discovery": {
+          "started": true,
+          "completed": true,
+          "completed_at": "2026-10-28T19:13:20.624Z"
+        },
+        "compose": {
+          "started": true,
+          "completed": true,
+          "completed_at": "2026-10-29T17:45:41.000Z"
+        },
+        "design": {
+          "started": true,
+          "completed": true,
+          "completed_at": "2026-10-30T14:06:37.718Z"
+        },
+        "execute": {
+          "started": true,
+          "completed": true,
+          "completed_at": "2026-10-30T16:49:03.000Z"
+        },
+        "verify": {
+          "started": true,
+          "completed": true,
+          "completed_at": "2026-10-30T21:12:43.000Z"
+        }
+      }
     }
   },
-  "last_handoff": "2026-10-28T18:50:26.491Z",
+  "last_handoff": "2026-10-30T21:12:43.000Z",
   "last_handoff_transition": "verify_to_complete"
 }

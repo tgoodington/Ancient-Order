@@ -53,16 +53,16 @@ public static class SessionValidation
         return null;
     }
 
-    public static RuleError? LineupIds(ImmutableArray<string?> ids, int lineupSize)
+    public static RuleError? LineupIds(ImmutableArray<string?> ids, int maxSize)
     {
         if (ids.IsDefault)
         {
             return Invalid("npcIds must be array");
         }
 
-        if (ids.Length != lineupSize)
+        if (ids.Length > maxSize)
         {
-            return Invalid($"npcIds must contain exactly {lineupSize} items");
+            return Invalid($"npcIds must NOT have more than {maxSize} items");
         }
 
         for (var i = 0; i < ids.Length; i++)

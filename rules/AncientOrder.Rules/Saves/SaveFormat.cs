@@ -10,7 +10,7 @@ using AncientOrder.Rules.State;
 namespace AncientOrder.Rules.Saves;
 
 /// <summary>A sound save, loaded: the slot, time, and name from its envelope, the game fitted to the current content, and what was adjusted.</summary>
-public sealed record LoadedSave(int Slot, long SavedAt, string PlayerName, GameState Game, LoadReport Report);
+public sealed record LoadedSave(int Slot, long SavedAt, string PlayerName, SaveSummary Summary, GameState Game, LoadReport Report);
 
 public static class SaveFormat
 {
@@ -27,7 +27,7 @@ public static class SaveFormat
         }
 
         var saved = SaveMapper.ToSaved(game, content);
-        var envelope = new SaveEnvelope(SaveConstants.FormatTag, SaveConstants.CurrentVersion, kind, slot, now, game.Player.Name, saved);
+        var envelope = new SaveEnvelope(SaveConstants.FormatTag, SaveConstants.CurrentVersion, kind, slot, now, game.Player.Name, SaveMapper.ToSummary(game, content), saved);
 
         var reasons = new List<string>();
         SaveChecks.CheckEnvelope(envelope, reasons);
@@ -140,7 +140,7 @@ public static class SaveFormat
         }
 
         var reconciled = SaveReconciler.Reconcile(envelope.Game, content);
-        return Result<LoadedSave>.Ok(new LoadedSave(envelope.Slot, envelope.SavedAt, envelope.PlayerName, reconciled.Game, reconciled.Report));
+        return Result<LoadedSave>.Ok(new LoadedSave(envelope.Slot, envelope.SavedAt, envelope.PlayerName, envelope.Summary, reconciled.Game, reconciled.Report));
     }
 
     private static string Describe(JsonNode? node) =>

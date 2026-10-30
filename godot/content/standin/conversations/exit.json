@@ -1,0 +1,35 @@
+{
+  "conversations": [
+    {
+      "id": "standin_exit",
+      "title": "STAND-IN Talk: Exit",
+      "participants": [],
+      "steps": [
+        {
+          "id": "gate",
+          "lines": [{ "speaker": "narrator", "text": "STAND-IN Exit: leads to the stand-in fight. Pick the fight lineup before going." }],
+          "choices": [
+            {
+              "id": "go",
+              "text": "STAND-IN: go to the stand-in fight now (confirmed exit)",
+              "lockedText": "STAND-IN: locked until your fight lineup is ready.",
+              "effects": [{ "type": "handOff", "fight": "standin_encounter" }]
+            },
+            {
+              "id": "mark_ready",
+              "text": "STAND-IN: mark the exit ready, so the exit spot hands off straight to the fight next time",
+              "when": [{ "type": "not", "condition": { "type": "flag", "flag": "standin_exit_ready" } }],
+              "effects": [{ "type": "setFlag", "flag": "standin_exit_ready" }],
+              "next": [{ "step": "marked" }]
+            },
+            { "id": "wait", "text": "STAND-IN: not yet" }
+          ]
+        },
+        {
+          "id": "marked",
+          "lines": [{ "speaker": "narrator", "text": "STAND-IN Exit: marked ready." }]
+        }
+      ]
+    }
+  ]
+}

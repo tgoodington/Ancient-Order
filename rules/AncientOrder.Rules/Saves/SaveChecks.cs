@@ -31,8 +31,40 @@ internal static class SaveChecks
         {
             reasons.Add("playerName: expected string");
         }
+        else if (envelope.PlayerName.Length > SaveConstants.MaxPlayerNameLength)
+        {
+            reasons.Add("playerName: must be at most 200 characters");
+        }
+        else if (envelope.PlayerName.Any(char.IsControl))
+        {
+            reasons.Add("playerName: must not contain control characters");
+        }
 
+        CheckSummary(envelope.Summary, reasons);
         CheckGame(envelope.Game, reasons);
+    }
+
+    private static void CheckSummary(SaveSummary? summary, List<string> reasons)
+    {
+        if (summary is null)
+        {
+            reasons.Add("summary: expected object");
+            return;
+        }
+
+        if (!Enum.IsDefined(summary.Situation))
+        {
+            reasons.Add("summary.situation: unknown situation");
+        }
+
+        if (summary.TownName is { Length: > SaveConstants.MaxTownNameLength })
+        {
+            reasons.Add("summary.townName: must be at most 200 characters");
+        }
+        else if (summary.TownName is not null && summary.TownName.Any(char.IsControl))
+        {
+            reasons.Add("summary.townName: must not contain control characters");
+        }
     }
 
     public static void CheckGame(SavedGame game, List<string> reasons)
@@ -61,6 +93,110 @@ internal static class SaveChecks
         {
             CheckCombat(game.Combat, "combat", true, reasons);
         }
+
+        CheckIds(game.Party, "party", reasons);
+        CheckTown(game.Town, reasons);
+        CheckConversation(game.Conversation, reasons);
+        CheckMemory(game.Memory, reasons);
+        CheckHandOff(game.HandOff, reasons);
+    }
+
+    private static void CheckIds(ImmutableArray<string> ids, string path, List<string> reasons)
+    {
+        if (ids.IsDefault)
+        {
+            reasons.Add(path + ": expected array");
+            return;
+        }
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var id in ids)
+        {
+            if (BadId(id))
+            {
+                reasons.Add(path + ": each id must be 1 to 64 characters");
+            }
+            else if (!seen.Add(id))
+            {
+                reasons.Add(path + ": duplicate id " + id);
+            }
+        }
+    }
+
+    private static void CheckTown(SavedTown? town, List<string> reasons)
+    {
+        if (town is null)
+        {
+            return;
+        }
+
+        if (BadId(town.Town))
+        {
+            reasons.Add("town.town: id must be 1 to 64 characters");
+        }
+
+        if (!double.IsFinite(town.X) || !double.IsFinite(town.Z))
+        {
+            reasons.Add("town: x and z must be finite numbers");
+        }
+    }
+
+    private static void CheckConversation(SavedConversation? conversation, List<string> reasons)
+    {
+        if (conversation is not null && (BadId(conversation.Conversation) || BadId(conversation.Step)))
+        {
+            reasons.Add("conversation: conversation and step ids must be 1 to 64 characters");
+        }
+    }
+
+    private static void CheckMemory(SavedMemory? memory, List<string> reasons)
+    {
+        if (memory is null)
+        {
+            reasons.Add("memory: expected object");
+            return;
+        }
+
+        CheckIds(memory.Flags, "memory.flags", reasons);
+        CheckIds(memory.Seen, "memory.seen", reasons);
+        if (memory.Chosen.IsDefault)
+        {
+            reasons.Add("memory.chosen: expected array");
+            return;
+        }
+
+        var seen = new HashSet<(string, string)>();
+        foreach (var choice in memory.Chosen)
+        {
+            if (choice is null || BadId(choice.Conversation) || BadId(choice.Choice))
+            {
+                reasons.Add("memory.chosen: each entry needs a conversation and a choice of 1 to 64 characters");
+            }
+            else if (!seen.Add((choice.Conversation, choice.Choice)))
+            {
+                reasons.Add($"memory.chosen: duplicate entry {choice.Conversation}/{choice.Choice}");
+            }
+        }
+    }
+
+    private static void CheckHandOff(SavedHandOff? handOff, List<string> reasons)
+    {
+        if (handOff is null)
+        {
+            return;
+        }
+
+        if (BadId(handOff.Fight))
+        {
+            reasons.Add("handOff.fight: id must be 1 to 64 characters");
+        }
+
+        if (handOff.Town is not null && BadId(handOff.Town))
+        {
+            reasons.Add("handOff.town: id must be 1 to 64 characters");
+        }
+
+        CheckIds(handOff.Lineup, "handOff.lineup", reasons);
     }
 
     private static void CheckPlayer(SavedPlayer? player, List<string> reasons)

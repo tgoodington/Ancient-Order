@@ -1,0 +1,45 @@
+{
+  "conversations": [
+    {
+      "id": "standin_scene_walkover",
+      "title": "STAND-IN Scene: Market Bell",
+      "participants": ["standin_elder", "standin_smith"],
+      "steps": [
+        {
+          "id": "ring",
+          "lines": [{ "speaker": "narrator", "text": "STAND-IN Scene: Market Bell. Walking onto this spot started this narrated scene." }],
+          "next": [{ "step": "elder_speaks" }]
+        },
+        {
+          "id": "elder_speaks",
+          "lines": [
+            { "speaker": "standin_elder", "text": "STAND-IN Elder: line in a multi-speaker scene." },
+            { "speaker": "standin_smith", "text": "STAND-IN Smith: answering line in the same scene." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "standin_scene_chained",
+      "title": "STAND-IN Scene: Chained",
+      "participants": ["standin_smith", "standin_elder"],
+      "steps": [
+        {
+          "id": "open",
+          "lines": [
+            { "speaker": "narrator", "text": "STAND-IN Scene: Chained. A conversation choice led straight into this narrated scene." },
+            { "speaker": "standin_smith", "text": "STAND-IN Smith: first line of the chained scene." }
+          ],
+          "next": [{ "step": "close" }]
+        },
+        {
+          "id": "close",
+          "lines": [
+            { "speaker": "standin_elder", "text": "STAND-IN Elder: second line of the chained scene." },
+            { "speaker": "narrator", "text": "STAND-IN Scene: Chained ends here." }
+          ]
+        }
+      ]
+    }
+  ]
+}

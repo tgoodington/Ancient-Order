@@ -40,13 +40,7 @@ public sealed partial class GameSession
                 return result;
             }
 
-            committed = outcome.Next with
-            {
-                Version = _snapshot.Version + 1,
-                Synergy = outcome.Next.Game is null
-                    ? ImmutableArray<SynergyResult>.Empty
-                    : Synergy.Current(_context.Content, outcome.Next.Game),
-            };
+            committed = Derive(outcome.Next, _snapshot, _snapshot.Version + 1);
         }
         catch (Exception)
         {

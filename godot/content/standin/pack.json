@@ -1,0 +1,17 @@
+{
+  "format": "ancient-order-content",
+  "version": 1,
+  "id": "standin",
+  "name": "STAND-IN Pack",
+  "standIn": true,
+  "files": [
+    "settings.json",
+    "cast.json",
+    "town.json",
+    "conversations/townsfolk.json",
+    "conversations/recruits.json",
+    "conversations/scenes.json",
+    "conversations/exit.json",
+    "fights.json"
+  ]
+}

@@ -21,7 +21,8 @@ public static class FightSetup
         }
 
         const string lineupMessage = "Choose a full lineup before starting a fight";
-        if (state.Lineup.IsDefault || state.Lineup.Length != content.Settings.LineupSize)
+        var readiness = LineupRules.Ready(content, state, encounter.Lineup ?? content.Settings.Lineup);
+        if (!readiness.Ready)
         {
             return Fail(ErrorCode.TEAM_COMPOSITION_INVALID, lineupMessage);
         }

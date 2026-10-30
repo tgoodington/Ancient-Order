@@ -1,0 +1,25 @@
+{
+  "fights": [
+    {
+      "id": "standin_encounter",
+      "name": "STAND-IN Encounter",
+      "enemies": [
+        {
+          "id": "standin_enemy",
+          "name": "STAND-IN Enemy",
+          "archetype": "standin_archetype_basic",
+          "rank": 3,
+          "stamina": 400,
+          "power": 40,
+          "speed": 60,
+          "elementalPath": "earth",
+          "reactionSkills": {
+            "block": { "sr": 0.5, "smr": 0.3, "fmr": 0.1 },
+            "dodge": { "sr": 0.4, "smr": 0.8, "fmr": 0.15 },
+            "parry": { "sr": 0.3, "smr": 0.9, "fmr": 0.1 }
+          }
+        }
+      ]
+    }
+  ]
+}

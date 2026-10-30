@@ -9,7 +9,7 @@ namespace AncientOrder;
 /// <summary>
 /// Headless smoke run: first builds the game's composition root (GameHost) and starts a game through it, without touching its saves.
 /// Then plays a fight through the session under Godot's .NET runtime, saving and loading mid-fight.
-/// Uses STAND-IN content and saves only under user://smoke/saves, which it empties before and after.
+/// Plays from the STAND-IN content pack (res://content/standin) and saves only under user://smoke/saves, which it empties before and after.
 /// Exits 0 on success, or 1 after printing the failing step.
 /// </summary>
 public partial class SmokeRun : Node
@@ -47,13 +47,39 @@ public partial class SmokeRun : Node
 
         Step("GameHost");
         var host = new GameHost();
-        Need(host.Session.NewGame());
-        if (host.Session.Snapshot.Version != 1 || host.Session.Snapshot.Game?.Player.Name != host.Content.Settings.PlayerName)
+        if (host.Content is not { } content || host.Session is not { } hostSession)
+        {
+            throw new InvalidOperationException("the stand-in pack did not load: " + string.Join("; ", host.ContentProblems.Select(p => p.Path + " " + p.Message)));
+        }
+
+        if (!content.Pack.StandIn)
+        {
+            throw new InvalidOperationException("the pack the game host loaded is not marked as stand-in");
+        }
+
+        Need(hostSession.NewGame());
+        if (hostSession.Snapshot.Version != 1 || hostSession.Snapshot.Game?.Player.Name != content.Settings.PlayerName)
         {
             throw new InvalidOperationException("the game host did not start a game with the stand-in player");
         }
 
-        var content = StandInContent.Create();
+        Step("new game starts in the stand-in town");
+        var started = hostSession.Snapshot.Game;
+        if (started?.Town?.TownId != StandInIds.TownId
+            || !content.Towns.TryGet(StandInIds.TownId, out var town)
+            || started.Town.Position != town.Start
+            || !started.Party.SequenceEqual([StandInIds.CompanionAId, StandInIds.CompanionBId]))
+        {
+            throw new InvalidOperationException("the new game did not start in the stand-in town with the two starting fighters");
+        }
+
+        Step("GameHost with a pack that cannot load");
+        var failed = new GameHost("res://content/no_such_pack");
+        if (failed.Session is not null || failed.Content is not null || failed.ContentProblems.IsEmpty)
+        {
+            throw new InvalidOperationException("the game host did not refuse a missing pack with a problem list");
+        }
+
         var session = new GameSession(content, new GameSessionOptions
         {
             Saves = new SaveStore(new FileSaveBackend(folder), content),
@@ -64,16 +90,16 @@ public partial class SmokeRun : Node
         Need(session.NewGame());
 
         Step("SetLineup");
-        Need(session.SetLineup([StandInContent.CompanionAId, StandInContent.CompanionBId]));
+        Need(session.SetLineup([StandInIds.CompanionAId, StandInIds.CompanionBId]));
 
         Step("StartEncounter");
-        Need(session.StartEncounter(StandInContent.EncounterId));
+        Need(session.StartEncounter(StandInIds.EncounterId));
 
         Step("DeclareOrders");
         var view = Need(session.GetCombatView());
         var orders = view.Fighters
-            .Where(f => f.Id != StandInContent.EnemyId)
-            .Select(f => new CombatAction(f.Id, ActionType.Attack, StandInContent.EnemyId, null))
+            .Where(f => f.Id != StandInIds.EnemyId)
+            .Select(f => new CombatAction(f.Id, ActionType.Attack, StandInIds.EnemyId, null))
             .ToList();
         var declared = Need(session.DeclareOrders(orders));
         if (declared.Accepted.Length != orders.Count)

@@ -40,7 +40,7 @@ internal static class SetupFixtures
         SynergySettings? synergy = null,
         ImmutableArray<EncounterDefinition>? encounters = null) =>
         TestContent.Create(
-            new GameSettings("Kael", lineupSize, null, hero),
+            new GameSettings("Kael", new LineupLimits(lineupSize, lineupSize), null, hero) { StartingParty = [.. (characters ?? TestCast.All).Select(c => c.Id)] },
             characters ?? TestCast.All,
             synergy ?? SynergySettings.None,
             encounters ?? [Foe]);
@@ -897,7 +897,7 @@ public class FightSetupRefusals
 
         Assert.Empty(content.Encounters.Definitions);
         SetupFixtures.Refused(FightSetup.Start(content, game, TestEncounters.DemoId, SetupFixtures.Seed, SetupFixtures.Later), ErrorCode.ENCOUNTER_NOT_FOUND);
-        Assert.Empty(GameContent.Create(new GameSettings("Kael", 2), TestCast.All, TestArchetypes.All).Value.Encounters.Definitions);
+        Assert.Empty(GameContent.Create(new GameSettings("Kael", new LineupLimits(2, 2)) { StartingParty = [.. TestCast.All.Select(c => c.Id)] }, TestCast.All, TestArchetypes.All).Value.Encounters.Definitions);
     }
 }
 
@@ -976,7 +976,7 @@ public class EncounterCatalogValidation
         new(id, name, archetype, rank, stamina, power, speed, path, skills ?? SetupFixtures.FoeSkills, level);
 
     private static Result<GameContent> Create(params EncounterDefinition[] encounters) =>
-        GameContent.Create(new GameSettings("Kael", 2), TestCast.All, TestArchetypes.All, null, [.. encounters]);
+        GameContent.Create(new GameSettings("Kael", new LineupLimits(2, 2)) { StartingParty = [.. TestCast.All.Select(c => c.Id)] }, TestCast.All, TestArchetypes.All, null, [.. encounters]);
 
     private static EncounterDefinition One(CombatantConfig enemy, string id = "enc", string name = "Encounter") => new(id, name, [enemy]);
 
@@ -1000,7 +1000,7 @@ public class EncounterCatalogValidation
     [Fact(DisplayName = "content without encounters has an empty catalog")]
     public void None()
     {
-        var result = GameContent.Create(new GameSettings("Kael", 2), TestCast.All, TestArchetypes.All);
+        var result = GameContent.Create(new GameSettings("Kael", new LineupLimits(2, 2)) { StartingParty = [.. TestCast.All.Select(c => c.Id)] }, TestCast.All, TestArchetypes.All);
 
         Assert.True(result.IsOk);
         Assert.Empty(result.Value.Encounters.Definitions);

@@ -1,0 +1,99 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://ui/screens/HandOffScreen.cs" id="1"]
+
+[sub_resource type="StyleBoxFlat" id="placeholder_band"]
+bg_color = Color(0.2784, 0.1961, 0.0784, 1)
+border_color = Color(0.8, 0.6, 0.2471, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 20
+content_margin_top = 14
+content_margin_right = 20
+content_margin_bottom = 14
+
+[node name="HandOffScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.102, 0.0784, 0.0627, 1)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Column" type="VBoxContainer" parent="Center"]
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Band" type="PanelContainer" parent="Center/Column"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("placeholder_band")
+
+[node name="Heading" type="Label" parent="Center/Column/Band"]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+theme_override_colors/font_color = Color(0.9, 0.7, 0.3, 1)
+text = "PLACEHOLDER: the fight arrives in Sprint 8"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Panel" type="PanelContainer" parent="Center/Column"]
+layout_mode = 2
+
+[node name="Content" type="VBoxContainer" parent="Center/Column/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="NextLabel" type="Label" parent="Center/Column/Panel/Content"]
+layout_mode = 2
+theme_type_variation = &"MutedLabel"
+text = "Next fight"
+horizontal_alignment = 1
+
+[node name="FightName" type="Label" parent="Center/Column/Panel/Content"]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Divider" type="HSeparator" parent="Center/Column/Panel/Content"]
+layout_mode = 2
+
+[node name="GoingInLabel" type="Label" parent="Center/Column/Panel/Content"]
+layout_mode = 2
+theme_type_variation = &"MutedLabel"
+text = "Going in"
+horizontal_alignment = 1
+
+[node name="LineupList" type="VBoxContainer" parent="Center/Column/Panel/Content"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="ReturnToStart" type="Button" parent="Center/Column"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Return to Start"

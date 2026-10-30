@@ -1,0 +1,1271 @@
+{
+  "title": "Sprint 7 (Godot): town and conversation systems",
+  "date": "2026-10-30",
+  "status": "success",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Content packs",
+      "domain": "code/content",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules/Content/Packs/IContentSource.cs",
+        "rules/AncientOrder.Rules/Content/Packs/FolderContentSource.cs",
+        "rules/AncientOrder.Rules/Content/Packs/MemoryContentSource.cs",
+        "rules/AncientOrder.Rules/Content/Packs/ContentPackLoader.cs",
+        "rules/AncientOrder.Rules/Content/Packs/ContentProvenance.cs",
+        "rules/AncientOrder.Rules/Content/Packs/ContentMapper.cs",
+        "rules/AncientOrder.Rules/Content/Packs/Format/PackIndexFile.cs",
+        "rules/AncientOrder.Rules/Content/Packs/Format/ContentFile.cs",
+        "rules/AncientOrder.Rules/Content/Packs/Format/SettingsFormat.cs",
+        "rules/AncientOrder.Rules/Content/Packs/Format/CharacterFormat.cs",
+        "rules/AncientOrder.Rules/Content/Packs/Format/ArchetypeFormat.cs",
+        "rules/AncientOrder.Rules/Content/Packs/Format/SynergyFormat.cs",
+        "rules/AncientOrder.Rules/Content/Packs/Format/FightFormat.cs",
+        "rules/AncientOrder.Rules/Content/Packs/Format/ContentJsonContext.cs",
+        "rules/AncientOrder.Rules/Common/StrictEnumConverter.cs",
+        "rules/AncientOrder.Rules/Content/PackInfo.cs",
+        "rules/AncientOrder.Rules/Content/GameContent.cs",
+        "godot/Content/GodotContentSource.cs",
+        "godot/GameHost.cs",
+        "godot/project.godot",
+        "godot/content/standin/pack.json",
+        "godot/content/standin/settings.json",
+        "godot/content/standin/cast.json",
+        "godot/content/standin/fights.json",
+        "godot/StandIn/StandInContent.cs",
+        "godot/smoke/SmokeRun.cs",
+        "godot/smoke/StandInIds.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Stand-in moved to a JSON pack; strict loader with file:pointer problems. Follow-ups: null-array-element walk (from T2 review); duplicate-key problems now carry line/column."
+      },
+      "deviations": [
+        "godot/Content and godot/content are one folder on disk (godot/content/)",
+        "Test namespace ContentPacks (Tests.Content collides)"
+      ],
+      "unanticipated_decisions": [
+        "ArchetypeFormat {id, profile?}",
+        "standIn required in pack.json"
+      ]
+    },
+    {
+      "id": "T2",
+      "title": "Conversations play from content",
+      "domain": "code/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules/Conversations/ConversationDefinition.cs",
+        "rules/AncientOrder.Rules/Conversations/ConversationCatalog.cs",
+        "rules/AncientOrder.Rules/Conversations/ConversationRules.cs",
+        "rules/AncientOrder.Rules/Conversations/ConversationView.cs",
+        "rules/AncientOrder.Rules/Conversations/ChoiceReport.cs",
+        "rules/AncientOrder.Rules/Effects/Effect.cs",
+        "rules/AncientOrder.Rules/Effects/EffectRules.cs",
+        "rules/AncientOrder.Rules/State/GameState.cs",
+        "rules/AncientOrder.Rules/Content/GameContent.cs",
+        "rules/AncientOrder.Rules/Session/GameSession.Conversations.cs",
+        "rules/AncientOrder.Rules/Session/Operations/ConversationOperations.cs",
+        "rules/AncientOrder.Rules/Session/SessionSnapshot.cs",
+        "rules/AncientOrder.Rules/Session/GameSession.cs",
+        "rules/AncientOrder.Rules/Common/RuleError.cs",
+        "rules/AncientOrder.Rules/Content/Packs/Format/ConversationFormat.cs",
+        "rules/AncientOrder.Rules/Content/Packs/Format/EffectFormat.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Security retry 1: null array elements could crash the loader; fixed generically."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "Start/Choose/Continue take a trailing now",
+        "Continue on a choice step gives CHOICE_UNAVAILABLE"
+      ]
+    },
+    {
+      "id": "T3",
+      "title": "Personality shifts and gates",
+      "domain": "code/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules/Effects/Effect.cs",
+        "rules/AncientOrder.Rules/Effects/EffectRules.cs",
+        "rules/AncientOrder.Rules/Conversations/ChoiceReport.cs",
+        "rules/AncientOrder.Rules/Conditions/RequirementView.cs",
+        "rules/AncientOrder.Rules/Content/Packs/Format/EffectFormat.cs",
+        "rules/AncientOrder.Rules/Content/GameSettings.cs",
+        "rules/AncientOrder.Rules/Content/Packs/Format/SettingsFormat.cs",
+        "rules/AncientOrder.Rules/Conversations/ConversationView.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": ""
+      },
+      "deviations": [
+        "Spec's TraitRequirement is T5's RequirementView.TraitRange (same fields)"
+      ],
+      "unanticipated_decisions": [
+        "Default locked line text 'That is not open to you yet.' (pack-overridable)"
+      ]
+    },
+    {
+      "id": "T4",
+      "title": "Archetype-driven reactions",
+      "domain": "code/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules/Reactions/ReactionProfile.cs",
+        "rules/AncientOrder.Rules/Reactions/ReactionOverride.cs",
+        "rules/AncientOrder.Rules/Reactions/ReactionRules.cs",
+        "rules/AncientOrder.Rules/Combat/Ai/ArchetypeDefinition.cs",
+        "rules/AncientOrder.Rules/Conversations/ChoiceReport.cs",
+        "rules/AncientOrder.Rules/Content/Packs/Format/ArchetypeFormat.cs",
+        "rules/AncientOrder.Rules/Content/Packs/Format/ConversationFormat.cs",
+        "rules/AncientOrder.Rules/Reactions/Tell.cs",
+        "rules/AncientOrder.Rules/Reactions/DemeanorRules.cs",
+        "rules/AncientOrder.Rules/Content/GameSettings.cs",
+        "rules/AncientOrder.Rules/Content/Packs/Format/SettingsFormat.cs",
+        "rules/AncientOrder.Rules/Conversations/ConversationView.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Security retry 1: intended changes clamped to +/-200 so extreme content cannot make a choice unchoosable."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "React takes now",
+        "Override validation stricter than spec (participant, no duplicates, silence xor text)"
+      ]
+    },
+    {
+      "id": "T5",
+      "title": "Conditions and story memory",
+      "domain": "code/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules/Conditions/Condition.cs",
+        "rules/AncientOrder.Rules/Conditions/Conditions.cs",
+        "rules/AncientOrder.Rules/Conditions/RequirementView.cs",
+        "rules/AncientOrder.Rules/Story/StoryMemory.cs",
+        "rules/AncientOrder.Rules/State/GameState.cs",
+        "rules/AncientOrder.Rules/State/GameStateUpdates.cs",
+        "rules/AncientOrder.Rules/Effects/Effect.cs",
+        "rules/AncientOrder.Rules/Conversations/ConversationRules.cs",
+        "rules/AncientOrder.Rules/Conversations/ConversationView.cs",
+        "rules/AncientOrder.Rules/Content/Packs/Format/ConditionFormat.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Builder hit its turn limit once and was resumed."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "Not renamed Negation in C# (CA1716); JSON stays 'not'"
+      ]
+    },
+    {
+      "id": "T6",
+      "title": "Party and fight lineup",
+      "domain": "code/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules/Party/PartyRules.cs",
+        "rules/AncientOrder.Rules/Party/LineupRules.cs",
+        "rules/AncientOrder.Rules/Party/LineupLimits.cs",
+        "rules/AncientOrder.Rules/Content/GameSettings.cs",
+        "rules/AncientOrder.Rules/Content/GameContent.cs",
+        "rules/AncientOrder.Rules/State/GameState.cs",
+        "rules/AncientOrder.Rules/State/GameStateUpdates.cs",
+        "rules/AncientOrder.Rules/Combat/FightSetup.cs",
+        "rules/AncientOrder.Rules/Session/SessionValidation.cs",
+        "rules/AncientOrder.Rules/Effects/Effect.cs",
+        "rules/AncientOrder.Rules/Conversations/ChoiceReport.cs",
+        "rules/AncientOrder.Rules/Content/Packs/Format/SettingsFormat.cs",
+        "rules/AncientOrder.Rules.Tests/Fixtures/TestContent.cs",
+        "rules/AncientOrder.Rules/Party/PartyView.cs",
+        "rules/AncientOrder.Rules/Session/SessionSnapshot.cs",
+        "rules/AncientOrder.Rules/Session/GameSession.cs",
+        "rules/AncientOrder.Rules/Party/Synergy/SynergyBonusDefinition.cs",
+        "rules/AncientOrder.Rules/Party/Synergy/SynergyCalculator.cs",
+        "rules/AncientOrder.Rules/Content/Packs/Format/SynergyFormat.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": ""
+      },
+      "deviations": [
+        "Spec said test content min=max=3; existing sizes were 2 and 3 - each kept, preserving behaviour"
+      ],
+      "unanticipated_decisions": [
+        "FightSetup failure message unchanged (existing tests assert it)"
+      ]
+    },
+    {
+      "id": "T7",
+      "title": "Town in the session",
+      "domain": "code/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules/Town/Geometry.cs",
+        "rules/AncientOrder.Rules/Town/TownDefinition.cs",
+        "rules/AncientOrder.Rules/Town/TownCatalog.cs",
+        "rules/AncientOrder.Rules/Town/IWalkableGround.cs",
+        "rules/AncientOrder.Rules/Town/TownRules.cs",
+        "rules/AncientOrder.Rules/Town/TownView.cs",
+        "rules/AncientOrder.Rules/Town/TownEvent.cs",
+        "rules/AncientOrder.Rules/State/GameState.cs",
+        "rules/AncientOrder.Rules/State/GameStateUpdates.cs",
+        "rules/AncientOrder.Rules/Content/GameSettings.cs",
+        "rules/AncientOrder.Rules/Content/GameContent.cs",
+        "rules/AncientOrder.Rules/Session/GameSession.Town.cs",
+        "rules/AncientOrder.Rules/Session/Operations/TownOperations.cs",
+        "rules/AncientOrder.Rules/Session/SessionSnapshot.cs",
+        "rules/AncientOrder.Rules/Session/GameSession.cs",
+        "rules/AncientOrder.Rules/Common/RuleError.cs",
+        "rules/AncientOrder.Rules/Content/Packs/Format/TownFormat.cs",
+        "rules/AncientOrder.Rules/Content/Packs/Format/SettingsFormat.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": ""
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "Moves during conversation/combat reuse CONVERSATION_ALREADY_ACTIVE/COMBAT_ALREADY_ACTIVE"
+      ]
+    },
+    {
+      "id": "T8",
+      "title": "People and spots open conversations",
+      "domain": "code/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules/Town/TownTriggers.cs",
+        "rules/AncientOrder.Rules/Town/TownDefinition.cs",
+        "rules/AncientOrder.Rules/Town/TownRules.cs",
+        "rules/AncientOrder.Rules/Town/TownView.cs",
+        "rules/AncientOrder.Rules/Session/GameSession.Town.cs",
+        "rules/AncientOrder.Rules/Session/Operations/TownOperations.cs",
+        "rules/AncientOrder.Rules/Common/RuleError.cs",
+        "rules/AncientOrder.Rules/Content/Packs/Format/TownFormat.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": ""
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "Walk-over spot passed to TriggerSpot gives VALIDATION_ERROR"
+      ]
+    },
+    {
+      "id": "T9",
+      "title": "Town hands off to the fight",
+      "domain": "code/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules/HandOff/FightHandOff.cs",
+        "rules/AncientOrder.Rules/HandOff/HandOffRules.cs",
+        "rules/AncientOrder.Rules/Combat/Encounters/EncounterDefinition.cs",
+        "rules/AncientOrder.Rules/Combat/FightSetup.cs",
+        "rules/AncientOrder.Rules/State/GameState.cs",
+        "rules/AncientOrder.Rules/Effects/Effect.cs",
+        "rules/AncientOrder.Rules/Conversations/ConversationRules.cs",
+        "rules/AncientOrder.Rules/Conversations/ChoiceReport.cs",
+        "rules/AncientOrder.Rules/Town/TownTriggers.cs",
+        "rules/AncientOrder.Rules/Session/Operations/TownOperations.cs",
+        "rules/AncientOrder.Rules/Session/Operations/ConversationOperations.cs",
+        "rules/AncientOrder.Rules/Session/Operations/PlayerOperations.cs",
+        "rules/AncientOrder.Rules/Common/RuleError.cs",
+        "rules/AncientOrder.Rules/Content/Packs/Format/FightFormat.cs",
+        "rules/AncientOrder.Rules/Content/Packs/Format/EffectFormat.cs",
+        "rules/AncientOrder.Rules/Content/Packs/Format/TownFormat.cs",
+        "rules/AncientOrder.Rules/HandOff/HandOffView.cs",
+        "rules/AncientOrder.Rules/Session/SessionSnapshot.cs",
+        "rules/AncientOrder.Rules/Session/GameSession.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Retry 1 (builder check): fight lineup limits validated (0<=min<=max, min<=settings max). Retry 2 (security): hand-off availability judged after preceding effects (dry run)."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "handOff must be the last effect"
+      ]
+    },
+    {
+      "id": "T10",
+      "title": "Saves carry everything",
+      "domain": "code/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules/Saves/SaveConstants.cs",
+        "rules/AncientOrder.Rules/Saves/Format/SaveEnvelope.cs",
+        "rules/AncientOrder.Rules/Saves/Format/SaveJsonContext.cs",
+        "rules/AncientOrder.Rules/Saves/SaveMapper.cs",
+        "rules/AncientOrder.Rules/Saves/SaveChecks.cs",
+        "rules/AncientOrder.Rules/Saves/SaveUpgrades.cs",
+        "rules/AncientOrder.Rules/Saves/SaveReconciler.cs",
+        "rules/AncientOrder.Rules/Saves/SaveStore.cs",
+        "rules/AncientOrder.Rules/Saves/SaveFormat.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Retry 1: step/choice/flag ids capped at 64 at load. Retry 2 (security): conversation with combat/hand-off ended on load; unknown hand-off town cleared; player/town names capped and control characters refused."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "Lineup duplicates/non-members dropped per member (LineupMemberDropped)",
+        "New LoadAdjustmentKind HandOffTownCleared"
+      ]
+    },
+    {
+      "id": "T11",
+      "title": "Content check",
+      "domain": "code/content",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules/Content/Check/ContentCheck.cs",
+        "rules/AncientOrder.Rules/Content/Check/ContentCheckReport.cs",
+        "rules/AncientOrder.Rules/Content/Check/DeadEndCheck.cs",
+        "rules/AncientOrder.Rules/Content/Check/GroundCheck.cs",
+        "rules/AncientOrder.Rules/Content/Check/FlagCheck.cs",
+        "rules/AncientOrder.Rules/Content/Check/ReachabilityCheck.cs",
+        "rules/AncientOrder.Rules/Content/Packs/ContentPackLoader.cs",
+        "tools/AncientOrder.ContentCheck/AncientOrder.ContentCheck.csproj",
+        "tools/AncientOrder.ContentCheck/Program.cs",
+        "AncientOrder.sln",
+        "verify.ps1",
+        "godot/GameHost.cs",
+        "docs/project_notes/key_facts.md",
+        "tools/AncientOrder.ContentCheck/ContentCheckCli.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Content check tool and verify step; the game refuses a pack with any problem."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "Extra files TextCheck.cs, PackWalk.cs",
+        "Digit warnings exclude synergy feel lines"
+      ]
+    },
+    {
+      "id": "T12",
+      "title": "Equinox look in Godot",
+      "domain": "ui/theme",
+      "producer": "ui-writer (profile) via intuition-code-writer",
+      "output_files": [
+        "godot/ui/theme/equinox_theme.tres",
+        "godot/ui/components/ErrorBanner.tscn",
+        "godot/ui/components/ErrorBanner.cs",
+        "godot/project.godot"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Theme not yet seen on screen by the designer."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "Screens must set ProgressBar show_percentage=false"
+      ]
+    },
+    {
+      "id": "T13",
+      "title": "Screen flow",
+      "domain": "code/godot",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "godot/main.tscn",
+        "godot/ui/ScreenFlow.cs",
+        "godot/ui/menu/GameMenu.tscn",
+        "godot/ui/menu/GameMenu.cs",
+        "godot/ui/screens/ContentErrorScreen.tscn",
+        "godot/ui/screens/ContentErrorScreen.cs",
+        "godot/GameHost.cs",
+        "godot/project.godot"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Later fixes via T16: ConversationHold, guard against deferred delivery after free."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "Fallback placeholder screens when a scene is missing"
+      ]
+    },
+    {
+      "id": "T14",
+      "title": "Walking the 3D town",
+      "domain": "code/godot",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "godot/town/TownStage.tscn",
+        "godot/town/TownStage.cs",
+        "godot/town/TownNavigation.cs",
+        "godot/town/TownCamera.cs",
+        "godot/town/PickLayers.cs",
+        "godot/project.godot"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": ""
+      },
+      "deviations": [
+        "Agent radius 0.5 m (spec about 0.4; Godot cell rounding); obstacles grown by agent radius"
+      ],
+      "unanticipated_decisions": [
+        "Namespace AncientOrder.Stage"
+      ]
+    },
+    {
+      "id": "T15",
+      "title": "Town look with placeholder shapes",
+      "domain": "ui/scene",
+      "producer": "ui-writer (profile) via intuition-code-writer",
+      "output_files": [
+        "godot/town/visuals/PlaceholderMeshes.cs",
+        "godot/town/visuals/PersonMarker.tscn",
+        "godot/town/visuals/PersonMarker.cs",
+        "godot/town/visuals/SpotMarker.tscn",
+        "godot/town/visuals/SpotMarker.cs",
+        "godot/town/visuals/PlayerAvatar.tscn",
+        "godot/town/visuals/materials/",
+        "godot/town/TownStage.tscn"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Look decisions listed for designer review."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "Warm demeanor overrides authored facing",
+        "Name tags draw through buildings"
+      ]
+    },
+    {
+      "id": "T16",
+      "title": "Conversations connected to the session",
+      "domain": "code/godot",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "godot/ui/conversation/ConversationPresenter.cs",
+        "godot/ui/conversation/ConversationOutcome.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Retry 1: ConversationHold keeps a final outcome on screen with the town paused through menu round-trips. Retry 2 (security): hold cleared on New Game/Return to Start."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "Extra file IConversationPanel.cs",
+        "CloseTaken event added to the panel contract"
+      ]
+    },
+    {
+      "id": "T17",
+      "title": "Conversation panel",
+      "domain": "ui/component",
+      "producer": "ui-writer (profile) via intuition-code-writer",
+      "output_files": [
+        "godot/ui/conversation/ConversationPanel.tscn",
+        "godot/ui/conversation/ConversationPanel.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Retry 1 (security hardening): re-entry guard, post-await validity check."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "Choices shown as 'N. text' - conflicts literally with 'No numbers appear anywhere in the panel' (director call)",
+        "Panel 40% of window height (spec about a third)"
+      ]
+    },
+    {
+      "id": "T18",
+      "title": "Party view and saves connected to the session",
+      "domain": "code/godot",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "godot/ui/party/PartyPresenter.cs",
+        "godot/ui/saves/SavePresenter.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Retry 1: SavePresenter.RequestSlots for the start screen. Retry 2: post-await validity guards."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "Plain C# events instead of Godot signals",
+        "Save/load/delete refusals inline only; lineup refusals use the banner"
+      ]
+    },
+    {
+      "id": "T19",
+      "title": "Personality, party, and lineup view",
+      "domain": "ui/component",
+      "producer": "ui-writer (profile) via intuition-code-writer",
+      "output_files": [
+        "godot/ui/party/PartyScreen.tscn",
+        "godot/ui/party/PartyScreen.cs",
+        "godot/ui/party/MemberCard.tscn"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Look decisions listed for designer review."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "MutedLabel overridden to tan (theme muted too faint on dark)"
+      ]
+    },
+    {
+      "id": "T20",
+      "title": "Save and load screen",
+      "domain": "ui/component",
+      "producer": "ui-writer (profile) via intuition-code-writer",
+      "output_files": [
+        "godot/ui/saves/SaveScreen.tscn",
+        "godot/ui/saves/SaveScreen.cs",
+        "godot/ui/saves/SlotRow.tscn"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Retry 1 (security): an open confirmation closes when busy or the slot changes."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "Every load from the menu asks for confirmation"
+      ]
+    },
+    {
+      "id": "T21",
+      "title": "Start screen",
+      "domain": "ui/page",
+      "producer": "ui-writer (profile) via intuition-code-writer",
+      "output_files": [
+        "godot/ui/screens/StartScreen.tscn",
+        "godot/ui/screens/StartScreen.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Retry 1 (security and spec): routed through SavePresenter; async guards; a failed list keeps Load enabled."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "Title shows the pack name ('STAND-IN Pack') - spec says 'the game's title' (director call)"
+      ]
+    },
+    {
+      "id": "T22",
+      "title": "Fight hand-off placeholder screen",
+      "domain": "ui/component",
+      "producer": "ui-writer (profile) via intuition-code-writer",
+      "output_files": [
+        "godot/ui/screens/HandOffScreen.tscn",
+        "godot/ui/screens/HandOffScreen.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Stray godot/.png from a screenshot run removed; screenshot path must now be absolute."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "Amber placeholder band (local style)"
+      ]
+    },
+    {
+      "id": "T23",
+      "title": "Stand-in content pack",
+      "domain": "content/stand-in",
+      "producer": "data-file-writer (profile) via intuition-code-writer",
+      "output_files": [
+        "godot/content/standin/pack.json",
+        "godot/content/standin/settings.json",
+        "godot/content/standin/cast.json",
+        "godot/content/standin/town.json",
+        "godot/content/standin/conversations/townsfolk.json",
+        "godot/content/standin/conversations/recruits.json",
+        "godot/content/standin/conversations/scenes.json",
+        "godot/content/standin/conversations/exit.json",
+        "godot/content/standin/fights.json",
+        "godot/smoke/SmokeRun.cs",
+        "godot/smoke/StandInIds.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Content check 0 problems / 0 warnings."
+      },
+      "deviations": [
+        "Stand-in equality test loosened as the pack grew"
+      ],
+      "unanticipated_decisions": [
+        "Companion B also stands in town (place for the departure)"
+      ]
+    },
+    {
+      "id": "T24",
+      "title": "Content guide",
+      "domain": "docs/content",
+      "producer": "document-writer (profile) via intuition-code-writer",
+      "output_files": [
+        "docs/content_guide.md",
+        "CLAUDE.md"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "skipped",
+        "notes": "Retry 1: playthrough caveats from T36 added to section 7."
+      },
+      "deviations": [],
+      "unanticipated_decisions": []
+    },
+    {
+      "id": "T25",
+      "title": "Tests: starting a game",
+      "domain": "test/integration",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "godot/tests/TestRunner.tscn",
+        "godot/tests/TestRunner.cs",
+        "godot/tests/Support/GodotTestAttribute.cs",
+        "godot/tests/Support/TestContext.cs",
+        "godot/tests/Support/Assert.cs",
+        "godot/tests/Support/TestPacks.cs",
+        "godot/tests/StartScreenTests.cs",
+        "rules/AncientOrder.Rules.Tests/Session/NewGameTests.cs",
+        "godot/AncientOrder.csproj",
+        "verify.ps1"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Godot in-engine test runner; tests excluded from release builds and checked by verify."
+      },
+      "deviations": [],
+      "unanticipated_decisions": []
+    },
+    {
+      "id": "T26",
+      "title": "Tests: walking a town built from content",
+      "domain": "test/integration",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules.Tests/Town/GeometryTests.cs",
+        "rules/AncientOrder.Rules.Tests/Town/AuthoredGroundTests.cs",
+        "rules/AncientOrder.Rules.Tests/Town/MovePlayerTests.cs",
+        "godot/tests/TownStageTests.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Batched security review of the test wave passed."
+      },
+      "deviations": [],
+      "unanticipated_decisions": []
+    },
+    {
+      "id": "T27",
+      "title": "Tests: people and spots open conversations",
+      "domain": "test/integration",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules.Tests/Town/TriggerTests.cs",
+        "godot/tests/TownTriggerTests.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Batched security review of the test wave passed."
+      },
+      "deviations": [],
+      "unanticipated_decisions": []
+    },
+    {
+      "id": "T28",
+      "title": "Tests: conversations play on screen",
+      "domain": "test/integration",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules.Tests/Conversations/ConversationRulesTests.cs",
+        "rules/AncientOrder.Rules.Tests/Conversations/ConversationLoadTests.cs",
+        "godot/tests/ConversationPanelTests.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Batched security review of the test wave passed."
+      },
+      "deviations": [],
+      "unanticipated_decisions": []
+    },
+    {
+      "id": "T29",
+      "title": "Tests: personality shifts and gates",
+      "domain": "test/integration",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules.Tests/Personality/ShiftEffectTests.cs",
+        "rules/AncientOrder.Rules.Tests/Conversations/LockedChoiceTests.cs",
+        "godot/tests/LockedChoiceTests.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Batched security review of the test wave passed."
+      },
+      "deviations": [],
+      "unanticipated_decisions": []
+    },
+    {
+      "id": "T30",
+      "title": "Tests: archetype reactions",
+      "domain": "test/integration",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules.Tests/Reactions/ReactionRulesTests.cs",
+        "rules/AncientOrder.Rules.Tests/Reactions/DemeanorTests.cs",
+        "godot/tests/ReactionTellTests.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Batched security review of the test wave passed."
+      },
+      "deviations": [],
+      "unanticipated_decisions": []
+    },
+    {
+      "id": "T31",
+      "title": "Tests: choices carry forward",
+      "domain": "test/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules.Tests/Conditions/ConditionTests.cs",
+        "rules/AncientOrder.Rules.Tests/Conditions/StoryMemoryTests.cs",
+        "rules/AncientOrder.Rules.Tests/Conditions/ConditionHookTests.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "77 tests."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "Namespace ConditionTesting"
+      ]
+    },
+    {
+      "id": "T32",
+      "title": "Tests: choices shape the party",
+      "domain": "test/integration",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules.Tests/Party/PartyRulesTests.cs",
+        "rules/AncientOrder.Rules.Tests/Party/LineupRulesTests.cs",
+        "rules/AncientOrder.Rules.Tests/Party/PartyViewTests.cs",
+        "godot/tests/PartyScreenTests.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Batched security review of the test wave passed."
+      },
+      "deviations": [],
+      "unanticipated_decisions": []
+    },
+    {
+      "id": "T33",
+      "title": "Tests: the town hands off to the fight",
+      "domain": "test/integration",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules.Tests/HandOff/HandOffTests.cs",
+        "godot/tests/HandOffScreenTests.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Batched security review of the test wave passed."
+      },
+      "deviations": [],
+      "unanticipated_decisions": []
+    },
+    {
+      "id": "T34",
+      "title": "Tests: saving and loading",
+      "domain": "test/integration",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules.Tests/Saves/SaveV2Tests.cs",
+        "rules/AncientOrder.Rules.Tests/Saves/ReconcileTests.cs",
+        "rules/AncientOrder.Rules.Tests/Saves/UpgradeTests.cs",
+        "rules/AncientOrder.Rules.Tests/Saves/Fixtures/v1-foundation.json",
+        "godot/tests/SaveScreenTests.cs",
+        "godot/tests/Support/GatedSaveBackend.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Batched security review of the test wave passed."
+      },
+      "deviations": [],
+      "unanticipated_decisions": []
+    },
+    {
+      "id": "T35",
+      "title": "Tests: content goes in and gets checked",
+      "domain": "test/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules.Tests/Content/Packs/PackLoaderTests.cs",
+        "rules/AncientOrder.Rules.Tests/Content/Check/ContentCheckTests.cs",
+        "tools/AncientOrder.ContentCheck.Tests/AncientOrder.ContentCheck.Tests.csproj",
+        "tools/AncientOrder.ContentCheck.Tests/ContentCheckCliTests.cs",
+        "AncientOrder.sln"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "40 tests plus the new tools/AncientOrder.ContentCheck.Tests project."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "Namespaces PackIntake, CheckKinds"
+      ]
+    },
+    {
+      "id": "T36",
+      "title": "Tests: stand-in playthrough proves every mechanic",
+      "domain": "test/engine",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "rules/AncientOrder.Rules.Tests/Playthrough/StandInPlaythroughTests.cs",
+        "rules/AncientOrder.Rules.Tests/Playthrough/StandInRoute.cs",
+        "rules/AncientOrder.Rules.Tests/Playthrough/MechanicsChecklist.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Retry 1: meta-tests prove the checklist names missing mechanics."
+      },
+      "deviations": [],
+      "unanticipated_decisions": [
+        "HiddenOutcome/LockedFallback evidence are proxies"
+      ]
+    },
+    {
+      "id": "T37",
+      "title": "Dev tools (designer only, never shipped)",
+      "domain": "code/godot",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "godot/devtools/DevTools.cs",
+        "godot/devtools/DevOverlay.tscn",
+        "godot/devtools/DevOverlay.cs",
+        "godot/devtools/RequirementText.cs",
+        "godot/devtools/LoadReportNotice.tscn",
+        "godot/devtools/LoadReportNotice.cs",
+        "godot/devtools/ContentProblemsList.tscn",
+        "godot/devtools/ContentProblemsList.cs",
+        "godot/AncientOrder.csproj",
+        "verify.ps1",
+        "docs/project_notes/key_facts.md"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Dev tools compiled only for Debug/ExportDebug; verify scans the release dll."
+      },
+      "deviations": [
+        "Spec: every configuration except ExportRelease; built for Debug/ExportDebug only (plain Release excluded too) - stricter, from a build-manager instruction"
+      ],
+      "unanticipated_decisions": [
+        "Install call moved after _started"
+      ]
+    },
+    {
+      "id": "T38",
+      "title": "Tests: dev tools",
+      "domain": "test/integration",
+      "producer": "intuition-code-writer",
+      "output_files": [
+        "godot/tests/DevToolsTests.cs"
+      ],
+      "status": "pass",
+      "review": {
+        "builder_verification": "pass",
+        "security_review": "pass",
+        "notes": "Batched security review of the test wave passed."
+      },
+      "deviations": [],
+      "unanticipated_decisions": []
+    }
+  ],
+  "files_created": [
+    "docs/content_guide.md",
+    "godot/content/GodotContentSource.cs",
+    "godot/content/standin/cast.json",
+    "godot/content/standin/conversations/exit.json",
+    "godot/content/standin/conversations/recruits.json",
+    "godot/content/standin/conversations/scenes.json",
+    "godot/content/standin/conversations/townsfolk.json",
+    "godot/content/standin/fights.json",
+    "godot/content/standin/pack.json",
+    "godot/content/standin/settings.json",
+    "godot/content/standin/town.json",
+    "godot/devtools/ContentProblemsList.cs",
+    "godot/devtools/ContentProblemsList.tscn",
+    "godot/devtools/DevOverlay.cs",
+    "godot/devtools/DevOverlay.tscn",
+    "godot/devtools/DevTools.cs",
+    "godot/devtools/LoadReportNotice.cs",
+    "godot/devtools/LoadReportNotice.tscn",
+    "godot/devtools/RequirementText.cs",
+    "godot/smoke/ConversationCheck.cs",
+    "godot/smoke/DevToolsCheck.cs",
+    "godot/smoke/FlowCheck.cs",
+    "godot/smoke/HandOffCheck.cs",
+    "godot/smoke/PanelCheck.cs",
+    "godot/smoke/PresenterCheck.cs",
+    "godot/smoke/SaveScreenCheck.cs",
+    "godot/smoke/StandInIds.cs",
+    "godot/smoke/TownWalkCheck.cs",
+    "godot/smoke/conversationcheck.tscn",
+    "godot/smoke/devtoolscheck.tscn",
+    "godot/smoke/flowcheck.tscn",
+    "godot/smoke/handoffcheck.tscn",
+    "godot/smoke/panelcheck.tscn",
+    "godot/smoke/presentercheck.tscn",
+    "godot/smoke/savescreencheck.tscn",
+    "godot/smoke/townpack/cast.json",
+    "godot/smoke/townpack/fights.json",
+    "godot/smoke/townpack/pack.json",
+    "godot/smoke/townpack/settings.json",
+    "godot/smoke/townpack/talk.json",
+    "godot/smoke/townpack/town.json",
+    "godot/smoke/townwalk.tscn",
+    "godot/tests/ConversationPanelTests.cs",
+    "godot/tests/DevToolsTests.cs",
+    "godot/tests/HandOffScreenTests.cs",
+    "godot/tests/LockedChoiceTests.cs",
+    "godot/tests/PartyScreenTests.cs",
+    "godot/tests/ReactionTellTests.cs",
+    "godot/tests/SaveScreenTests.cs",
+    "godot/tests/StartScreenTests.cs",
+    "godot/tests/Support/Assert.cs",
+    "godot/tests/Support/ConversationPacks.cs",
+    "godot/tests/Support/GatedSaveBackend.cs",
+    "godot/tests/Support/GodotTestAttribute.cs",
+    "godot/tests/Support/HandOffPacks.cs",
+    "godot/tests/Support/LockedChoicePacks.cs",
+    "godot/tests/Support/PartyScreenPacks.cs",
+    "godot/tests/Support/ReactionPacks.cs",
+    "godot/tests/Support/TestContext.cs",
+    "godot/tests/Support/TestPacks.cs",
+    "godot/tests/Support/TownStagePacks.cs",
+    "godot/tests/Support/TownTriggerPacks.cs",
+    "godot/tests/TestRunner.cs",
+    "godot/tests/TestRunner.tscn",
+    "godot/tests/TownStageTests.cs",
+    "godot/tests/TownTriggerTests.cs",
+    "godot/town/PickLayers.cs",
+    "godot/town/TownCamera.cs",
+    "godot/town/TownNavigation.cs",
+    "godot/town/TownStage.cs",
+    "godot/town/TownStage.tscn",
+    "godot/town/visuals/PersonMarker.cs",
+    "godot/town/visuals/PersonMarker.tscn",
+    "godot/town/visuals/PlaceholderMeshes.cs",
+    "godot/town/visuals/PlayerAvatar.cs",
+    "godot/town/visuals/PlayerAvatar.tscn",
+    "godot/town/visuals/SpotMarker.cs",
+    "godot/town/visuals/SpotMarker.tscn",
+    "godot/town/visuals/materials/building_top.tres",
+    "godot/town/visuals/materials/building_wall.tres",
+    "godot/town/visuals/materials/ground.tres",
+    "godot/town/visuals/materials/marker.tres",
+    "godot/town/visuals/materials/marker_near.tres",
+    "godot/town/visuals/materials/person_body.tres",
+    "godot/town/visuals/materials/person_nose.tres",
+    "godot/town/visuals/materials/player_body.tres",
+    "godot/town/visuals/materials/player_nose.tres",
+    "godot/town/visuals/materials/spot.tres",
+    "godot/town/visuals/materials/spot_near.tres",
+    "godot/ui/IFlowScreen.cs",
+    "godot/ui/SaveScreenMode.cs",
+    "godot/ui/ScreenFlow.cs",
+    "godot/ui/components/ErrorBanner.cs",
+    "godot/ui/components/ErrorBanner.tscn",
+    "godot/ui/conversation/ConversationOutcome.cs",
+    "godot/ui/conversation/ConversationPanel.cs",
+    "godot/ui/conversation/ConversationPanel.tscn",
+    "godot/ui/conversation/ConversationPresenter.cs",
+    "godot/ui/conversation/IConversationPanel.cs",
+    "godot/ui/menu/GameMenu.cs",
+    "godot/ui/menu/GameMenu.tscn",
+    "godot/ui/party/MemberCard.tscn",
+    "godot/ui/party/PartyPresenter.cs",
+    "godot/ui/party/PartyScreen.cs",
+    "godot/ui/party/PartyScreen.tscn",
+    "godot/ui/saves/SavePresenter.cs",
+    "godot/ui/saves/SaveScreen.cs",
+    "godot/ui/saves/SaveScreen.tscn",
+    "godot/ui/saves/SlotRow.cs",
+    "godot/ui/saves/SlotRow.tscn",
+    "godot/ui/screens/ContentErrorScreen.cs",
+    "godot/ui/screens/ContentErrorScreen.tscn",
+    "godot/ui/screens/HandOffScreen.cs",
+    "godot/ui/screens/HandOffScreen.tscn",
+    "godot/ui/screens/StartScreen.cs",
+    "godot/ui/screens/StartScreen.tscn",
+    "godot/ui/theme/equinox_theme.tres",
+    "rules/AncientOrder.Rules.Tests/Conditions/ConditionHookTests.cs",
+    "rules/AncientOrder.Rules.Tests/Conditions/ConditionTests.cs",
+    "rules/AncientOrder.Rules.Tests/Conditions/StoryMemoryTests.cs",
+    "rules/AncientOrder.Rules.Tests/Content/Check/ContentCheckTests.cs",
+    "rules/AncientOrder.Rules.Tests/Content/Packs/PackLoaderTests.cs",
+    "rules/AncientOrder.Rules.Tests/ContentPacks/ConditionTests.cs",
+    "rules/AncientOrder.Rules.Tests/ContentPacks/ContentCheckTests.cs",
+    "rules/AncientOrder.Rules.Tests/ContentPacks/ContentPackLoaderTests.cs",
+    "rules/AncientOrder.Rules.Tests/ContentPacks/ConversationTests.cs",
+    "rules/AncientOrder.Rules.Tests/ContentPacks/PersonalityShiftTests.cs",
+    "rules/AncientOrder.Rules.Tests/ContentPacks/ReactionTests.cs",
+    "rules/AncientOrder.Rules.Tests/ContentPacks/TownTests.cs",
+    "rules/AncientOrder.Rules.Tests/ContentPacks/TownTriggerTests.cs",
+    "rules/AncientOrder.Rules.Tests/Conversations/ConversationLoadTests.cs",
+    "rules/AncientOrder.Rules.Tests/Conversations/ConversationRulesTests.cs",
+    "rules/AncientOrder.Rules.Tests/Conversations/LockedChoiceTests.cs",
+    "rules/AncientOrder.Rules.Tests/HandOff/HandOffTests.cs",
+    "rules/AncientOrder.Rules.Tests/Party/PartyRulesTests.cs",
+    "rules/AncientOrder.Rules.Tests/Party/PartyTests.cs",
+    "rules/AncientOrder.Rules.Tests/Party/PartyViewTests.cs",
+    "rules/AncientOrder.Rules.Tests/Personality/ShiftEffectTests.cs",
+    "rules/AncientOrder.Rules.Tests/Playthrough/MechanicsChecklist.cs",
+    "rules/AncientOrder.Rules.Tests/Playthrough/StandInPlaythroughTests.cs",
+    "rules/AncientOrder.Rules.Tests/Playthrough/StandInRoute.cs",
+    "rules/AncientOrder.Rules.Tests/Reactions/DemeanorTests.cs",
+    "rules/AncientOrder.Rules.Tests/Reactions/ReactionRulesTests.cs",
+    "rules/AncientOrder.Rules.Tests/Saves/Fixtures/v1-foundation.json",
+    "rules/AncientOrder.Rules.Tests/Saves/ReconcileTests.cs",
+    "rules/AncientOrder.Rules.Tests/Saves/SaveV2Tests.cs",
+    "rules/AncientOrder.Rules.Tests/Saves/SaveWorldTests.cs",
+    "rules/AncientOrder.Rules.Tests/Saves/UpgradeTests.cs",
+    "rules/AncientOrder.Rules.Tests/Session/NewGameTests.cs",
+    "rules/AncientOrder.Rules.Tests/Town/AuthoredGroundTests.cs",
+    "rules/AncientOrder.Rules.Tests/Town/GeometryTests.cs",
+    "rules/AncientOrder.Rules.Tests/Town/MovePlayerTests.cs",
+    "rules/AncientOrder.Rules.Tests/Town/TriggerTests.cs",
+    "rules/AncientOrder.Rules/Common/StrictEnumConverter.cs",
+    "rules/AncientOrder.Rules/Conditions/Condition.cs",
+    "rules/AncientOrder.Rules/Conditions/Conditions.cs",
+    "rules/AncientOrder.Rules/Conditions/RequirementView.cs",
+    "rules/AncientOrder.Rules/Content/Check/ContentCheck.cs",
+    "rules/AncientOrder.Rules/Content/Check/ContentCheckReport.cs",
+    "rules/AncientOrder.Rules/Content/Check/DeadEndCheck.cs",
+    "rules/AncientOrder.Rules/Content/Check/FlagCheck.cs",
+    "rules/AncientOrder.Rules/Content/Check/GroundCheck.cs",
+    "rules/AncientOrder.Rules/Content/Check/PackWalk.cs",
+    "rules/AncientOrder.Rules/Content/Check/ReachabilityCheck.cs",
+    "rules/AncientOrder.Rules/Content/Check/TextCheck.cs",
+    "rules/AncientOrder.Rules/Content/PackInfo.cs",
+    "rules/AncientOrder.Rules/Content/Packs/ContentMapper.cs",
+    "rules/AncientOrder.Rules/Content/Packs/ContentPackLoader.cs",
+    "rules/AncientOrder.Rules/Content/Packs/ContentProvenance.cs",
+    "rules/AncientOrder.Rules/Content/Packs/FolderContentSource.cs",
+    "rules/AncientOrder.Rules/Content/Packs/Format/ArchetypeFormat.cs",
+    "rules/AncientOrder.Rules/Content/Packs/Format/CharacterFormat.cs",
+    "rules/AncientOrder.Rules/Content/Packs/Format/ConditionFormat.cs",
+    "rules/AncientOrder.Rules/Content/Packs/Format/ContentFile.cs",
+    "rules/AncientOrder.Rules/Content/Packs/Format/ContentJsonContext.cs",
+    "rules/AncientOrder.Rules/Content/Packs/Format/ConversationFormat.cs",
+    "rules/AncientOrder.Rules/Content/Packs/Format/EffectFormat.cs",
+    "rules/AncientOrder.Rules/Content/Packs/Format/FightFormat.cs",
+    "rules/AncientOrder.Rules/Content/Packs/Format/PackIndexFile.cs",
+    "rules/AncientOrder.Rules/Content/Packs/Format/SettingsFormat.cs",
+    "rules/AncientOrder.Rules/Content/Packs/Format/SynergyFormat.cs",
+    "rules/AncientOrder.Rules/Content/Packs/Format/TownFormat.cs",
+    "rules/AncientOrder.Rules/Content/Packs/IContentSource.cs",
+    "rules/AncientOrder.Rules/Content/Packs/MemoryContentSource.cs",
+    "rules/AncientOrder.Rules/Conversations/ChoiceReport.cs",
+    "rules/AncientOrder.Rules/Conversations/ConversationCatalog.cs",
+    "rules/AncientOrder.Rules/Conversations/ConversationDefinition.cs",
+    "rules/AncientOrder.Rules/Conversations/ConversationRules.cs",
+    "rules/AncientOrder.Rules/Conversations/ConversationView.cs",
+    "rules/AncientOrder.Rules/Effects/Effect.cs",
+    "rules/AncientOrder.Rules/Effects/EffectRules.cs",
+    "rules/AncientOrder.Rules/HandOff/FightHandOff.cs",
+    "rules/AncientOrder.Rules/HandOff/HandOffRules.cs",
+    "rules/AncientOrder.Rules/HandOff/HandOffView.cs",
+    "rules/AncientOrder.Rules/Party/LineupLimits.cs",
+    "rules/AncientOrder.Rules/Party/PartyRules.cs",
+    "rules/AncientOrder.Rules/Party/PartyView.cs",
+    "rules/AncientOrder.Rules/Reactions/DemeanorRules.cs",
+    "rules/AncientOrder.Rules/Reactions/ReactionOverride.cs",
+    "rules/AncientOrder.Rules/Reactions/ReactionProfile.cs",
+    "rules/AncientOrder.Rules/Reactions/ReactionRules.cs",
+    "rules/AncientOrder.Rules/Reactions/Tell.cs",
+    "rules/AncientOrder.Rules/Session/GameSession.Conversations.cs",
+    "rules/AncientOrder.Rules/Session/GameSession.Town.cs",
+    "rules/AncientOrder.Rules/Session/Operations/ConversationOperations.cs",
+    "rules/AncientOrder.Rules/Session/Operations/TownOperations.cs",
+    "rules/AncientOrder.Rules/Story/StoryMemory.cs",
+    "rules/AncientOrder.Rules/Town/Geometry.cs",
+    "rules/AncientOrder.Rules/Town/IWalkableGround.cs",
+    "rules/AncientOrder.Rules/Town/TownCatalog.cs",
+    "rules/AncientOrder.Rules/Town/TownDefinition.cs",
+    "rules/AncientOrder.Rules/Town/TownEvent.cs",
+    "rules/AncientOrder.Rules/Town/TownRules.cs",
+    "rules/AncientOrder.Rules/Town/TownTriggers.cs",
+    "rules/AncientOrder.Rules/Town/TownView.cs",
+    "tools/AncientOrder.ContentCheck.Tests/AncientOrder.ContentCheck.Tests.csproj",
+    "tools/AncientOrder.ContentCheck.Tests/ContentCheckCliTests.cs",
+    "tools/AncientOrder.ContentCheck/AncientOrder.ContentCheck.csproj",
+    "tools/AncientOrder.ContentCheck/ContentCheckCli.cs",
+    "tools/AncientOrder.ContentCheck/Program.cs"
+  ],
+  "files_modified": [
+    "AncientOrder.sln",
+    "CLAUDE.md",
+    "docs/project_notes/decisions.md",
+    "docs/project_notes/key_facts.md",
+    "docs/project_notes/project_map.md",
+    "godot/AncientOrder.csproj",
+    "godot/GameHost.cs",
+    "godot/main.tscn",
+    "godot/project.godot",
+    "godot/smoke/SmokeRun.cs",
+    "rules/AncientOrder.Rules.Tests/Combat/FightSetupTests.cs",
+    "rules/AncientOrder.Rules.Tests/Fixtures/TestContent.cs",
+    "rules/AncientOrder.Rules.Tests/Fixtures/TestEncounters.cs",
+    "rules/AncientOrder.Rules.Tests/Party/LineupRulesTests.cs",
+    "rules/AncientOrder.Rules.Tests/Saves/SaveBackendTests.cs",
+    "rules/AncientOrder.Rules.Tests/Saves/SaveFormatTests.cs",
+    "rules/AncientOrder.Rules.Tests/Saves/SaveReconcilerTests.cs",
+    "rules/AncientOrder.Rules.Tests/Saves/SaveStoreTests.cs",
+    "rules/AncientOrder.Rules.Tests/Session/PlayerOperationsTests.cs",
+    "rules/AncientOrder.Rules.Tests/Session/SaveOperationsTests.cs",
+    "rules/AncientOrder.Rules.Tests/Session/SessionEndToEndTests.cs",
+    "rules/AncientOrder.Rules.Tests/Session/SessionValidationTests.cs",
+    "rules/AncientOrder.Rules.Tests/Support/TestSessions.cs",
+    "rules/AncientOrder.Rules/Characters/CharacterCatalog.cs",
+    "rules/AncientOrder.Rules/Combat/Ai/ArchetypeCatalog.cs",
+    "rules/AncientOrder.Rules/Combat/Ai/ArchetypeDefinition.cs",
+    "rules/AncientOrder.Rules/Combat/Encounters/EncounterDefinition.cs",
+    "rules/AncientOrder.Rules/Combat/FightSetup.cs",
+    "rules/AncientOrder.Rules/Common/RuleError.cs",
+    "rules/AncientOrder.Rules/Content/GameContent.cs",
+    "rules/AncientOrder.Rules/Content/GameSettings.cs",
+    "rules/AncientOrder.Rules/Party/LineupRules.cs",
+    "rules/AncientOrder.Rules/Party/Synergy/SynergyBonusDefinition.cs",
+    "rules/AncientOrder.Rules/Party/Synergy/SynergyCalculator.cs",
+    "rules/AncientOrder.Rules/Saves/Format/SaveEnvelope.cs",
+    "rules/AncientOrder.Rules/Saves/Format/SaveJsonContext.cs",
+    "rules/AncientOrder.Rules/Saves/SaveChecks.cs",
+    "rules/AncientOrder.Rules/Saves/SaveConstants.cs",
+    "rules/AncientOrder.Rules/Saves/SaveFormat.cs",
+    "rules/AncientOrder.Rules/Saves/SaveMapper.cs",
+    "rules/AncientOrder.Rules/Saves/SaveReconciler.cs",
+    "rules/AncientOrder.Rules/Saves/SaveStore.cs",
+    "rules/AncientOrder.Rules/Saves/SaveUpgrades.cs",
+    "rules/AncientOrder.Rules/Session/GameSession.Saves.cs",
+    "rules/AncientOrder.Rules/Session/GameSession.cs",
+    "rules/AncientOrder.Rules/Session/Operations/PlayerOperations.cs",
+    "rules/AncientOrder.Rules/Session/SessionSnapshot.cs",
+    "rules/AncientOrder.Rules/Session/SessionValidation.cs",
+    "rules/AncientOrder.Rules/State/GameState.cs",
+    "rules/AncientOrder.Rules/State/GameStateUpdates.cs",
+    "verify.ps1"
+  ],
+  "files_deleted": [
+    "godot/StandIn/StandInContent.cs"
+  ],
+  "verification": {
+    "verify_ps1": "passes: format, build, release build without dev tools/tests, 1706 .NET tests, content check 0/0, Godot smoke, 85 Godot screen tests; 3 consecutive green runs on 2026-10-30",
+    "headless_checks": "godot/smoke: townwalk, flowcheck, conversationcheck, panelcheck, presentercheck, savescreencheck, handoffcheck, devtoolscheck - all pass, run on demand outside verify",
+    "not_yet_seen_by_designer": "No screen has been opened in the editor by the designer; builders took a few throwaway screenshots only."
+  },
+  "escalated_issues": [],
+  "director_review": [
+    "Conversation panel shows choice numbers ('1. text') for number-key shortcuts; the T17 criterion says 'No numbers appear anywhere in the panel'.",
+    "Start screen title shows the pack name ('STAND-IN Pack'); the spec says 'the game's title'.",
+    "Default locked line wording 'That is not open to you yet.' (pack can override) - open creative question.",
+    "Town look (T15): colours, demeanor posture table, tell lean sizes, Warm overriding authored facing, name tags through buildings.",
+    "Screens' look (T19 party, T20 save, T21 start, T22 hand-off amber band): placeholder Equinox styling; theme MutedLabel too faint on dark backdrops."
+  ],
+  "open_for_later": [
+    "Export sprint: export presets must exclude godot/tests/*, TestRunner.tscn and godot/devtools/* resources (the csproj removes only C#); add *.json to non-resource filters.",
+    "Town tests needed a 5-physics-frame wait before a new town after freeing the previous scene (test-only; watch navigation readiness after Return to Start then New Game in play).",
+    "Stand-in pack: Elder 'warm' and 'override' cannot both be taken in one game; 'ask' only on the first visit; 'favor' never seen locked after 'warm'.",
+    "Saves: char.IsControl misses bidi/format characters in names (harmless locally)."
+  ],
+  "brief_alignment": {
+    "north_star": "met",
+    "constraints_respected": true,
+    "stakeholders_served": [
+      "Demo players: walkable 3D town, conversations carrying all five mechanics, start/party/save/hand-off screens",
+      "Designer/director: content packs, content check, content guide, F3 dev tools; creative decisions plug in as content"
+    ]
+  }
+}

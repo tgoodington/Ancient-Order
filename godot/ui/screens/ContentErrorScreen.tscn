@@ -1,0 +1,50 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://ui/screens/ContentErrorScreen.cs" id="1"]
+
+[node name="ContentErrorScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.102, 0.0784, 0.0627, 1)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(480, 0)
+layout_mode = 2
+
+[node name="Content" type="VBoxContainer" parent="Center/Panel"]
+layout_mode = 2
+
+[node name="Message" type="Label" parent="Center/Panel/Content"]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+text = "The game's content failed to load."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="DetailSlot" type="VBoxContainer" parent="Center/Panel/Content"]
+layout_mode = 2
+
+[node name="Quit" type="Button" parent="Center/Panel/Content"]
+layout_mode = 2
+text = "Quit"

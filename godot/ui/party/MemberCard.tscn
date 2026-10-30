@@ -1,0 +1,54 @@
+[gd_scene format=3]
+
+[node name="MemberCard" type="PanelContainer"]
+layout_mode = 3
+anchors_preset = 0
+size_flags_horizontal = 3
+
+[node name="Box" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Top" type="HBoxContainer" parent="Box"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Name" type="Label" parent="Box/Top"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"TitleLabel"
+theme_override_font_sizes/font_size = 20
+text_overrun_behavior = 3
+
+[node name="Status" type="Label" parent="Box/Top"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6588, 0.5961, 0.502, 1)
+text = "Does not fight"
+
+[node name="Toggle" type="CheckButton" parent="Box/Top"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "In the lineup"
+
+[node name="Readout" type="VBoxContainer" parent="Box"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Traits" type="GridContainer" parent="Box/Readout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 6
+columns = 3
+
+[node name="Combat" type="Label" parent="Box/Readout"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6588, 0.5961, 0.502, 1)
+autowrap_mode = 3

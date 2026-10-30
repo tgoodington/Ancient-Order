@@ -1,0 +1,8 @@
+{
+  "format": "ancient-order-content",
+  "version": 1,
+  "id": "towncheck",
+  "name": "STAND-IN Town Check Pack",
+  "standIn": true,
+  "files": ["settings.json", "cast.json", "fights.json", "talk.json", "town.json"]
+}

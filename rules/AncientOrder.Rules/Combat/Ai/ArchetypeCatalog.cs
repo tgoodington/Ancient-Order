@@ -2,6 +2,8 @@ using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Globalization;
 using AncientOrder.Rules.Common;
+using AncientOrder.Rules.Personality;
+using AncientOrder.Rules.Reactions;
 
 namespace AncientOrder.Rules.Combat.Ai;
 
@@ -63,6 +65,8 @@ public sealed record ArchetypeCatalog
                 details.Add(new RuleErrorDetail(path + "/id", $"duplicate archetype id: {d.Id}"));
             }
 
+            ValidateReactions(d.Reactions, path + "/reactions", details);
+
             switch (d.Behavior)
             {
                 case ArchetypeBehavior.Basic:
@@ -83,6 +87,55 @@ public sealed record ArchetypeCatalog
         }
 
         return Result<ArchetypeCatalog>.Ok(new ArchetypeCatalog(definitions));
+    }
+
+    private static void ValidateReactions(ReactionProfile? reactions, string path, ImmutableArray<RuleErrorDetail>.Builder details)
+    {
+        if (reactions is null)
+        {
+            return;
+        }
+
+        if (reactions.Leanings is null)
+        {
+            details.Add(new RuleErrorDetail(path + "/leanings", "leanings must not be missing"));
+        }
+        else
+        {
+            foreach (var trait in PersonalityRules.Traits)
+            {
+                if (!double.IsFinite(reactions.Leanings.Of(trait)))
+                {
+                    details.Add(new RuleErrorDetail(path + "/leanings/" + char.ToLowerInvariant(trait.ToString()[0]) + trait.ToString()[1..], "leaning must be a finite number"));
+                }
+            }
+        }
+
+        if (!double.IsFinite(reactions.Minimum) || reactions.Minimum < 0)
+        {
+            details.Add(new RuleErrorDetail(path + "/minimum", "minimum must be a finite number, 0 or more"));
+        }
+
+        if (!double.IsFinite(reactions.AffectionPerPoint))
+        {
+            details.Add(new RuleErrorDetail(path + "/affectionPerPoint", "affectionPerPoint must be a finite number"));
+        }
+
+        if (!double.IsFinite(reactions.TrustPerPoint))
+        {
+            details.Add(new RuleErrorDetail(path + "/trustPerPoint", "trustPerPoint must be a finite number"));
+        }
+
+        ValidateLines(reactions.Approve, path + "/approve", details);
+        ValidateLines(reactions.Disapprove, path + "/disapprove", details);
+    }
+
+    private static void ValidateLines(ReactionLines? lines, string path, ImmutableArray<RuleErrorDetail>.Builder details)
+    {
+        if (lines is null || string.IsNullOrEmpty(lines.Clear))
+        {
+            details.Add(new RuleErrorDetail(path + "/clear", "a reaction needs a clear line"));
+        }
     }
 
     private static void ValidateProfile(DecisionProfile? profile, string path, ImmutableArray<RuleErrorDetail>.Builder details)

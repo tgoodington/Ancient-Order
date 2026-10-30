@@ -1,0 +1,114 @@
+{
+  "conversations": [
+    {
+      "id": "standin_recruit_talk",
+      "title": "STAND-IN Talk: Recruit",
+      "participants": ["standin_recruit"],
+      "steps": [
+        {
+          "id": "greeting",
+          "lines": [{ "speaker": "standin_recruit", "text": "STAND-IN Recruit: greeting. Ready to join the party." }],
+          "choices": [
+            {
+              "id": "invite",
+              "text": "STAND-IN: invite the Recruit to join (a new recruit joins)",
+              "effects": [{ "type": "join", "character": "standin_recruit" }],
+              "next": [{ "step": "joined" }]
+            },
+            { "id": "bye", "text": "STAND-IN: say goodbye" }
+          ]
+        },
+        {
+          "id": "joined",
+          "lines": [{ "speaker": "standin_recruit", "text": "STAND-IN Recruit: joined the party." }]
+        }
+      ]
+    },
+    {
+      "id": "standin_merchant_talk",
+      "title": "STAND-IN Talk: Merchant",
+      "participants": ["standin_merchant"],
+      "start": [{ "step": "already", "when": [{ "type": "inParty", "character": "standin_merchant" }] }],
+      "steps": [
+        {
+          "id": "greeting",
+          "lines": [
+            { "speaker": "standin_merchant", "text": "STAND-IN Merchant: wary greeting." },
+            { "speaker": "standin_merchant", "text": "STAND-IN clue: the Merchant warms to gifts, and joins once won over." }
+          ],
+          "choices": [
+            {
+              "id": "gift",
+              "text": "STAND-IN: offer a gift (relationship improves)",
+              "effects": [{ "type": "relationship", "character": "standin_merchant", "affection": 20, "trust": 15 }],
+              "next": [{ "step": "gift_reply" }]
+            },
+            {
+              "id": "join",
+              "text": "STAND-IN: invite the Merchant to join (relationship-gated; uses the pack default locked line)",
+              "requires": [{ "type": "relationship", "character": "standin_merchant", "measure": "affection", "atLeast": 20 }],
+              "effects": [{ "type": "join", "character": "standin_merchant" }],
+              "next": [{ "step": "joined" }]
+            },
+            { "id": "bye", "text": "STAND-IN: say goodbye" }
+          ]
+        },
+        {
+          "id": "gift_reply",
+          "lines": [{ "speaker": "standin_merchant", "text": "STAND-IN Merchant: thanks for the gift." }]
+        },
+        {
+          "id": "joined",
+          "lines": [{ "speaker": "standin_merchant", "text": "STAND-IN Merchant: won over, joined the party." }]
+        },
+        {
+          "id": "already",
+          "lines": [{ "speaker": "standin_merchant", "text": "STAND-IN Merchant: already in the party." }],
+          "choices": [{ "id": "bye_already", "text": "STAND-IN: say goodbye" }]
+        }
+      ]
+    },
+    {
+      "id": "standin_farewell",
+      "title": "STAND-IN Talk: Companion B",
+      "participants": ["standin_companion_b"],
+      "start": [{ "step": "away", "when": [{ "type": "not", "condition": { "type": "inParty", "character": "standin_companion_b" } }] }],
+      "steps": [
+        {
+          "id": "greeting",
+          "lines": [{ "speaker": "standin_companion_b", "text": "STAND-IN Companion B: asks whether to stay in the party." }],
+          "choices": [
+            {
+              "id": "part",
+              "text": "STAND-IN: let Companion B leave the party (a departure)",
+              "effects": [{ "type": "leave", "character": "standin_companion_b" }],
+              "next": [{ "step": "left" }]
+            },
+            { "id": "stay", "text": "STAND-IN: ask Companion B to stay" }
+          ]
+        },
+        {
+          "id": "left",
+          "lines": [{ "speaker": "standin_companion_b", "text": "STAND-IN Companion B: has left the party." }]
+        },
+        {
+          "id": "away",
+          "lines": [{ "speaker": "standin_companion_b", "text": "STAND-IN Companion B: is outside the party." }],
+          "choices": [
+            {
+              "id": "rejoin",
+              "text": "STAND-IN: ask Companion B to rejoin the party",
+              "effects": [{ "type": "join", "character": "standin_companion_b" }],
+              "next": [{ "step": "rejoined" }]
+            },
+            { "id": "bye_away", "text": "STAND-IN: say goodbye" }
+          ]
+        },
+        {
+          "id": "rejoined",
+          "lines": [{ "speaker": "standin_companion_b", "text": "STAND-IN Companion B: has rejoined the party." }]
+        }
+      ]
+    }
+  ]
+}

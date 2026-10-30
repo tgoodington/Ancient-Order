@@ -1,0 +1,12 @@
+{
+  "conversations": [
+    {
+      "id": "standin_talk",
+      "participants": ["standin_companion_a"],
+      "start": [{ "step": "hello" }],
+      "steps": [
+        { "id": "hello", "lines": [{ "speaker": "narrator", "text": "STAND-IN line." }], "choices": [{ "id": "bye", "text": "STAND-IN goodbye" }] }
+      ]
+    }
+  ]
+}

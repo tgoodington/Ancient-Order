@@ -21,7 +21,7 @@ internal static class StoreEnv
     public static (MemorySaveBackend Backend, SaveStore Store) Create()
     {
         var backend = new MemorySaveBackend();
-        return (backend, new SaveStore(backend, Content));
+        return (backend, new SaveStore(backend, SaveFixtures.Content));
     }
 
     public static async Task Put(MemorySaveBackend backend, int slot, string text) =>
@@ -215,7 +215,7 @@ public class InvalidSlotErrors
     public async Task Differs_from_the_session_message()
     {
         var (_, store) = StoreEnv.Create();
-        var session = new GameSession(Content, new GameSessionOptions { Saves = store });
+        var session = new GameSession(SaveFixtures.Content, new GameSessionOptions { Saves = store });
         var res = await session.LoadFromSlot(11);
         var sessionMessage = Refused(res, ErrorCode.INVALID_SLOT).Message;
         Assert.Equal("Slot must be an integer between 1 and 10", sessionMessage);
@@ -263,7 +263,7 @@ public class ListSaves
     public async Task Storage_error_fails_the_call()
     {
         var backend = new FlakyBackend(new MemorySaveBackend()) { FailRead = "Save storage is unavailable" };
-        var listed = await new SaveStore(backend, Content).ListAsync(Ct);
+        var listed = await new SaveStore(backend, SaveFixtures.Content).ListAsync(Ct);
         Assert.Equal(ErrorCode.STORAGE_ERROR, Refused(listed, ErrorCode.STORAGE_ERROR).Code);
     }
 }
@@ -501,7 +501,7 @@ public class StorageFailures
     public async Task Write_throws()
     {
         var backend = new FlakyBackend(new MemorySaveBackend()) { FailWrite = "Not enough storage space to save" };
-        var result = await new SaveStore(backend, Content).SaveAsync(1, MakeGame(), 1, Ct);
+        var result = await new SaveStore(backend, SaveFixtures.Content).SaveAsync(1, MakeGame(), 1, Ct);
         var error = Refused(result, ErrorCode.STORAGE_ERROR);
         Assert.Equal("Not enough storage space to save", error.Message);
     }
@@ -510,7 +510,7 @@ public class StorageFailures
     public async Task Read_throws()
     {
         var backend = new FlakyBackend(new MemorySaveBackend()) { FailRead = "Save storage is unavailable" };
-        var store = new SaveStore(backend, Content);
+        var store = new SaveStore(backend, SaveFixtures.Content);
         var load = Refused(await store.LoadAsync(1, Ct), ErrorCode.STORAGE_ERROR);
         Assert.Equal("Save storage is unavailable", load.Message);
         Refused(await store.DeleteAsync(1, Ct), ErrorCode.STORAGE_ERROR);
@@ -520,9 +520,9 @@ public class StorageFailures
     public async Task Remove_throws()
     {
         var inner = new MemorySaveBackend();
-        var good = new SaveStore(inner, Content);
+        var good = new SaveStore(inner, SaveFixtures.Content);
         await good.SaveAsync(1, MakeGame(), 1, Ct);
-        var broken = new SaveStore(new FlakyBackend(inner) { FailRemove = "Save storage is unavailable" }, Content);
+        var broken = new SaveStore(new FlakyBackend(inner) { FailRemove = "Save storage is unavailable" }, SaveFixtures.Content);
         Refused(await broken.DeleteAsync(1, Ct), ErrorCode.STORAGE_ERROR);
         Assert.Equal("Rin", (await good.LoadAsync(1, Ct)).Value.Game.Player.Name);
     }

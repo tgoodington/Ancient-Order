@@ -4,7 +4,7 @@ using AncientOrder.Rules.Personality;
 
 namespace AncientOrder.Rules.Party;
 
-public sealed record SynergyResult(string Name, CombatStat Stat, StatStep Step, double Value, double MatchQuality);
+public sealed record SynergyResult(string Name, CombatStat Stat, StatStep Step, double Value, double MatchQuality, string? Feel = null);
 
 public static class SynergyCalculator
 {
@@ -22,7 +22,7 @@ public static class SynergyCalculator
                 : Alignment(player, companions, bonus.Threshold);
             if (quality is not null)
             {
-                results.Add(new SynergyResult(bonus.Name, bonus.Stat, bonus.Step, bonus.Value, quality.Value));
+                results.Add(new SynergyResult(bonus.Name, bonus.Stat, bonus.Step, bonus.Value, quality.Value, bonus.Feel));
             }
         }
 

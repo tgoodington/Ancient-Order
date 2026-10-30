@@ -87,16 +87,15 @@ public class SetTeam
         Assert.Equal([TestCast.ElenaId, TestCast.LarsId], session.Snapshot.Game!.Lineup);
     }
 
+    // Changed: a lineup of 0 to max ids is accepted; more than max or a bad id is refused.
     [Fact(DisplayName = "refuses anything that is not exactly two string ids")]
-    public void Refuses_anything_but_two_string_ids()
+    public void Refuses_anything_but_up_to_max_string_ids()
     {
         var session = TestSessions.WithGame();
         var snap = session.Snapshot;
         ImmutableArray<string?>[] cases =
         [
             default,
-            [],
-            [TestCast.ElenaId],
             [TestCast.ElenaId, TestCast.LarsId, TestCast.KadeId],
             [TestCast.ElenaId, null],
             [TestCast.ElenaId, new string('x', 65)],

@@ -11,10 +11,11 @@ Turn-based combat RPG with personality-driven narrative, growing from the Act 1 
 - Local browser saves (`localStorage`, 10 slots)
 - Vitest 5, ESLint 10
 - Commands: `npm run dev` starts the game in the browser; `npm run verify` runs typecheck, lint, and all tests
-- **Godot project (`godot/`, C#, net10.0):** a Godot 4.7.2 (.NET) project that uses the rules library (`rules/AncientOrder.Rules`, plain C#, no Godot reference). No UI yet.
+- **Godot project (`godot/`, C#, net10.0):** a Godot 4.7.2 (.NET) project that uses the rules library (`rules/AncientOrder.Rules`, plain C#, no Godot reference). The playable build: start screen, 3D town, conversations, party and save screens, fight hand-off placeholder; content packs in `godot/content/` (default `standin`).
+  - Play: open the project in the editor and press F5
   - Open: `godot/project.godot` in the Godot 4.7.2 (.NET) editor (Start menu: "Godot 4.7.2 (.NET)")
-  - Build: `dotnet build AncientOrder.sln` (the solution holds the rules, their tests, and the Godot project)
-  - Verify: `pwsh -File ./verify.ps1` runs the format check, build, all C# tests, the Godot import (only when `godot/.godot` is missing), and the headless smoke run (`godot/smoke`, stand-in content, saves under `user://smoke/saves`)
+  - Build: `dotnet build AncientOrder.sln` (the solution holds the rules, their tests, the content check tool and its tests, and the Godot project)
+  - Verify: `pwsh -File ./verify.ps1` runs the format check, build, all C# tests, a release build that must leave out the dev tools and screen tests, the content check over every pack, the Godot import (only when `godot/.godot` is missing), the headless smoke run (`godot/smoke`, stand-in pack, saves under `user://smoke/saves`), and the Godot screen tests (`godot/tests`)
 
 ## Key Constraints
 - Personality traits: 6 traits, 5-35% range, sum always = 100%
@@ -35,6 +36,9 @@ Turn-based combat RPG with personality-driven narrative, growing from the Act 1 
 
 ### Project Overview
 - `docs/Reference Documents/Claude_Code_Handoff_Document.md` - Complete project overview & 9-sprint roadmap
+
+### Content (Godot build)
+- `docs/content_guide.md` - How to turn the designer's decisions into content-pack files (formats, conditions, effects, content check, hand-off loop)
 
 ### Combat System (Sprint 2)
 - `docs/Reference Documents/GM_Combat_Tracker_Documentation.md` - Complete combat system documentation

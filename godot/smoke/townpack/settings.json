@@ -1,0 +1,42 @@
+{
+  "settings": {
+    "playerName": "STAND-IN Player",
+    "lineup": {
+      "min": 2,
+      "max": 2
+    },
+    "startingParty": [
+      "standin_companion_a",
+      "standin_companion_b"
+    ],
+    "playerCombat": {
+      "rank": 3,
+      "stamina": 120,
+      "power": 80,
+      "speed": 80,
+      "elementalPath": "air"
+    },
+    "startingTown": "checkville"
+  },
+  "synergy": {
+    "resolution": "bestOnly",
+    "bonuses": [
+      {
+        "name": "STAND-IN Well Rounded",
+        "rule": "coverage",
+        "threshold": 25,
+        "stat": "power",
+        "step": "multiply",
+        "value": 1.1
+      },
+      {
+        "name": "STAND-IN Bond",
+        "rule": "alignment",
+        "threshold": 80,
+        "stat": "speed",
+        "step": "multiply",
+        "value": 1.1
+      }
+    ]
+  }
+}

@@ -3,6 +3,7 @@ using AncientOrder.Rules.Combat;
 using AncientOrder.Rules.Common;
 using AncientOrder.Rules.Saves.Format;
 using AncientOrder.Rules.State;
+using AncientOrder.Rules.Story;
 using PersonalityRecord = AncientOrder.Rules.Personality.Personality;
 
 namespace AncientOrder.Rules.Saves;
@@ -44,8 +45,53 @@ public static class SaveMapper
             characters.ToImmutable(),
             game.Lineup,
             progress,
-            game.Combat is null ? null : ToSaved(game.Combat));
+            game.Combat is null ? null : ToSaved(game.Combat),
+            game.Party.IsDefault ? [] : game.Party,
+            game.Town is null ? null : new SavedTown(game.Town.TownId, game.Town.Position.X, game.Town.Position.Z),
+            game.Conversation is null ? null : new SavedConversation(game.Conversation.ConversationId, game.Conversation.StepId),
+            ToSaved(game.Memory),
+            game.HandOff is null ? null : new SavedHandOff(game.HandOff.FightId, game.HandOff.Lineup.IsDefault ? [] : game.HandOff.Lineup, game.HandOff.TownId));
     }
+
+    /// <summary>
+    /// The summary the slot list shows: what the player was doing (hand-off, else conversation, else town, else none) and the name of
+    /// the town they were in, from the content at save time.
+    /// </summary>
+    public static SaveSummary ToSummary(GameState game, GameContent content)
+    {
+        var situation = game.HandOff is not null
+            ? SaveSituation.HandOff
+            : game.Conversation is not null
+                ? SaveSituation.Conversation
+                : game.Town is not null ? SaveSituation.Town : SaveSituation.None;
+        var townId = game.Town?.TownId ?? game.HandOff?.TownId;
+        string? name = null;
+        if (townId is not null && content.Towns.TryGet(townId, out var town) && !string.IsNullOrEmpty(town.Name))
+        {
+            name = new string([.. town.Name.Where(c => !char.IsControl(c))]);
+            if (name.Length > SaveConstants.MaxTownNameLength)
+            {
+                var cut = SaveConstants.MaxTownNameLength;
+                name = name[..(char.IsHighSurrogate(name[cut - 1]) ? cut - 1 : cut)];
+            }
+        }
+
+        return new SaveSummary(situation, name);
+    }
+
+    /// <summary>The one place the memory sets are iterated: flags and seen ordinal, choices by conversation then choice (ordinal).</summary>
+    private static SavedMemory ToSaved(StoryMemory memory) => new(
+        [.. memory.Flags.Order(StringComparer.Ordinal)],
+        [.. memory.Chosen
+            .OrderBy(key => key.ConversationId, StringComparer.Ordinal)
+            .ThenBy(key => key.ChoiceId, StringComparer.Ordinal)
+            .Select(key => new SavedChoice(key.ConversationId, key.ChoiceId))],
+        [.. memory.Seen.Order(StringComparer.Ordinal)]);
+
+    public static StoryMemory ToMemory(SavedMemory memory) => new(
+        ImmutableHashSet.CreateRange(StringComparer.Ordinal, memory.Flags),
+        ImmutableHashSet.CreateRange(ChoiceKeyComparer.Instance, memory.Chosen.Select(c => new ChoiceKey(c.Conversation, c.Choice))),
+        ImmutableHashSet.CreateRange(StringComparer.Ordinal, memory.Seen));
 
     public static PlayerCharacter ToPlayer(SavedPlayer player) =>
         new(player.Id, player.Name, ToPersonality(player.Personality));

@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using AncientOrder.Rules.Combat;
 using AncientOrder.Rules.Common;
+using AncientOrder.Rules.Party;
 using AncientOrder.Rules.Session;
 using AncientOrder.Rules.State;
 using AncientOrder.Rules.Tests.Fixtures;
@@ -97,7 +98,7 @@ public static class TestSessions
         ImmutableArray<EncounterDefinition>? encounters = null)
     {
         var result = GameContent.Create(
-            new GameSettings("Kael", 2, null, hero ?? HeroProfile),
+            new GameSettings("Kael", new LineupLimits(2, 2), null, hero ?? HeroProfile) { StartingParty = [.. (characters ?? TestCast.All).Select(c => c.Id)] },
             characters ?? TestCast.All,
             TestArchetypes.All,
             TestContent.Synergy,

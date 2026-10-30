@@ -1,8 +1,10 @@
 using System.Collections.Immutable;
 using AncientOrder.Rules.Common;
+using AncientOrder.Rules.HandOff;
 using AncientOrder.Rules.Party;
 using AncientOrder.Rules.Personality;
 using AncientOrder.Rules.State;
+using AncientOrder.Rules.Town;
 
 namespace AncientOrder.Rules.Session;
 
@@ -81,13 +83,7 @@ public sealed partial class GameSession
                 return result;
             }
 
-            committed = outcome.Next with
-            {
-                Version = started.Version + 1,
-                Synergy = outcome.Next.Game is null
-                    ? ImmutableArray<SynergyResult>.Empty
-                    : Party.Synergy.Current(_context.Content, outcome.Next.Game),
-            };
+            committed = Derive(outcome.Next, started, started.Version + 1);
         }
         catch (Exception)
         {
@@ -98,6 +94,21 @@ public sealed partial class GameSession
         Notify(committed);
         return result;
     }
+
+    /// <summary>Fills in what is derived on every commit. A new LastChoice report is kept; one carried over from the previous snapshot is cleared.</summary>
+    private SessionSnapshot Derive(SessionSnapshot next, SessionSnapshot previous, long version) =>
+        next with
+        {
+            Version = version,
+            Synergy = next.Game is null
+                ? ImmutableArray<SynergyResult>.Empty
+                : Party.Synergy.Current(_context.Content, next.Game),
+            Party = next.Game is null ? null : PartyView.From(_context.Content, next.Game),
+            Conversation = next.Game is null ? null : Conversations.ConversationView.From(_context.Content, next.Game),
+            Town = next.Game is null ? null : TownView.From(_context.Content, next.Game),
+            HandOff = next.Game is null ? null : HandOffView.From(_context.Content, next.Game),
+            LastChoice = ReferenceEquals(next.LastChoice, previous.LastChoice) ? null : next.LastChoice,
+        };
 
     private void Notify(SessionSnapshot snapshot)
     {

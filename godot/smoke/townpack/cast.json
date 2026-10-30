@@ -1,0 +1,40 @@
+{
+  "characters": [
+    {
+      "id": "standin_companion_a",
+      "name": "STAND-IN Companion A",
+      "archetypeId": "standin_archetype_scored",
+      "personality": { "patience": 20, "empathy": 20, "cunning": 10, "logic": 15, "kindness": 20, "charisma": 15 },
+      "startingAffection": 0,
+      "startingTrust": 0,
+      "combat": { "rank": 3, "stamina": 120, "power": 85, "speed": 90, "elementalPath": "light" }
+    },
+    {
+      "id": "standin_companion_b",
+      "name": "STAND-IN Companion B",
+      "archetypeId": "standin_archetype_basic",
+      "personality": { "patience": 12, "empathy": 8, "cunning": 25, "logic": 18, "kindness": 10, "charisma": 27 },
+      "startingAffection": 0,
+      "startingTrust": 0,
+      "combat": { "rank": 3, "stamina": 110, "power": 100, "speed": 100, "elementalPath": "fire" }
+    }
+  ],
+  "archetypes": [
+    {
+      "id": "standin_archetype_scored",
+      "profile": {
+        "baseScores": { "attack": 0.3, "defend": 0.5, "evade": 0.3, "special": 0.4, "group": 0.2 },
+        "factorWeights": {
+          "ownStamina": 1.0,
+          "allyInDanger": 1.8,
+          "targetVulnerability": 0.5,
+          "energyAvailability": 1.2,
+          "speedAdvantage": 0.3,
+          "roundPhase": 0.8,
+          "teamBalance": 1.4
+        }
+      }
+    },
+    { "id": "standin_archetype_basic" }
+  ]
+}

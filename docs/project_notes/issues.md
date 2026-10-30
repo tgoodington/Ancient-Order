@@ -201,3 +201,37 @@ This file logs work completed on tickets. Keep it simple - just enough to rememb
 - **Map**: reconciled with code; Sprint 7's planned (unbuilt) slices removed from the map at the designer's choice and logged in map_history.md.
 - **Noted for later sprints (TypeScript parity, no change)**: a finished fight's reported round is one past the last round played (the counter advances after each round); stamina values carry floating-point noise (e.g. 22.800000000000004), so screens should round for display; the solution maps the Godot project's Release configuration to Debug (Godot only defines Debug/ExportDebug/ExportRelease, so no effect today).
 - **Final verification**: `verify.ps1` passes (format, build with 0 warnings, 1256/1256 tests, smoke with the GameHost step); `npm run verify` passes (59 files, 1329 tests; no TypeScript file changed).
+
+### 2026-10-30 - BUILD-008: Sprint 7 (Godot) — town and conversation systems
+- **Status**: Complete (verified 2026-10-30)
+- **Description**: A walkable 3D town and one conversation system built from content packs, carrying all five demo mechanics (personality shifts, personality-gated choices, archetype reactions with tells and demeanor, story memory, party changes), plus the screens to play them in the Equinox look (start, town, conversation panel, party/lineup, save/load, hand-off placeholder), designer-only F3 dev tools, a content check tool, a content guide (`docs/content_guide.md`), and a clearly marked stand-in pack that a rules-test playthrough proves reaches every mechanic. Save format moves to version 2 with an upgrade from version 1. 38 tasks.
+- **Security hardening from review**: loader refuses null array items, extreme numbers and over-long ids instead of crashing or dead-ending; hand-off availability judged after a choice's earlier effects; tampered saves can't restore a conversation alongside a fight or hand-off; save names capped and control characters refused; async UI paths guarded against freed nodes; dev tools and tests excluded from release builds and checked by verify.
+- **Verification**: `pwsh -File ./verify.ps1` passes three times in a row (format, build, release build without dev tools/tests, 1706 .NET tests, content check 0/0, smoke, 85 Godot screen tests).
+- **For the designer to review in verify**: choice numbers shown in the conversation panel vs "no numbers" criterion; start screen title shows the pack name; default locked-line wording; town and screen looks (all placeholder).
+- **Refs**: docs/project_notes/branches/sprint-7-godot/build_output.json; ADR-062, ADR-063.
+- **Live verification (2026-10-30)**:
+  - The designer opened the project in the Godot 4.7.2 editor, ran it to the start screen, and played the hands-on list ("all good").
+  - A throwaway GDScript driver outside the repo played the real game in a 1600x900 window with real mouse and keyboard input:
+    - the full stand-in route to the hand-off
+    - saves and loads, including mid-conversation
+    - the party screen, the Esc menu, return to start and New Game, F3, resizes to 1024x640 and 1920x1080, and Quit
+  - Final run: 127/127 checks, with screenshots of every state.
+  - The content check on a deliberately broken pack copy exits 1, naming each problem's file and place.
+- **Fixes in verify**:
+  - The conversation panel opened scrolled to the bottom, hiding the speaker's line. It now opens each step at its first new line and grows to fit up to about two-thirds of the screen, with a visible scrollbar beyond that. The theme's scrollbar had zero width.
+  - Designer-approved (ADR-078):
+    - choices show text only
+    - arrows and Enter (wrapping, skipping locked choices) plus mouse, with silent 1-9 keys
+    - Esc menu Return to Start and Quit, each asking first
+    - start screen titled "Ancient Order"
+    - "Lineup full" instead of rules text when a full lineup refuses a pick
+  - Stale docs fixed: CLAUDE.md said "No UI yet"; key_facts had the old `godot/StandIn` path and was missing the screen-tests step.
+- **Final verification**: `verify.ps1` passes: format, build with 0 warnings, release build without dev tools or tests, 1706/1706 .NET tests, content check 0/0, smoke, and 101/101 Godot screen tests (85 at build, plus 16 added in verify fixes).
+- **Noted for later**:
+  - UI and scaling pass:
+    - the party screen's lineup and "Together" sections sit below the fold
+    - the tall conversation panel covers the speaker and avatar, hiding reaction leans (camera framing)
+    - town and screen looks
+  - Content check: broken references stop the whole-pack analyses, so a designer sees problems in two rounds. This is by design and noted in the map.
+  - Export sprint: Godot crashed at startup once when Windows audio (WASAPI) failed to initialize (see bugs.md); check for a fallback. The export-preset exclusions from build_output also carry over.
+  - Open creative question: the default locked-line wording ("That is not open to you yet."); the stand-in pack overrides it.

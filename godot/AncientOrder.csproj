@@ -8,6 +8,17 @@
     <RootNamespace>AncientOrder</RootNamespace>
   </PropertyGroup>
 
+  <!-- Dev tools (godot/devtools, designer only): our own symbol, not DEBUG (DEBUG may stay defined in release exports). Defined in Debug and ExportDebug only. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug' Or '$(Configuration)' == 'ExportDebug'">
+    <DefineConstants>$(DefineConstants);AO_DEVTOOLS</DefineConstants>
+  </PropertyGroup>
+
+  <!-- Release and ExportRelease leave the dev tools and the in-engine screen tests (godot/tests) out of the build entirely. -->
+  <ItemGroup Condition="'$(Configuration)' == 'Release' Or '$(Configuration)' == 'ExportRelease'">
+    <Compile Remove="devtools/**" />
+    <Compile Remove="tests/**" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="../rules/AncientOrder.Rules/AncientOrder.Rules.csproj" />
   </ItemGroup>

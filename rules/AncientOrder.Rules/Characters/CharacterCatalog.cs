@@ -2,6 +2,7 @@ using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Globalization;
 using AncientOrder.Rules.Common;
+using AncientOrder.Rules.Conversations;
 using AncientOrder.Rules.Personality;
 
 namespace AncientOrder.Rules.State;
@@ -71,6 +72,11 @@ public sealed record CharacterCatalog
                 if (d.Id.Length > MaxIdLength)
                 {
                     details.Add(new RuleErrorDetail(path + "/id", $"id must be at most {MaxIdLength} characters"));
+                }
+
+                if (Speaker.IsReserved(d.Id))
+                {
+                    details.Add(new RuleErrorDetail(path + "/id", $"id {d.Id} is reserved for conversation speakers"));
                 }
 
                 if (!seen.Add(d.Id))

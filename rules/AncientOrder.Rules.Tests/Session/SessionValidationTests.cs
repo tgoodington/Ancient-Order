@@ -176,13 +176,13 @@ public class ValidateTeamIds
         Assert.Equal("npcIds must be array", error.Message);
     }
 
+    // Changed: only more than the content's max is refused here; a short lineup is fine while the player is still picking.
     [Fact(DisplayName = "rejects any count other than 2")]
-    public void Rejects_any_count_other_than_two()
+    public void Rejects_more_than_max()
     {
-        foreach (var bad in new[] { Array.Empty<string?>(), ["a"], ["a", "b", "c"] })
-        {
-            Assert.Equal("npcIds must contain exactly 2 items", Check(bad)!.Message);
-        }
+        Assert.Equal("npcIds must NOT have more than 2 items", Check("a", "b", "c")!.Message);
+        Assert.Null(Check());
+        Assert.Null(Check("a"));
     }
 
     // Changed: a null entry stands in for a non-string.
@@ -193,10 +193,10 @@ public class ValidateTeamIds
         Assert.Contains("more than 64", Check(new string('x', 65), "b")!.Message, StringComparison.Ordinal);
     }
 
-    [Fact(DisplayName = "the required count follows the lineup size")]
-    public void Count_follows_the_lineup_size()
+    [Fact(DisplayName = "the limit follows the lineup max")]
+    public void Count_follows_the_lineup_max()
     {
         Assert.Null(SessionValidation.LineupIds(["a", "b", "c"], 3));
-        Assert.Equal("npcIds must contain exactly 3 items", SessionValidation.LineupIds(["a", "b"], 3)!.Message);
+        Assert.Equal("npcIds must NOT have more than 3 items", SessionValidation.LineupIds(["a", "b", "c", "d"], 3)!.Message);
     }
 }

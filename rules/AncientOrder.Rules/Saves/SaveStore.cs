@@ -1,11 +1,13 @@
 using System.Collections.Immutable;
 using System.Globalization;
 using AncientOrder.Rules.Common;
+using AncientOrder.Rules.Saves.Format;
 using AncientOrder.Rules.State;
 
 namespace AncientOrder.Rules.Saves;
 
-public sealed record SaveMetadata(int Slot, long SavedAt, string PlayerName);
+/// <summary>TownName and Situation come from the save's own summary, so the slot list needs no current content.</summary>
+public sealed record SaveMetadata(int Slot, long SavedAt, string PlayerName, string? TownName = null, SaveSituation Situation = SaveSituation.None);
 
 public enum SlotStatus
 {
@@ -61,7 +63,7 @@ public sealed class SaveStore
             return StorageFailure<SaveMetadata>(ex);
         }
 
-        return Result<SaveMetadata>.Ok(new SaveMetadata(slot, now, game.Player.Name));
+        return Result<SaveMetadata>.Ok(Metadata(slot, now, game.Player.Name, SaveMapper.ToSummary(game, _content)));
     }
 
     public async ValueTask<Result<LoadedSave>> LoadAsync(int slot, CancellationToken cancellationToken = default)
@@ -119,7 +121,7 @@ public sealed class SaveStore
 
             var parsed = SaveFormat.Read(raw, _content);
             slots.Add(parsed.IsOk
-                ? new SlotInfo(slot, true, SlotStatus.Saved, new SaveMetadata(slot, parsed.Value.SavedAt, parsed.Value.PlayerName))
+                ? new SlotInfo(slot, true, SlotStatus.Saved, Metadata(slot, parsed.Value.SavedAt, parsed.Value.PlayerName, parsed.Value.Summary))
                 : new SlotInfo(slot, false, SlotStatus.Corrupted, null));
         }
 
@@ -151,6 +153,9 @@ public sealed class SaveStore
 
         return Result<int>.Ok(slot);
     }
+
+    private static SaveMetadata Metadata(int slot, long savedAt, string playerName, SaveSummary summary) =>
+        new(slot, savedAt, playerName, summary.TownName, summary.Situation);
 
     private static RuleError? InvalidSlot(int slot) =>
         SaveConstants.IsValidSlot(slot)
